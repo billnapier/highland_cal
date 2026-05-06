@@ -13,7 +13,7 @@ This document serves as the guide for the LLM developer. The LLM should implemen
 - `Detailed_Design.md` > 6.1 GitHub Actions
 **Tasks:**
 - Initialize a Next.js project using the App Router.
-- Configure Tailwind CSS (ensure a premium, modern design system foundation is established).
+- Configure Tailwind CSS and set up `shadcn/ui` for accessible component scaffolding (avoid raw Tailwind CSS where `shadcn/ui` provides a component).
 - Set up standard ESLint and Prettier configurations.
 - Create a basic GitHub Action workflow (`.github/workflows/ci.yml`) for linting and type-checking on PRs.
 - Create a placeholder `/app/page.tsx` and a basic application layout with a navigation header.
@@ -64,7 +64,7 @@ This document serves as the guide for the LLM developer. The LLM should implemen
 - `Detailed_Design.md` > 4.4 iCal Feed Generation
 **Tasks:**
 - Update `/app/page.tsx` to fetch and display the list of upcoming Games from the `Games` table. This must be accessible without authentication (relying on the public RLS policy).
-- Implement `/app/api/calendar.ics/route.ts` to serialize the `Games` table into a valid iCal feed.
+- Implement `/app/api/calendar.ics/route.ts` to serialize the `Games` table into a valid iCal feed using the `ics` npm package.
 - Add a "Subscribe to Calendar" button on the public page that links to the `.ics` route.
 **Runnable State:** 
 - Unauthenticated visitors can see a chronologically sorted list of games (using mock data inserted manually into Supabase). 
@@ -72,26 +72,38 @@ This document serves as the guide for the LLM developer. The LLM should implemen
 
 ---
 
-## Milestone 5: Event Management (Journeys 3 & 8)
-**Goal:** Provide the UI and Server Actions for `APPROVED` and `ADMIN` users to manage the calendar.
+## Milestone 5: Event Management (Delete & Basic UI)
+**Goal:** Provide the basic UI to view the schedule from the dashboard and allow Admins to delete events.
 **References:** 
-- `User_Journeys.md` > Journey 3: The High-Trust Event Management
 - `User_Journeys.md` > Journey 8: Event Cleanup
-- `Detailed_Design.md` > 4.2 Event Management Flow
 **Tasks:**
-- Create a "Create Event" form/modal on the authenticated dashboard.
-- Create an "Edit Event" form/modal (ensure the "major change" checkbox is included in the UI state).
-- Implement Next.js Server Actions for inserting, updating, and deleting records in the `Games` table.
-- Ensure the frontend respects user roles (e.g., the Delete button should only render for `ADMIN` users).
+- Create the event list view on the authenticated dashboard.
+- Implement a Next.js Server Action for deleting records from the `Games` table.
+- Ensure the frontend respects user roles (the Delete button should only render for `ADMIN` users).
 - *Note:* Stub out the Resend email notifications with `console.log()` for now to isolate concerns.
 **Runnable State:** 
-- An `APPROVED` user can add or edit a game. 
 - An `ADMIN` can delete a game. 
 - The public page reflects these changes immediately.
 
 ---
 
-## Milestone 6: RSVP & Attendance Tracking (Journey 4)
+## Milestone 6: Event Management (Create & Edit Forms)
+**Goal:** Provide the complex forms and Server Actions for `APPROVED` users to add and modify the calendar.
+**References:** 
+- `User_Journeys.md` > Journey 3: The High-Trust Event Management
+- `Detailed_Design.md` > 4.2 Event Management Flow
+**Tasks:**
+- Create a "Create Event" form/modal on the authenticated dashboard using `react-hook-form` and `zod` for validation.
+- Create an "Edit Event" form/modal (ensure the "major change" checkbox is included in the UI state).
+- Implement Next.js Server Actions for inserting and updating records in the `Games` table.
+- *Note:* Continue to stub out Resend email notifications.
+**Runnable State:** 
+- An `APPROVED` user can add or edit a game through validated forms.
+- The public page reflects these changes immediately.
+
+---
+
+## Milestone 7: RSVP & Attendance Tracking (Journey 4)
 **Goal:** Enable athletes to register their interest level for events and coordinate with others.
 **References:** 
 - `User_Journeys.md` > Journey 4: Registering & RSVPing for a Competition
@@ -107,13 +119,13 @@ This document serves as the guide for the LLM developer. The LLM should implemen
 
 ---
 
-## Milestone 7: Personal Profile Management (Journey 5)
+## Milestone 8: Personal Profile Management (Journey 5)
 **Goal:** Allow users to maintain their public persona and competition details.
 **References:** 
 - `User_Journeys.md` > Journey 5: Managing Personal Profile
 **Tasks:**
 - Create a dedicated `/app/dashboard/profile` page.
-- Build a form to update the user's `class` (e.g., A-Class) and `outward_links` (JSONB field for Instagram, NASGA, etc.).
+- Build a form using `react-hook-form` and `zod` to update the user's `class` and `outward_links` (JSONB). The form should explicitly include inputs for Instagram and Facebook, and allow up to 5 additional custom links.
 - Implement a Server Action to securely update the `Profiles` table for the authenticated user.
 - Create a public roster view or profile card component so the club can show off its athletes.
 **Runnable State:** 
@@ -122,7 +134,7 @@ This document serves as the guide for the LLM developer. The LLM should implemen
 
 ---
 
-## Milestone 8: Admin User Management (Journeys 7 & 9)
+## Milestone 9: Admin User Management (Journeys 7 & 9)
 **Goal:** Provide Admins the tools to approve pending users, promote new admins, and manage the roster.
 **References:** 
 - `User_Journeys.md` > Journey 7: Managing User Access
@@ -140,29 +152,16 @@ This document serves as the guide for the LLM developer. The LLM should implemen
 
 ---
 
-## Milestone 9: Email Notifications Integration
+## Milestone 10: Email Notifications Integration
 **Goal:** Replace the stubbed notification logs with live transactional emails via Resend.
 **References:** 
 - `Detailed_Design.md` > 4.3 Notifications (Next.js Server Actions)
 **Tasks:**
-- Integrate the Resend Node.js SDK.
+- Integrate the Resend Node.js SDK and `react-email` for building HTML email templates.
 - Wire up the **New User Registration** email (triggered during onboarding, sent to Admins).
 - Wire up the **User Approved** email (triggered by Admin action, sent to Athlete).
 - Wire up the **New Event / Major Edit** email (triggered by event creation/edit, sent to Approved Athletes).
 - Wire up the **Event Deletion** email (triggered by Admin action, sent to Approved Athletes).
 **Runnable State:** 
-- Actions taken in the application successfully and reliably dispatch real emails to the correct recipients.
+- Actions taken in the application successfully and reliably dispatch real, styled emails to the correct recipients.
 
----
-
-## Milestone 10: UI Polish & Aesthetics
-**Goal:** Elevate the application's design to meet premium web standards.
-**References:** 
-- System Guidelines: "Prioritize Visual Excellence"
-**Tasks:**
-- Conduct a full audit of the application's UI.
-- Refine the color palette, typography (e.g., Inter/Outfit), and spacing.
-- Add glassmorphism effects, dynamic hover states, and micro-animations to interactive elements.
-- Ensure flawless responsive behavior across mobile, tablet, and desktop devices.
-**Runnable State:** 
-- A visually stunning, production-ready application that feels premium, highly interactive, and looks great on all devices.
