@@ -1,88 +1,76 @@
-# CaberTrack (Highland Cal) User Journeys
+# Highland Cal User Journeys
 
-Based on the architecture and data schema, here are the primary user journeys for the application. The journeys are broken down by the two main implied personas: **Athletes** and **Club Organizers**.
+Based on the architecture and data schema, here are the primary user journeys for the application. The system follows a **"Public-First, High-Trust"** model, meaning the calendar is public to serve as a marketing tool for the club, while modifying the schedule or RSVPing requires an approved account. 
+
+The journeys are broken down by the two main personas: **Athletes (End Users)** and **Admins (Site Operators)**.
 
 ---
 
-## 1. End Users (Athletes)
+## 1. End Users (Athletes & Public)
 
-### Journey 1: Frictionless Onboarding
-**Goal:** Access the site and set up a profile with zero hassle.
-1. **Trigger:** The end user receives a link to their club's site.
-2. **Action:** They navigate to the app and click **"Login with Google"**.
-3. **System:** The application redirects to Google OAuth, authenticates the user, and securely handles the callback via Supabase Auth.
-4. **Action:** A record is automatically created in the `Profiles` table using the Google `display_name`.
-5. **Completion:** The end user lands on the dashboard and is prompted to optionally set their competition `class` (e.g., A-Class, Masters, Women).
-
-### Journey 2: Discovering Upcoming Games and Practices
-**Goal:** Find out what Highland Games and club practices are on the schedule.
-1. **Trigger:** The end user wants to plan their season or upcoming week.
-2. **Action:** They view the main dashboard calendar.
-3. **System:** The system queries the events and displays a chronologically sorted list of upcoming games and practices (with a clear visual distinction between the two), showing the date, name, and location.
+### Journey 1: Discovering Upcoming Games and Practices (Public Viewing)
+**Goal:** Find out what Highland Games and club practices are on the schedule without needing to log in.
+1. **Trigger:** A prospective athlete or club member wants to plan their season.
+2. **Action:** They visit the main Highland Cal URL.
+3. **System:** The system displays a chronologically sorted list of upcoming games and practices, showing the date, name, and location. This data is publicly accessible to act as a club marketing tool.
 4. **Action:** They click the "Subscribe to Calendar" button to get a global iCal feed link.
-5. **System:** The system provides an `.ics` URL that the user can add to Google Calendar, Apple Calendar, or Outlook to sync all configured events.
+5. **System:** The system provides a public `.ics` URL that the user can add to Google Calendar, Apple Calendar, or Outlook to sync all configured events.
 
-### Journey 3: Adding a New Game
-**Goal:** Expand the club's schedule by adding games of interest.
-1. **Trigger:** The end user discovers a game they want to attend that isn't on the dashboard.
-2. **Action:** They navigate to an "Add Game" section.
-3. **Action:** They provide the game details: Name, Date, Location, and Registration URL.
-4. **System:** A new record is inserted into the `Games` table and immediately becomes visible to all authenticated users.
+### Journey 2: Frictionless Onboarding & Pending Approval
+**Goal:** Access the site, set up a profile, and request write-access to the club.
+1. **Trigger:** An athlete wants to RSVP to a game or add a new practice.
+2. **Action:** They click **"Login with Google"**.
+3. **System:** The application authenticates the user via Google OAuth and creates a new record in the `Profiles` table. The user is placed in a **"Pending Approval"** state.
+4. **System Action:** The system uses Resend to send an email to the club Admin notifying them that a new user has registered and is pending approval.
+5. **Completion:** The athlete lands on the dashboard but is shown a message that they cannot edit events or RSVP until an Admin approves their account.
 
-### Journey 4: Registering for a Competition
-**Goal:** Officially register for a game via external sites.
-1. **Trigger:** The end user decides to compete in a specific game.
+### Journey 3: The High-Trust Event Management (Adding/Editing)
+**Goal:** Expand or correct the club's schedule by adding/editing games or practices.
+1. **Trigger:** An *approved* athlete discovers a game that isn't on the dashboard, or realizes a start time is wrong.
+2. **Action:** They log in and navigate to "Add Event" or click "Edit" on an existing event.
+3. **Action:** They provide/update the details: Name, Date, Location, and Registration URL. If editing, they can optionally check a box labeled "This is a major change—notify all athletes."
+4. **System:** The record is inserted/updated in the `Games` table and becomes instantly visible to everyone.
+5. **System Action:** The system uses Resend to send an email to all approved athletes notifying them that a new event was added. If an event is edited, an email is *only* sent if the "major change" checkbox was selected.
+
+### Journey 4: Registering & RSVPing for a Competition
+**Goal:** Officially register for a game via external sites and let the club know.
+1. **Trigger:** An *approved* athlete decides to compete in a specific game.
 2. **Action:** They select the game on the dashboard and click the provided **Registration URL**.
-3. **System:** The end user is redirected to the independent registration site.
-4. **Completion:** After completing external registration, they return to the site and update their status.
+3. **System:** The athlete is redirected to the independent registration site.
+4. **Action:** After returning to the site, they update their RSVP `interest_level` to **"I'm going"**, **"I'm interested"**, or **"Not going"**.
+5. **System:** Row Level Security (RLS) ensures they can only edit their own attendance. Other logged-in users can view this status to coordinate travel via external channels (text/email). *(Note: No emails are triggered by RSVP changes).*
 
-### Journey 5: Coordinating Attendance, Carpooling, and Lodging
-**Goal:** Let the club know their intent and coordinate logistics.
-1. **Trigger:** The end user wants to see who else is going to an upcoming game or practice and arrange travel.
-2. **Action:** They select the game or practice and view the current attendance list from their club.
-3. **Action:** They update their own `interest_level` to **"I'm going"**, **"I'm interested"**, **"Not going"**, or **"Not sure"**.
-4. **Action:** They add `notes` (e.g., *"Driving from Portland, have 2 open seats in the truck"* or *"Looking to split an Airbnb"*).
-5. **System:** The application upserts the `Attendance` record. Row Level Security (RLS) ensures they can only edit their own attendance.
-
-### Journey 6: Managing Personal Profile
+### Journey 5: Managing Personal Profile
 **Goal:** Maintain a personal identity and track individual schedules.
-1. **Trigger:** The end user wants to view their upcoming events or update their contact info.
+1. **Trigger:** An *approved* athlete wants to update their contact info or class.
 2. **Action:** They navigate to their "Profile" page.
-3. **Action:** They view a personalized summary of their specific reservation statuses (games and practices they are attending).
+3. **Action:** They update their competition `class` (e.g., A-Class, Masters, Women).
 4. **Action:** They configure outward-facing links, adding their social media profiles (Instagram, Facebook) and links to external Highland Games athlete profiles (NASGA, HeavyAthlete).
-5. **Action:** They copy their personal iCal feed link from their profile.
-6. **System:** The system saves the extended profile data, and provides a dynamic `.ics` URL filtered specifically to only include events where the user's status is "I'm going" or "I'm interested".
+5. **System:** The system saves the extended profile data. Profiles are publicly viewable to promote the club's roster.
 
 ---
 
 ## 2. Admin Users (Site Operators)
 
-*(Note: The current schema doesn't explicitly define an 'Admin' boolean or role yet. Admin users are the ones who deploy and manage the system.)*
-
-### Journey 7: Instance Deployment & Setup
+### Journey 6: Instance Deployment & Setup
 **Goal:** Stand up a private instance for the club.
-1. **Trigger:** A club organizer wants to use CaberTrack for their club.
+1. **Trigger:** A club organizer wants to use Highland Cal.
 2. **Action:** The organizer clicks the **"Deploy to Vercel"** button on the project's GitHub repository.
-3. **System:** Vercel provisions the hosting, and Terraform (or similar automation) spins up the Supabase database.
-4. **Action:** The organizer follows documented steps to link their Google Cloud Console OAuth credentials to their instance, completing the zero-password setup.
+3. **Action:** During the Vercel setup flow, the organizer enters their email address into the `INITIAL_ADMIN_EMAIL` environment variable.
+4. **System:** Vercel provisions the hosting, and Terraform spins up the Supabase database.
+5. **Action:** The organizer follows documented steps to link their Google Cloud Console OAuth credentials and Resend API key to their instance.
 
-### Journey 8: Configuring Site Identity
-**Goal:** Customize the instance to match the club's branding.
-1. **Trigger:** The admin wants to personalize the newly deployed site.
-2. **Action:** They navigate to the "Site Settings" area.
-3. **Action:** They update the "Site Name" (e.g., "Seattle Highland Games Club") and upload a custom logo or hero image.
-4. **System:** The application saves these global configuration settings (likely to a `SiteSettings` table or environment variables) and updates the UI for all end users.
+### Journey 7: Managing User Access (Proactive Security)
+**Goal:** Ensure only authorized club members can write to the database.
+1. **Trigger:** The Admin receives an automated email via Resend that a new user has registered.
+2. **Action:** The Admin navigates to the "User Management" section.
+3. **Action:** They review the pending user and click "Approve".
+4. **System:** The application updates the user's status in the `Profiles` table to "Approved".
+5. **System Action:** An email is dispatched via Resend to the athlete letting them know their account has been approved and they can now RSVP and add events.
 
-### Journey 9: Managing User Access
-**Goal:** Ensure only authorized club members can access the private instance.
-1. **Trigger:** An unknown user registers, or a member leaves the club.
-2. **Action:** The admin navigates to the "User Management" section.
-3. **Action:** They review the list of registered users. They can toggle an "Approved" status or click "Revoke Access" for specific individuals.
-4. **System:** The application updates the user's role/status in the `Profiles` table. RLS policies instantly prevent revoked users from reading games or attendance data.
-
-### Journey 10: Scheduling Practices
-**Goal:** Add club practices to the calendar.
-1. **Trigger:** The admin finalizes the time and location for a club practice.
-2. **Action:** The admin navigates to the "Add Event" section and selects "Practice".
-3. **Action:** They provide the practice details: Name (e.g., "Saturday Throwing Session"), Date, Location, and any relevant links.
-4. **System:** A new practice record is inserted and immediately becomes visible to all authenticated users with a clear distinction from official games.
+### Journey 8: Event Cleanup (Deleting Events)
+**Goal:** Keep the calendar free of spam or cancelled events.
+1. **Trigger:** A game is permanently cancelled, or an athlete accidentally created a duplicate event.
+2. **Action:** The Admin views the event and clicks "Delete".
+3. **System:** The event is removed from the database.
+4. **System Action:** An email is sent via Resend to all approved users notifying them that the event has been deleted.

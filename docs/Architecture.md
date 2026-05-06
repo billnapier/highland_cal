@@ -1,6 +1,6 @@
-# Highland Games Club Tracker - ccccccc Specification V4
+# Highland Cal - Specification V4
 
-**Project Code Name:** CaberTrack  
+**Project Name:** Highland Cal  
 **Target Audience:** Highland Games Throwing Clubs  
 **Deployment Model:** Decentralized Open-Source / Self-Hosted  
 
@@ -20,6 +20,7 @@ This document outlines the architecture for a web application designed to coordi
 | **Database** | Supabase (PostgreSQL) | Relational data storage with integrated Row Level Security (RLS). |
 | **Authentication** | Federated Google Auth | Identity management via Google OAuth 2.0. No local credentials stored. |
 | **Infrastructure** | Vercel Buttons / Terraform | Automated provisioning for diverse technical backgrounds. |
+| **Email** | Resend | Transactional emails for notifications (e.g., pending user approvals). Fits well within free tier. |
 
 ---
 
@@ -43,7 +44,6 @@ The system uses a relational model to track the many-to-many relationship betwee
 - **user_id** (uuid, foreign key)
 - **game_id** (uuid, foreign key)
 - **interest_level** (enum): `[Watching, Interested, Registered, Not Going]`
-- **notes** (text): Carpooling or lodging notes.
 
 ---
 
@@ -56,9 +56,11 @@ To eliminate the security overhead and user friction of local credential managem
 - **Onboarding:** Upon first login via Google, a record is automatically created in the `Profiles` table using the identity information returned by the provider.
 
 ### 4.2. Authorization (Permissions)
-While identity is handled externally, **Authorization is managed internally via Row Level Security (RLS).**
-- **RLS Gatekeeper:** The database continues to be the authoritative source of truth for permissions. RLS policies verify that `auth.uid()` (the Google-provided ID) matches the `user_id` of the record being accessed or modified.
-- **ACL Enforcement:** All read/write operations must pass RLS constraints. This ensures that an authenticated user can only modify their own attendance records.
+While identity is handled externally, **Authorization is managed internally via Row Level Security (RLS) and Application Logic.**
+- **Public Reads:** The calendar, practice schedule, and profiles are public. Unauthenticated users can view this data, allowing the application to serve as a marketing/recruiting tool for the club.
+- **RLS Gatekeeper:** Write operations (RSVPing, adding events) require the user to be authenticated and have an "Approved" status set by an Admin.
+- **High-Trust Writes:** Any approved member can add or edit games/practices. Admins retain the ability to delete events. RLS policies verify `auth.uid()` against records where users modify their own attendance.
+- **Admin Role:** The initial Admin user is explicitly defined during the instance deployment (e.g., via an environment variable). The Admin is responsible for approving new users.
 
 ---
 
@@ -79,6 +81,7 @@ Each club maintains its own Vercel and Supabase accounts. This ensures that each
 | Vercel | Hobby Plan | $0.00 |
 | Supabase | Free Tier | $0.00 |
 | Google Auth | GCP Identity Platform | $0.00 (Standard Tier) |
+| Resend | Free Tier | $0.00 (Up to 3,000 emails/month) |
 | **Total** | | **$0.00** |
 
 ---
