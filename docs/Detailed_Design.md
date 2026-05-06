@@ -4,10 +4,11 @@
 Highland Cal is a decentralized, self-hosted web application built for Highland Games throwing clubs to coordinate attendance, track events, and manage athlete profiles. This document specifies the technical implementation details required to build the project, acting as a blueprint for an LLM or human developer.
 
 ## 2. Tech Stack & Architecture
-- **Frontend / API:** Next.js (App Router, React, Tailwind CSS for styling)
+- **Frontend / API:** Next.js (App Router, React, Tailwind CSS, `shadcn/ui` for components, `react-hook-form` and `zod` for forms)
+- **iCal Generation:** `ics` npm package
 - **Database / Auth:** Supabase (PostgreSQL, Row Level Security, Auth)
 - **Authentication Provider:** Google OAuth 2.0 (Federated, Zero Password)
-- **Email Service:** Resend
+- **Email Service:** Resend with `react-email` templates
 - **Hosting:** Vercel
 
 ## 3. Database Schema & RLS Policies (PostgreSQL)
@@ -20,10 +21,29 @@ User data is split into two tables to enable standard Row Level Security without
 - `display_name` (text): Athlete's name.
 - `email` (text): Athlete's email address (synced from auth. Note: this is a point-in-time snapshot unless an `AFTER UPDATE` trigger on `auth.users` is also implemented).
 - `class` (text): Competition class (e.g., A-Class, Masters, Women).
-- `outward_links` (jsonb): Social media and external profile links.
+- `outward_links` (jsonb): Social media and external profile links. The JSON structure should explicitly support `"instagram"` and `"facebook"` keys, and a `"custom_links"` array containing up to 5 objects with `"label"` and `"url"`.
 - `created_at` (timestamptz): Default `now()`.
 
 *Crucial Implementation Detail:* A Postgres `AFTER INSERT` trigger on the `auth.users` table must be created to automatically insert a new row into `Profiles` whenever a user signs up. This prevents the "race condition" of relying on the Next.js frontend redirect to create the user profile.
+
+To prevent the LLM from guessing the syntax, here is the explicit SQL for the trigger:
+```sql
+CREATE OR REPLACE FUNCTION public.handle_new_user()
+RETURNS trigger AS $$
+BEGIN
+  INSERT INTO public.Profiles (id, email, display_name)
+  VALUES (new.id, new.email, new.raw_user_meta_data->>'full_name');
+  
+  INSERT INTO public.User_Roles (user_id, role)
+  VALUES (new.id, 'PENDING');
+  RETURN new;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+CREATE TRIGGER on_auth_user_created
+  AFTER INSERT ON auth.users
+  FOR EACH ROW EXECUTE PROCEDURE public.handle_new_user();
+```
 
 **RLS Policies (`Profiles`):**
 - **Read:** Publicly readable (to serve as a club roster).
