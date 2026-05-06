@@ -1,14 +1,14 @@
-# Highland Cal
+# Highland Cal 🐮📅
 
 ![Highland Cow](docs/highland_cow.png)
 
-Welcome to **Highland Cal**! 
+Welcome to **Highland Cal**! 🎉
 
-*Note: This project is called "Highland Cal" and not "Highland Cow", but the two are closely related.*
+*Wait, did you say Highland **Cow**? 🐄 Nope, it's Highland **Cal** (short for Calendar)!\nThough to be fair, they both love a good grassy field and are absolute units of Scottish awesomeness. 🏴󠁧󠁢󠁳󠁣󠁴󠁿*
 
 ## Project Overview
 
-Highland Cal (project code name CaberTrack) is a web application designed to coordinate attendance and interest levels for Highland Games athletes. 
+Highland Cal (project code name CaberTrack) is a web application designed to coordinate attendance and interest levels for Highland Games athletes.\nThrowing heavy things in kilts has never been so flawlessly organized! 🪵💪
 
 The system follows a decentralized open-source/self-hosted model where individual throwing clubs can deploy their own isolated instances. This allows clubs to easily manage their athletes, track competition classes, and coordinate athlete attendance for various Highland Games.
 
