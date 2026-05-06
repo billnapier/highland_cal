@@ -31,10 +31,10 @@ To prevent the LLM from guessing the syntax, here is the explicit SQL for the tr
 CREATE OR REPLACE FUNCTION public.handle_new_user()
 RETURNS trigger AS $$
 BEGIN
-  INSERT INTO public."Profiles" (id, email, display_name)
+  INSERT INTO public.Profiles (id, email, display_name)
   VALUES (new.id, new.email, new.raw_user_meta_data->>'full_name');
   
-  INSERT INTO public."User_Roles" (user_id, role)
+  INSERT INTO public.User_Roles (user_id, role)
   VALUES (new.id, 'PENDING');
   RETURN new;
 END;
