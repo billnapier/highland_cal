@@ -18,7 +18,7 @@ User data is split into two tables to enable standard Row Level Security without
 **`Profiles` Table** (Stores extended user information)
 - `id` (uuid, Primary Key): References `auth.users(id)` on delete cascade.
 - `display_name` (text): Athlete's name.
-- `email` (text): Athlete's email address.
+- `email` (text): Athlete's email address (synced from auth. Note: this is a point-in-time snapshot unless an `AFTER UPDATE` trigger on `auth.users` is also implemented).
 - `class` (text): Competition class (e.g., A-Class, Masters, Women).
 - `outward_links` (jsonb): Social media and external profile links.
 - `created_at` (timestamptz): Default `now()`.
@@ -31,7 +31,7 @@ User data is split into two tables to enable standard Row Level Security without
 
 **`User_Roles` Table** (Stores authorization state)
 - `user_id` (uuid, Primary Key): References `Profiles(id)` on delete cascade.
-- `role` (text): Account status. Enum: `['PENDING', 'APPROVED', 'ADMIN']`. Default: `PENDING`.
+- `role` (text): Account status. Must be enforced via a PostgreSQL custom `ENUM` type or a `CHECK` constraint: `['PENDING', 'APPROVED', 'ADMIN']`. Default: `'PENDING'`.
 
 **RLS Policies (`User_Roles`):**
 - **Read:** Publicly readable.
@@ -41,14 +41,14 @@ User data is split into two tables to enable standard Row Level Security without
 
 ### 3.2 `Games` Table
 Stores upcoming games and practices.
-- `id` (uuid, Primary Key): Default `uuid_generate_v4()`.
+- `id` (uuid, Primary Key): Default `gen_random_uuid()`.
 - **name** (text): Name of the game or practice.
 - **start_timestamp** (timestamptz): Start date and time of the event.
 - **end_timestamp** (timestamptz): End date and time of the event.
 - **local_timezone** (text): Timezone identifier (e.g., 'America/Los_Angeles') for display purposes.
 - `location` (text): Location (City, State).
 - `registration_url` (text): External registration link.
-- `created_by` (uuid): References `Profiles(id)`.
+- `created_by` (uuid): References `Profiles(id)` on delete set null.
 - `created_at` (timestamptz): Default `now()`.
 
 **RLS Policies (`Games`):**
@@ -58,10 +58,10 @@ Stores upcoming games and practices.
 
 ### 3.3 `Attendance` Table
 Tracks RSVPs.
-- `id` (uuid, Primary Key): Default `uuid_generate_v4()`.
+- `id` (uuid, Primary Key): Default `gen_random_uuid()`.
 - `user_id` (uuid): References `Profiles(id)` on delete cascade.
 - `game_id` (uuid): References `Games(id)` on delete cascade.
-- `interest_level` (text): Enum: `['WATCHING', 'INTERESTED', 'REGISTERED', 'NOT_GOING']`.
+- `interest_level` (text): Must be enforced via a PostgreSQL custom `ENUM` type or a `CHECK` constraint: `['WATCHING', 'INTERESTED', 'REGISTERED', 'NOT_GOING']`.
 - `updated_at` (timestamptz): Default `now()`.
 - **Constraint:** Unique constraint on `(user_id, game_id)`.
 
@@ -85,7 +85,7 @@ Tracks RSVPs.
 
 ### 4.3 User Deletion
 1. When an Admin decides to delete a user, simply deleting the row in `Profiles` is insufficient because the identity resides in the Supabase `auth` schema.
-2. The frontend must call a secure Next.js Server Action that uses the Supabase Admin API (`supabase.auth.admin.deleteUser()`) to delete the user. The `Profiles` row will then be automatically removed via the cascade delete.
+2. The frontend must call a secure Next.js Server Action that **explicitly verifies the requesting user has an `ADMIN` role** before calling the Supabase Admin API (`supabase.auth.admin.deleteUser()`) to delete the user. This application-layer authorization check is critical because the Service Role Key bypasses RLS. The `Profiles` row will then be automatically removed via the cascade delete.
 
 ### 4.4 iCal Feed Generation
 - A Next.js API Route (e.g., `/api/calendar.ics`) generates an iCal feed dynamically from the `Games` table.
@@ -94,7 +94,7 @@ Tracks RSVPs.
 ## 5. Next.js Application Structure
 - `/app/page.tsx`: Public dashboard showing upcoming games.
 - `/app/auth/callback/route.ts`: Supabase Auth callback handler and admin bootstrapper.
-- `/app/api/calendar/route.ts`: iCal feed generator.
+- `/app/api/calendar.ics/route.ts`: iCal feed generator.
 - `/app/dashboard/page.tsx`: Authenticated athlete view.
 - `/app/dashboard/admin/page.tsx`: Admin-only view for user management.
 - `/components/...`: Reusable UI components (buttons, forms, modals).

@@ -16,8 +16,8 @@ This document outlines the manual steps a human (the Site Operator/Admin) must t
    - Application type: **Web application**.
    - Name: "Highland Cal Web Auth".
    - **Authorized JavaScript origins**: Add your Vercel domain (e.g., `https://my-highland-cal.vercel.app`). Also add `http://localhost:3000` for local development.
-   - **Authorized redirect URIs**: Add your Supabase project's redirect URI (e.g., `https://[YOUR_SUPABASE_PROJECT_ID].supabase.co/auth/v1/callback`). Also add `http://localhost:3000/auth/callback` for local development.
-   - Click Create. 
+   - **Authorized redirect URIs**: Add your Supabase project's redirect URI (e.g., `https://[YOUR_SUPABASE_PROJECT_ID].supabase.co/auth/v1/callback`).
+   - Click Create.
 5. Save the **Client ID** and **Client Secret**. You will need these for Supabase.
 
 ## 2. Vercel Deployment & Supabase Integration (Automated)
@@ -29,6 +29,8 @@ The simplest way to stand up the application is to use Vercel's native Supabase 
 2. During the setup flow, you will see a section for **Integrations**. Click **Add Integration** and select **Supabase**.
 3. Follow the prompts to log into Supabase and either select an existing project or create a new one directly from the Vercel dashboard.
 4. Vercel will automatically populate the required Supabase environment variables (`NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`).
+   - > [!CAUTION]
+   - > The `SUPABASE_SERVICE_ROLE_KEY` bypasses all Row Level Security policies and grants full administrative access to the database. It **must never** be exposed on the client side (e.g., by prefixing it with `NEXT_PUBLIC_`).
 5. You must manually provide the remaining Environment Variables:
    - `RESEND_API_KEY`: (From your Resend account, see Step 3)
    - `INITIAL_ADMIN_EMAIL`: The Google email address of the person who will be the first admin.

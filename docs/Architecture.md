@@ -50,7 +50,7 @@ To separate public user data from secure authorization data, the system uses two
 - **id** (uuid, primary key)
 - **user_id** (uuid, foreign key)
 - **game_id** (uuid, foreign key)
-- **interest_level** (enum): `[Watching, Interested, Registered, Not Going]`
+- **interest_level** (enum): `['WATCHING', 'INTERESTED', 'REGISTERED', 'NOT_GOING']`
 
 ---
 

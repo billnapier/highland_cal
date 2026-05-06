@@ -37,7 +37,7 @@ The journeys are broken down by the two main personas: **Athletes (End Users)** 
 1. **Trigger:** An *approved* athlete decides to compete in a specific game.
 2. **Action:** They select the game on the dashboard and click the provided **Registration URL**.
 3. **System:** The athlete is redirected to the independent registration site.
-4. **Action:** After returning to the site, they update their RSVP `interest_level` to **"I'm going"**, **"I'm interested"**, or **"Not going"**.
+4. **Action:** After returning to the site, they update their RSVP `interest_level` to **`REGISTERED`**, **`INTERESTED`**, or **`NOT_GOING`**.
 5. **System:** Row Level Security (RLS) ensures they can only edit their own attendance. Other logged-in users can view this status to coordinate travel via external channels (text/email). *(Note: No emails are triggered by RSVP changes).*
 
 ### Journey 5: Managing Personal Profile
@@ -79,6 +79,6 @@ The journeys are broken down by the two main personas: **Athletes (End Users)** 
 **Goal:** Delegate administrative responsibilities to another trusted club member.
 1. **Trigger:** The current Admin wants to share the workload of managing the club.
 2. **Action:** The Admin navigates to the "User Management" section.
-3. **Action:** They locate an existing "Approved" user and click "Promote to Admin".
+3. **Action:** They locate an existing `APPROVED` user and click "Promote to Admin".
 4. **System:** A Next.js Server Action updates the user's role in the `User_Roles` table to "ADMIN".
 5. **System Action:** The Server Action dispatches an email via Resend to the user notifying them of their new administrative privileges.
