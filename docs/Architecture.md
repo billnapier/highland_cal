@@ -19,7 +19,7 @@ This document outlines the architecture for a web application designed to coordi
 | **Hosting** | Vercel | Global Edge Network for hosting and CI/CD. |
 | **Database** | Supabase (PostgreSQL) | Relational data storage with integrated Row Level Security (RLS). |
 | **Authentication** | Federated Google Auth | Identity management via Google OAuth 2.0. No local credentials stored. |
-| **Infrastructure** | Vercel Buttons / Terraform | Automated provisioning for diverse technical backgrounds. |
+| **Infrastructure** | Vercel | Automated provisioning for diverse technical backgrounds. |
 | **Email** | Resend | Transactional emails for notifications (e.g., pending user approvals). Fits well within free tier. |
 
 ---
@@ -62,6 +62,11 @@ While identity is handled externally, **Authorization is managed internally via 
 - **High-Trust Writes:** Any approved member can add or edit games/practices. Admins retain the ability to delete events. RLS policies verify `auth.uid()` against records where users modify their own attendance.
 - **Admin Role:** The initial Admin user is explicitly defined during the instance deployment (e.g., via an environment variable). The Admin is responsible for approving new users.
 
+### 4.3 Notifications (Database Webhooks & Server Actions)
+To provide a reliable queueing mechanism, the system prefers using Supabase Database Webhooks to trigger email notifications (via Resend) when relevant database mutations occur, such as when a new user registers or a new game is added. 
+
+However, when complex application logic is involved (such as an athlete checking an optional "This is a major change" box on the frontend), it is fully acceptable to use Next.js Server Actions or API routes to dispatch emails directly, as webhooks lack the context of frontend state.
+
 ---
 
 ## 5. Deployment & DevOps Strategy
@@ -71,6 +76,11 @@ The **highest priority requirement** for this project is that the "Deploy to Ver
 
 ### 5.2. Decentralized Self-Hosting
 Each club maintains its own Vercel and Supabase accounts. This ensures that each club manages its own Google OAuth client IDs, keeping club data logically and physically isolated.
+
+### 5.3. CI/CD & Preview Environments
+- **Continuous Integration (CI):** GitHub Actions must be configured to run linting, type-checking, and automated tests on every Pull Request.
+- **Continuous Deployment (CD):** Merges to the `main` branch are automatically deployed to production via Vercel's native GitHub integration.
+- **Preview Deployments (PR Testing):** Vercel automatically generates ephemeral environments for every PR. To make these work with Google OAuth without tedious manual configuration, Supabase handles the OAuth flow (Google only needs the Supabase callback URL). Supabase is then configured to allow wildcard redirect URIs (e.g., `https://*-clubname.vercel.app/**`) so it can redirect back to any dynamic Vercel PR URL.
 
 ---
 
@@ -87,5 +97,5 @@ Each club maintains its own Vercel and Supabase accounts. This ensures that each
 ---
 
 ## 7. Future Extensibility
-- **Cross-Club Coordination:** Optional opt-in to share "public" interest levels with other clubs while maintaining private carpool notes.
+- **Cross-Club Coordination:** Optional opt-in to share "public" interest levels with other clubs.
 - **Automated Game Scrapers:** Serverless functions to automatically update the `Games` table from known independent league schedules.

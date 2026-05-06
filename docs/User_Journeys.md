@@ -57,7 +57,7 @@ The journeys are broken down by the two main personas: **Athletes (End Users)** 
 1. **Trigger:** A club organizer wants to use Highland Cal.
 2. **Action:** The organizer clicks the **"Deploy to Vercel"** button on the project's GitHub repository.
 3. **Action:** During the Vercel setup flow, the organizer enters their email address into the `INITIAL_ADMIN_EMAIL` environment variable.
-4. **System:** Vercel provisions the hosting, and Terraform spins up the Supabase database.
+4. **System:** Vercel provisions the hosting and handles the Supabase database integration.
 5. **Action:** The organizer follows documented steps to link their Google Cloud Console OAuth credentials and Resend API key to their instance.
 
 ### Journey 7: Managing User Access (Proactive Security)
@@ -74,3 +74,11 @@ The journeys are broken down by the two main personas: **Athletes (End Users)** 
 2. **Action:** The Admin views the event and clicks "Delete".
 3. **System:** The event is removed from the database.
 4. **System Action:** An email is sent via Resend to all approved users notifying them that the event has been deleted.
+
+### Journey 9: Promoting a User to Admin
+**Goal:** Delegate administrative responsibilities to another trusted club member.
+1. **Trigger:** The current Admin wants to share the workload of managing the club.
+2. **Action:** The Admin navigates to the "User Management" section.
+3. **Action:** They locate an existing "Approved" user and click "Promote to Admin".
+4. **System:** The application updates the user's status in the `Profiles` table from "Approved" to "Admin".
+5. **System Action:** An email is dispatched via Resend to the user notifying them of their new administrative privileges.

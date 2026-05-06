@@ -10,13 +10,13 @@ Welcome to **Highland Cal**!
 
 Highland Cal (project code name CaberTrack) is a web application designed to coordinate attendance and interest levels for Highland Games athletes. 
 
-The system follows a decentralized open-source/self-hosted model where individual throwing clubs can deploy their own isolated instances. This allows clubs to easily manage their athletes, track competition classes, and coordinate carpooling or lodging for various Highland Games.
+The system follows a decentralized open-source/self-hosted model where individual throwing clubs can deploy their own isolated instances. This allows clubs to easily manage their athletes, track competition classes, and coordinate athlete attendance for various Highland Games.
 
 ### Key Features
 - **Decentralized Self-Hosting:** Each club maintains its own instance using Vercel and Supabase.
 - **Federated Authentication:** All authentication is handled securely via Google OAuth 2.0 (Zero Password Policy).
 - **Games & Attendance Tracking:** Keep track of Highland Games dates, locations, registration URLs, and coordinate athlete attendance and interest levels.
-- **Row Level Security (RLS):** Ensures athletes can securely modify their own attendance records and carpool notes.
+- **Row Level Security (RLS):** Ensures athletes can securely modify their own attendance records.
 
 ### Tech Stack
 - **Frontend:** Next.js (React)
