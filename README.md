@@ -4,7 +4,7 @@
 
 Welcome to **Highland Cal**! 🎉
 
-*Wait, did you say Highland **Cow**? 🐄 Nope, it's Highland **Cal** (short for Calendar)! Though to be fair, they both love a good grassy field and are an absolute unit of Scottish awesomeness. 🏴󠁧󠁢󠁳󠁣󠁴󠁿*
+*Wait, did you say Highland **Cow**? 🐄 Nope, it's Highland **Cal** (short for Calendar)!\nThough to be fair, they both love a good grassy field and are absolute units of Scottish awesomeness. 🏴󠁧󠁢󠁳󠁣󠁴󠁿*
 
 ## Project Overview
 
