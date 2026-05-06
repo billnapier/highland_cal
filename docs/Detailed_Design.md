@@ -12,30 +12,40 @@ Highland Cal is a decentralized, self-hosted web application built for Highland 
 
 ## 3. Database Schema & RLS Policies (PostgreSQL)
 
-### 3.1 `Profiles` Table
-Stores extended user information.
+### 3.1 `Profiles` and `User_Roles` Tables
+User data is split into two tables to enable standard Row Level Security without complex column-level triggers.
+
+**`Profiles` Table** (Stores extended user information)
 - `id` (uuid, Primary Key): References `auth.users(id)` on delete cascade.
 - `display_name` (text): Athlete's name.
-- `email` (text): Athlete's email address (synced from auth).
+- `email` (text): Athlete's email address.
 - `class` (text): Competition class (e.g., A-Class, Masters, Women).
-- `status` (text): Account status. Enum: `['PENDING', 'APPROVED', 'ADMIN']`. Default: `PENDING`.
 - `outward_links` (jsonb): Social media and external profile links.
 - `created_at` (timestamptz): Default `now()`.
+
+*Crucial Implementation Detail:* A Postgres `AFTER INSERT` trigger on the `auth.users` table must be created to automatically insert a new row into `Profiles` whenever a user signs up. This prevents the "race condition" of relying on the Next.js frontend redirect to create the user profile.
 
 **RLS Policies (`Profiles`):**
 - **Read:** Publicly readable (to serve as a club roster).
 - **Update:** Users can update their own row (`id = auth.uid()`). 
-  - *Crucial Implementation Detail:* Standard RLS cannot prevent column-level updates. To enforce that users CANNOT update their own `status`, you must implement a `BEFORE UPDATE` Postgres trigger that raises an exception if `NEW.status IS DISTINCT FROM OLD.status` unless the requesting user has an `'ADMIN'` status.
-- **Admin Update:** Users with `status = 'ADMIN'` can update the `status` of other users.
+
+**`User_Roles` Table** (Stores authorization state)
+- `user_id` (uuid, Primary Key): References `Profiles(id)` on delete cascade.
+- `role` (text): Account status. Enum: `['PENDING', 'APPROVED', 'ADMIN']`. Default: `PENDING`.
+
+**RLS Policies (`User_Roles`):**
+- **Read:** Publicly readable.
+- **Insert:** Handled by the same `AFTER INSERT` trigger on `auth.users` that creates the Profile.
+- **Update:** Allowed only if the requesting user has the `ADMIN` role.
+  - *Recursion Warning:* To check the role, use a `SECURITY DEFINER` function (e.g., `is_admin()`) inside this RLS policy to avoid infinite recursion when querying the `User_Roles` table.
 
 ### 3.2 `Games` Table
 Stores upcoming games and practices.
 - `id` (uuid, Primary Key): Default `uuid_generate_v4()`.
-- `name` (text): Name of the game or practice.
-- `date` (date): Date of the event.
-- `start_time` (time): Optional start time of the event.
-- `end_time` (time): Optional end time of the event.
-- `timezone` (text): Timezone identifier (e.g., 'America/Los_Angeles').
+- **name** (text): Name of the game or practice.
+- **start_timestamp** (timestamptz): Start date and time of the event.
+- **end_timestamp** (timestamptz): End date and time of the event.
+- **local_timezone** (text): Timezone identifier (e.g., 'America/Los_Angeles') for display purposes.
 - `location` (text): Location (City, State).
 - `registration_url` (text): External registration link.
 - `created_by` (uuid): References `Profiles(id)`.
@@ -43,9 +53,8 @@ Stores upcoming games and practices.
 
 **RLS Policies (`Games`):**
 - **Read:** Publicly readable (acts as a marketing tool).
-- **Insert/Update:** Allowed if the requesting user's `status` is `'APPROVED'` or `'ADMIN'`. 
-  - *Recursion Warning:* To check the status, use a `SECURITY DEFINER` function (e.g., `get_user_status()`) inside the RLS policy to avoid infinite recursion when querying the `Profiles` table.
-- **Delete:** Allowed only if the requesting user's `status` is `'ADMIN'`.
+- **Insert/Update:** Allowed if the requesting user's `role` in `User_Roles` is `'APPROVED'` or `'ADMIN'`. 
+- **Delete:** Allowed only if the requesting user's `role` is `'ADMIN'`.
 
 ### 3.3 `Attendance` Table
 Tracks RSVPs.
@@ -58,23 +67,21 @@ Tracks RSVPs.
 
 **RLS Policies (`Attendance`):**
 - **Read:** Publicly readable.
-- **Insert/Update/Delete:** Allowed only if `user_id = auth.uid()` AND the user's `status` is `'APPROVED'` or `'ADMIN'`. If a user's status is revoked to `'PENDING'`, their past attendance records are frozen (read-only).
-  - *Recursion Warning:* Similar to `Games`, use a `SECURITY DEFINER` function to check user status in this RLS policy to prevent infinite recursion.
+- **Insert/Update/Delete:** Allowed only if `user_id = auth.uid()` AND the user's `role` in `User_Roles` is `'APPROVED'` or `'ADMIN'`. If a user's role is revoked to `'PENDING'`, their past attendance records are frozen (read-only).
 
 ## 4. Application Logic & Workflows
 
 ### 4.1 Onboarding & Authentication Flow
 1. User clicks "Login with Google". Supabase handles the OAuth flow.
-2. **Auth Callback Bootstrapping:** After successful authentication, the user is redirected back to the Next.js application (e.g., `/app/auth/callback/route.ts`).
-   - This route ensures a new row is inserted into the `Profiles` table for the user.
-   - **Admin Bootstrapping:** Since Postgres triggers cannot access Vercel environment variables, this Next.js route checks if the user's email matches the `INITIAL_ADMIN_EMAIL` Vercel environment variable. If so, it uses the Supabase Service Role Key to set their `status` to `'ADMIN'`. Otherwise, it defaults to `'PENDING'`.
-3. **Email Notification:** Once the profile is created, the system uses Resend to email all `ADMIN` users to notify them of the new pending user. This can be handled directly in the callback route or via a webhook.
+2. **Profile Creation:** Supabase creates a new user in `auth.users`. A Postgres `AFTER INSERT` trigger automatically generates the `Profiles` and `User_Roles` rows for the new user, setting their initial role to `PENDING`.
+3. **Admin Bootstrapping:** During the user's first login redirect (e.g., hitting `/app/auth/callback/route.ts`), the Next.js route checks if the user's email matches the `INITIAL_ADMIN_EMAIL` Vercel environment variable. If it matches, the route uses the Supabase Service Role Key to elevate their `User_Roles.role` to `'ADMIN'`.
+4. **Email Notification:** A Next.js Server Action is invoked to use Resend to email all `ADMIN` users notifying them of the new pending user.
 
 ### 4.2 Event Management Flow
 1. An `APPROVED` user creates a new event via the Next.js frontend.
-2. The frontend calls Supabase to insert the `Games` record. RLS validates the user's status.
-3. **Email Notification:** Upon successful insertion, a Supabase Database Webhook triggers an email via Resend to all `APPROVED` and `ADMIN` users notifying them of the new event.
-4. If an event is edited and the "major change" flag is set, a similar email notification is dispatched.
+2. The frontend calls a **Next.js Server Action** to handle the mutation. The Server Action uses the Supabase client to insert the `Games` record. RLS validates the user's role natively.
+3. **Email Notification:** Upon successful database insertion, the *same Server Action* immediately triggers an email via Resend to all `APPROVED` and `ADMIN` users notifying them of the new event.
+4. If an event is edited, the Server Action checks if the "major change" flag was checked in the form data. If so, it dispatches a similar email notification. *This is why Server Actions are required over Database Webhooks.*
 
 ### 4.3 User Deletion
 1. When an Admin decides to delete a user, simply deleting the row in `Profiles` is insufficient because the identity resides in the Supabase `auth` schema.
@@ -88,11 +95,10 @@ Tracks RSVPs.
 - `/app/page.tsx`: Public dashboard showing upcoming games.
 - `/app/auth/callback/route.ts`: Supabase Auth callback handler and admin bootstrapper.
 - `/app/api/calendar/route.ts`: iCal feed generator.
-- `/app/api/webhooks/new-user/route.ts`: Secure endpoint called by Supabase Database Webhooks. Queries admins and dispatches Resend email.
-- `/app/api/webhooks/new-event/route.ts`: Secure endpoint called by Supabase Database Webhooks to dispatch new event emails.
 - `/app/dashboard/page.tsx`: Authenticated athlete view.
 - `/app/dashboard/admin/page.tsx`: Admin-only view for user management.
 - `/components/...`: Reusable UI components (buttons, forms, modals).
+- `/lib/actions/...`: Next.js Server Actions for database mutations and sending Resend emails.
 - `/lib/supabase/...`: Supabase client initialization (browser and server).
 
 ## 6. CI/CD & Testing

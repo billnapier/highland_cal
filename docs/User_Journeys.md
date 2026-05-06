@@ -20,8 +20,8 @@ The journeys are broken down by the two main personas: **Athletes (End Users)** 
 **Goal:** Access the site, set up a profile, and request write-access to the club.
 1. **Trigger:** An athlete wants to RSVP to a game or add a new practice.
 2. **Action:** They click **"Login with Google"**.
-3. **System:** The application authenticates the user via Google OAuth and creates a new record in the `Profiles` table. The user is placed in a **"Pending Approval"** state.
-4. **System Action:** The system uses Resend to send an email to the club Admin notifying them that a new user has registered and is pending approval.
+3. **System:** The application authenticates the user via Google OAuth. A Postgres trigger automatically creates a new record in the `Profiles` and `User_Roles` tables. The user's role defaults to **"PENDING"**.
+4. **System Action:** A Next.js Server Action uses Resend to send an email to the club Admin notifying them that a new user has registered and is pending approval.
 5. **Completion:** The athlete lands on the dashboard but is shown a message that they cannot edit events or RSVP until an Admin approves their account.
 
 ### Journey 3: The High-Trust Event Management (Adding/Editing)
@@ -29,8 +29,8 @@ The journeys are broken down by the two main personas: **Athletes (End Users)** 
 1. **Trigger:** An *approved* athlete discovers a game that isn't on the dashboard, or realizes a start time is wrong.
 2. **Action:** They log in and navigate to "Add Event" or click "Edit" on an existing event.
 3. **Action:** They provide/update the details: Name, Date, Location, and Registration URL. If editing, they can optionally check a box labeled "This is a major change—notify all athletes."
-4. **System:** The record is inserted/updated in the `Games` table and becomes instantly visible to everyone.
-5. **System Action:** The system uses Resend to send an email to all approved athletes notifying them that a new event was added. If an event is edited, an email is *only* sent if the "major change" checkbox was selected.
+4. **System:** A Next.js Server Action receives the payload, inserts/updates the record in the `Games` table, and the event becomes instantly visible to everyone.
+5. **System Action:** The *same* Server Action uses Resend to send an email to all approved athletes notifying them that a new event was added. If an event is edited, the Server Action *only* dispatches the email if the "major change" checkbox was selected on the frontend form.
 
 ### Journey 4: Registering & RSVPing for a Competition
 **Goal:** Officially register for a game via external sites and let the club know.
@@ -65,20 +65,20 @@ The journeys are broken down by the two main personas: **Athletes (End Users)** 
 1. **Trigger:** The Admin receives an automated email via Resend that a new user has registered.
 2. **Action:** The Admin navigates to the "User Management" section.
 3. **Action:** They review the pending user and click "Approve".
-4. **System:** The application updates the user's status in the `Profiles` table to "Approved".
-5. **System Action:** An email is dispatched via Resend to the athlete letting them know their account has been approved and they can now RSVP and add events.
+4. **System:** A Next.js Server Action updates the user's role in the `User_Roles` table to "APPROVED".
+5. **System Action:** The Server Action dispatches an email via Resend to the athlete letting them know their account has been approved and they can now RSVP and add events.
 
 ### Journey 8: Event Cleanup (Deleting Events)
 **Goal:** Keep the calendar free of spam or cancelled events.
 1. **Trigger:** A game is permanently cancelled, or an athlete accidentally created a duplicate event.
 2. **Action:** The Admin views the event and clicks "Delete".
-3. **System:** The event is removed from the database.
-4. **System Action:** An email is sent via Resend to all approved users notifying them that the event has been deleted.
+3. **System:** A Next.js Server Action removes the event from the database.
+4. **System Action:** The Server Action sends an email via Resend to all approved users notifying them that the event has been deleted.
 
 ### Journey 9: Promoting a User to Admin
 **Goal:** Delegate administrative responsibilities to another trusted club member.
 1. **Trigger:** The current Admin wants to share the workload of managing the club.
 2. **Action:** The Admin navigates to the "User Management" section.
 3. **Action:** They locate an existing "Approved" user and click "Promote to Admin".
-4. **System:** The application updates the user's status in the `Profiles` table from "Approved" to "Admin".
-5. **System Action:** An email is dispatched via Resend to the user notifying them of their new administrative privileges.
+4. **System:** A Next.js Server Action updates the user's role in the `User_Roles` table to "ADMIN".
+5. **System Action:** The Server Action dispatches an email via Resend to the user notifying them of their new administrative privileges.

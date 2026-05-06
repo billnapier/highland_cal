@@ -20,41 +20,50 @@ This document outlines the manual steps a human (the Site Operator/Admin) must t
    - Click Create. 
 5. Save the **Client ID** and **Client Secret**. You will need these for Supabase.
 
-## 2. Supabase Configuration (Initial)
-*Requirement: A Supabase account.*
-1. Go to [Supabase](https://supabase.com/) and create a new project.
-2. Under **Authentication > Providers**, enable **Google**.
-   - Enter the **Client ID** and **Client Secret** obtained from Google Cloud.
-   - Copy the **Callback URL (for OAuth)** provided by Supabase and add it to your Google Cloud OAuth "Authorized redirect URIs" (if not already done).
-3. Retrieve the **Project URL**, **anon public API key**, and **service_role secret** from **Project Settings > API**.
+## 2. Vercel Deployment & Supabase Integration (Automated)
+*Requirement: A Vercel account, a Supabase account, and a GitHub account.*
 
-## 3. Resend Configuration (Email)
+The simplest way to stand up the application is to use Vercel's native Supabase integration. This automatically creates your database and links all necessary environment variables, completely avoiding manual copy-pasting of API keys.
+
+1. Click the **Deploy to Vercel** button on the project's GitHub repository.
+2. During the setup flow, you will see a section for **Integrations**. Click **Add Integration** and select **Supabase**.
+3. Follow the prompts to log into Supabase and either select an existing project or create a new one directly from the Vercel dashboard.
+4. Vercel will automatically populate the required Supabase environment variables (`NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`).
+5. You must manually provide the remaining Environment Variables:
+   - `RESEND_API_KEY`: (From your Resend account, see Step 3)
+   - `INITIAL_ADMIN_EMAIL`: The Google email address of the person who will be the first admin.
+   - `NEXT_PUBLIC_APP_URL`: The production URL of the app (e.g., `https://my-club.vercel.app`).
+6. Click **Deploy**.
+
+## 3. Supabase Authentication Configuration
+Now that your database is provisioned and linked, you must configure Google Login.
+
+1. Go to your [Supabase Dashboard](https://supabase.com/dashboard) and open your newly created project.
+2. Under **Authentication > Providers**, enable **Google**.
+   - Enter the **Client ID** and **Client Secret** obtained from Google Cloud (Step 1).
+   - Copy the **Callback URL (for OAuth)** provided by Supabase.
+3. Return to the **Google Cloud Console**.
+   - Under **Credentials**, edit your OAuth client ID.
+   - Add the copied Supabase Callback URL to the **Authorized redirect URIs**.
+   - Add your newly created Vercel Domain (e.g., `https://my-club.vercel.app`) to the **Authorized JavaScript origins**.
+
+## 4. Resend Configuration (Email)
 *Requirement: A Resend account and ideally a custom domain.*
 1. Go to [Resend](https://resend.com/) and create an account.
 2. (Recommended) Add and verify your custom domain in Resend to ensure emails aren't marked as spam.
-3. Generate an API Key.
-4. Note the sender email address you intend to use (e.g., `notifications@yourclub.com`).
-
-## 4. Vercel Deployment & Environment Variables
-*Requirement: A Vercel account and GitHub account.*
-1. Generate a random secure string to use as your `WEBHOOK_SECRET` (e.g., using a password generator).
-2. Click the **Deploy to Vercel** button on the project repository.
-3. During the setup flow, Vercel will prompt for Environment Variables. You must provide:
-   - `NEXT_PUBLIC_SUPABASE_URL`: (From Supabase)
-   - `NEXT_PUBLIC_SUPABASE_ANON_KEY`: (From Supabase)
-   - `SUPABASE_SERVICE_ROLE_KEY`: (From Supabase - needed for admin server actions)
-   - `RESEND_API_KEY`: (From Resend)
-   - `INITIAL_ADMIN_EMAIL`: The Google email address of the person who will be the first admin.
-   - `NEXT_PUBLIC_APP_URL`: The production URL of the app (e.g., `https://my-club.vercel.app`).
-   - `WEBHOOK_SECRET`: The random string you generated in Step 1.
-4. Deploy the project.
+3. Generate an API Key and add it to your Vercel Environment Variables (`RESEND_API_KEY`).
+4. Note the sender email address you intend to use in the application code.
 
 ## 5. Supabase Database Initialization
-1. Now that your Vercel app is deployed and you know your `NEXT_PUBLIC_APP_URL`, return to the Supabase SQL Editor.
-2. Open the SQL initialization scripts for the project. Replace any placeholder values for your Vercel App URL and Webhook Secret in the Database Webhook definitions.
-3. Run the SQL initialization scripts to create tables, RLS policies, and triggers.
+1. Navigate to the **SQL Editor** in your Supabase Dashboard.
+2. Copy the contents of the `database/schema.sql` (or equivalent initialization script) from the project repository.
+3. Run the SQL script. This will automatically:
+   - Create the `Profiles`, `User_Roles`, `Games`, and `Attendance` tables.
+   - Set up Row Level Security (RLS) policies.
+   - Create the necessary database triggers (e.g., the trigger to automatically create a profile when a new user signs up).
 
 ## 6. Post-Deployment Verification
 1. Navigate to your Vercel deployment URL.
-2. Click "Login with Google" and authenticate using the email you set as `INITIAL_ADMIN_EMAIL`.
-3. Verify that your profile is automatically set to "Admin" and you can access the User Management dashboard.
+2. Click "Login with Google" and authenticate using the exact email you set as `INITIAL_ADMIN_EMAIL`.
+3. The system will recognize this email during its first login bootstrap and elevate your account to Admin.
+4. Verify that you can access the User Management dashboard and add your first Game.
