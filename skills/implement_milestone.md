@@ -11,4 +11,4 @@
 6. **Update Progress:** 
    - Edit `docs/Roadmap.md` to check off the completed `[x]` tasks for this milestone.
    - Edit `docs/STATUS.md` to increment the `Current Milestone` to the next logical phase.
-7. **Finalize:** Summarize your changes and instruct the user to commit the code and open a Pull Request.
+7. **Finalize:** Summarize your changes and open a Pull Request.
