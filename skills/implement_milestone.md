@@ -10,5 +10,5 @@
 5. **Verify:** Ensure the codebase runs locally and passes linting/type-checking (if configured).
 6. **Update Progress:** 
    - Edit `docs/Roadmap.md` to check off the completed `[x]` tasks for this milestone.
-   - Edit `docs/STATUS.md` to increment the `Current Milestone` to the next logical phase.
-7. **Finalize:** Summarize your changes and instruct the user to commit the code and open a Pull Request.
+   - Edit docs/STATUS.md to update Last Completed and increment the Current Milestone to the next logical phase (or mark as Completed).
+7. **Finalize:** Summarize your changes and open a Pull Request.
