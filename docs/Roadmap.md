@@ -12,11 +12,11 @@ This document serves as the guide for the LLM developer. The LLM should implemen
 - `Detailed_Design.md` > 2. Tech Stack & Architecture
 - `Detailed_Design.md` > 6.1 GitHub Actions
 **Tasks:**
-- Initialize a Next.js project using the App Router.
-- Configure Tailwind CSS and set up `shadcn/ui` for accessible component scaffolding (avoid raw Tailwind CSS where `shadcn/ui` provides a component).
-- Set up standard ESLint and Prettier configurations.
-- Create a basic GitHub Action workflow (`.github/workflows/ci.yml`) for linting and type-checking on PRs.
-- Create a placeholder `/app/page.tsx` and a basic application layout with a navigation header.
+- [ ] Initialize a Next.js project using the App Router.
+- [ ] Configure Tailwind CSS and set up `shadcn/ui` for accessible component scaffolding (avoid raw Tailwind CSS where `shadcn/ui` provides a component).
+- [ ] Set up standard ESLint and Prettier configurations.
+- [ ] Create a basic GitHub Action workflow (`.github/workflows/ci.yml`) for linting and type-checking on PRs.
+- [ ] Create a placeholder `/app/page.tsx` and a basic application layout with a navigation header.
 **Runnable State:** 
 - Running `npm run dev` displays a basic, styled "Coming Soon" or placeholder page. 
 - The CI pipeline passes successfully on a test PR.
@@ -28,10 +28,10 @@ This document serves as the guide for the LLM developer. The LLM should implemen
 **References:** 
 - `Detailed_Design.md` > 3. Database Schema & RLS Policies
 **Tasks:**
-- Create a `database/schema.sql` file containing all table definitions (`Profiles`, `User_Roles`, `Games`, `Attendance`), custom ENUMs, the `is_admin()` security definer function, Row Level Security policies, and the `AFTER INSERT` trigger (with its associated function) on `auth.users`.
-- Set up the Supabase client utilities in the Next.js app (e.g., `/lib/supabase/server.ts`, `/lib/supabase/client.ts`).
-- Configure local environment variables (`NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`). Note: Ensure the Service Role Key is never prefixed with `NEXT_PUBLIC_`.
-- Create a simple database health check component or route to confirm the application can successfully query Supabase.
+- [ ] Create a `database/schema.sql` file containing all table definitions (`Profiles`, `User_Roles`, `Games`, `Attendance`), custom ENUMs, the `is_admin()` security definer function, Row Level Security policies, and the `AFTER INSERT` trigger (with its associated function) on `auth.users`.
+- [ ] Set up the Supabase client utilities in the Next.js app (e.g., `/lib/supabase/server.ts`, `/lib/supabase/client.ts`).
+- [ ] Configure local environment variables (`NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`). Note: Ensure the Service Role Key is never prefixed with `NEXT_PUBLIC_`.
+- [ ] Create a simple database health check component or route to confirm the application can successfully query Supabase.
 **Runnable State:** 
 - The application successfully connects to a provisioned Supabase instance. 
 - The `schema.sql` can be successfully executed in the Supabase SQL Editor without errors.
@@ -45,10 +45,10 @@ This document serves as the guide for the LLM developer. The LLM should implemen
 - `User_Journeys.md` > Journey 6: Instance Deployment & Setup
 - `Detailed_Design.md` > 4.1 Onboarding & Authentication Flow
 **Tasks:**
-- Add a "Login with Google" button to the UI, wiring it to Supabase Auth.
-- Implement the auth callback route (e.g., `/app/auth/callback/route.ts`) to handle the OAuth redirect and session exchange.
-- Implement the **Admin Bootstrapping** logic in the callback: Check if the logging-in user's email matches `process.env.INITIAL_ADMIN_EMAIL` and they do not already have the `ADMIN` role. If so, use the Service Role Key to elevate their role in `User_Roles` to `ADMIN`.
-- Create a basic authenticated `/app/dashboard/page.tsx` that displays the user's current role (`PENDING`, `APPROVED`, `ADMIN`).
+- [ ] Add a "Login with Google" button to the UI, wiring it to Supabase Auth.
+- [ ] Implement the auth callback route (e.g., `/app/auth/callback/route.ts`) to handle the OAuth redirect and session exchange.
+- [ ] Implement the **Admin Bootstrapping** logic in the callback: Check if the logging-in user's email matches `process.env.INITIAL_ADMIN_EMAIL` and they do not already have the `ADMIN` role. If so, use the Service Role Key to elevate their role in `User_Roles` to `ADMIN`.
+- [ ] Create a basic authenticated `/app/dashboard/page.tsx` that displays the user's current role (`PENDING`, `APPROVED`, `ADMIN`).
 **Runnable State:** 
 - A user can click Login, authenticate with Google, and be redirected to a dashboard. 
 - The database correctly populates `Profiles` and `User_Roles` via the SQL trigger. 
@@ -63,9 +63,9 @@ This document serves as the guide for the LLM developer. The LLM should implemen
 - `Detailed_Design.md` > 3.2 Games Table
 - `Detailed_Design.md` > 4.4 iCal Feed Generation
 **Tasks:**
-- Update `/app/page.tsx` to fetch and display the list of upcoming Games from the `Games` table. This must be accessible without authentication (relying on the public RLS policy).
-- Implement `/app/api/calendar.ics/route.ts` to serialize the `Games` table into a valid iCal feed using the `ics` npm package (include Cache-Control headers to optimize performance).
-- Add a "Subscribe to Calendar" button on the public page that links to the `.ics` route.
+- [ ] Update `/app/page.tsx` to fetch and display the list of upcoming Games from the `Games` table. This must be accessible without authentication (relying on the public RLS policy).
+- [ ] Implement `/app/api/calendar.ics/route.ts` to serialize the `Games` table into a valid iCal feed using the `ics` npm package (include Cache-Control headers to optimize performance).
+- [ ] Add a "Subscribe to Calendar" button on the public page that links to the `.ics` route.
 **Runnable State:** 
 - Unauthenticated visitors can see a chronologically sorted list of games (using mock data inserted manually into Supabase). 
 - Users can successfully download/subscribe to the `.ics` feed.
@@ -77,10 +77,10 @@ This document serves as the guide for the LLM developer. The LLM should implemen
 **References:** 
 - `User_Journeys.md` > Journey 8: Event Cleanup
 **Tasks:**
-- Create the event list view on the authenticated dashboard.
-- Implement a Next.js Server Action for deleting records from the `Games` table (ensure strict server-side authorization checks for each action).
-- Ensure the frontend respects user roles (the Delete button should only render for `ADMIN` users).
-- *Note:* Stub out the Resend email notifications with `console.log()` for now to isolate concerns.
+- [ ] Create the event list view on the authenticated dashboard.
+- [ ] Implement a Next.js Server Action for deleting records from the `Games` table (ensure strict server-side authorization checks for each action).
+- [ ] Ensure the frontend respects user roles (the Delete button should only render for `ADMIN` users).
+- [ ] *Note:* Stub out the Resend email notifications with `console.log()` for now to isolate concerns.
 **Runnable State:** 
 - An `ADMIN` can delete a game. 
 - The public page reflects these changes immediately.
@@ -93,10 +93,10 @@ This document serves as the guide for the LLM developer. The LLM should implemen
 - `User_Journeys.md` > Journey 3: The High-Trust Event Management
 - `Detailed_Design.md` > 4.2 Event Management Flow
 **Tasks:**
-- Create a "Create Event" form/modal on the authenticated dashboard using `react-hook-form` and `zod` for validation.
-- Create an "Edit Event" form/modal (ensure the "major change" checkbox is included in the UI state).
-- Implement Next.js Server Actions for inserting and updating records in the `Games` table (ensure strict server-side authorization checks for each action).
-- *Note:* Continue to stub out Resend email notifications.
+- [ ] Create a "Create Event" form/modal on the authenticated dashboard using `react-hook-form` and `zod` for validation.
+- [ ] Create an "Edit Event" form/modal (ensure the "major change" checkbox is included in the UI state).
+- [ ] Implement Next.js Server Actions for inserting and updating records in the `Games` table (ensure strict server-side authorization checks for each action).
+- [ ] *Note:* Continue to stub out Resend email notifications.
 **Runnable State:** 
 - An `APPROVED` user can add or edit a game through validated forms.
 - The public page reflects these changes immediately.
@@ -109,10 +109,10 @@ This document serves as the guide for the LLM developer. The LLM should implemen
 - `User_Journeys.md` > Journey 4: Registering & RSVPing for a Competition
 - `Detailed_Design.md` > 3.3 Attendance Table
 **Tasks:**
-- Build the Attendance UI component, embedded within the event view on the authenticated dashboard.
-- Allow `APPROVED` users to select/update their `interest_level` (`WATCHING`, `INTERESTED`, `REGISTERED`, `NOT_GOING`).
-- Display an aggregated summary of who is attending the event.
-- Ensure RLS policies restrict attendance modification strictly to `auth.uid()`.
+- [ ] Build the Attendance UI component, embedded within the event view on the authenticated dashboard.
+- [ ] Allow `APPROVED` users to select/update their `interest_level` (`WATCHING`, `INTERESTED`, `REGISTERED`, `NOT_GOING`).
+- [ ] Display an aggregated summary of who is attending the event.
+- [ ] Ensure RLS policies restrict attendance modification strictly to `auth.uid()`.
 **Runnable State:** 
 - Authenticated users can set and change their RSVP status. 
 - The UI dynamically updates to reflect their selection and lists other attendees.
@@ -124,10 +124,10 @@ This document serves as the guide for the LLM developer. The LLM should implemen
 **References:** 
 - `User_Journeys.md` > Journey 5: Managing Personal Profile
 **Tasks:**
-- Create a dedicated `/app/dashboard/profile` page.
-- Build a form using `react-hook-form` and `zod` to update the user's `class` and `outward_links` (JSONB). The form should explicitly include inputs for Instagram and Facebook, and allow up to 5 additional custom links.
-- Implement a Server Action to securely update the `Profiles` table for the authenticated user.
-- Create a public roster view or profile card component so the club can show off its athletes.
+- [ ] Create a dedicated `/app/dashboard/profile` page.
+- [ ] Build a form using `react-hook-form` and `zod` to update the user's `class` and `outward_links` (JSONB). The form should explicitly include inputs for Instagram and Facebook, and allow up to 5 additional custom links.
+- [ ] Implement a Server Action to securely update the `Profiles` table for the authenticated user.
+- [ ] Create a public roster view or profile card component so the club can show off its athletes.
 **Runnable State:** 
 - Users can successfully update their competition class and add social media links. 
 - These changes persist to the database and are viewable in the public roster.
@@ -141,12 +141,12 @@ This document serves as the guide for the LLM developer. The LLM should implemen
 - `User_Journeys.md` > Journey 9: Promoting a User to Admin
 - `Detailed_Design.md` > 4.3 User Deletion
 **Tasks:**
-- Create an `/app/dashboard/admin/page.tsx` view, strictly gated to `ADMIN` users.
-- Fetch and display a list of all users and their current roles from `Profiles` joined with `User_Roles`.
-- Implement secure Server Actions to:
-  - Approve a `PENDING` user (updates to `APPROVED`).
-  - Promote an `APPROVED` user to `ADMIN`.
-  - Delete a user (must use the Supabase Admin API via the Service Role Key to remove the identity from `auth.users`; ensure `ON DELETE CASCADE` is configured on related tables).
+- [ ] Create an `/app/dashboard/admin/page.tsx` view, strictly gated to `ADMIN` users.
+- [ ] Fetch and display a list of all users and their current roles from `Profiles` joined with `User_Roles`.
+- [ ] Implement secure Server Actions to:
+  - [ ] Approve a `PENDING` user (updates to `APPROVED`).
+  - [ ] Promote an `APPROVED` user to `ADMIN`.
+  - [ ] Delete a user (must use the Supabase Admin API via the Service Role Key to remove the identity from `auth.users`; ensure `ON DELETE CASCADE` is configured on related tables).
 **Runnable State:** 
 - The Admin can view the user list, approve new registrations (granting them immediate write access), and permanently delete users.
 
@@ -157,11 +157,11 @@ This document serves as the guide for the LLM developer. The LLM should implemen
 **References:** 
 - `Detailed_Design.md` > 4.3 Notifications (Next.js Server Actions)
 **Tasks:**
-- Integrate the Resend Node.js SDK and `react-email` for building HTML email templates.
-- Wire up the **New User Registration** email (triggered during onboarding, sent to Admins).
-- Wire up the **User Approved** email (triggered by Admin action, sent to Athlete).
-- Wire up the **New Event / Major Edit** email (triggered by event creation/edit, sent to Approved Athletes).
-- Wire up the **Event Deletion** email (triggered by Admin action, sent to Approved Athletes).
+- [ ] Integrate the Resend Node.js SDK and `react-email` for building HTML email templates.
+- [ ] Wire up the **New User Registration** email (triggered during onboarding, sent to Admins).
+- [ ] Wire up the **User Approved** email (triggered by Admin action, sent to Athlete).
+- [ ] Wire up the **New Event / Major Edit** email (triggered by event creation/edit, sent to Approved Athletes).
+- [ ] Wire up the **Event Deletion** email (triggered by Admin action, sent to Approved Athletes).
 **Runnable State:** 
 - Actions taken in the application successfully and reliably dispatch real, styled emails to the correct recipients.
 
