@@ -12,11 +12,11 @@ This document serves as the guide for the LLM developer. The LLM should implemen
 - `Detailed_Design.md` > 2. Tech Stack & Architecture
 - `Detailed_Design.md` > 6.1 GitHub Actions
 **Tasks:**
-- [ ] Initialize a Next.js project using the App Router.
-- [ ] Configure Tailwind CSS and set up `shadcn/ui` for accessible component scaffolding (avoid raw Tailwind CSS where `shadcn/ui` provides a component).
-- [ ] Set up standard ESLint and Prettier configurations.
-- [ ] Create a basic GitHub Action workflow (`.github/workflows/ci.yml`) for linting and type-checking on PRs.
-- [ ] Create a placeholder `/app/page.tsx` and a basic application layout with a navigation header.
+- [x] Initialize a Next.js project using the App Router.
+- [x] Configure Tailwind CSS and set up `shadcn/ui` for accessible component scaffolding (avoid raw Tailwind CSS where `shadcn/ui` provides a component).
+- [x] Set up standard ESLint and Prettier configurations.
+- [x] Create a basic GitHub Action workflow (`.github/workflows/ci.yml`) for linting and type-checking on PRs.
+- [x] Create a placeholder `/app/page.tsx` and a basic application layout with a navigation header.
 **Runnable State:** 
 - Running `npm run dev` displays a basic, styled "Coming Soon" or placeholder page. 
 - The CI pipeline passes successfully on a test PR.
