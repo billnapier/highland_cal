@@ -63,9 +63,9 @@ This document serves as the guide for the LLM developer. The LLM should implemen
 - `Detailed_Design.md` > 3.2 Games Table
 - `Detailed_Design.md` > 4.4 iCal Feed Generation
 **Tasks:**
-- [ ] Update `/app/page.tsx` to fetch and display the list of upcoming Games from the `Games` table. This must be accessible without authentication (relying on the public RLS policy).
-- [ ] Implement `/app/api/calendar.ics/route.ts` to serialize the `Games` table into a valid iCal feed using the `ics` npm package (include Cache-Control headers to optimize performance).
-- [ ] Add a "Subscribe to Calendar" button on the public page that links to the `.ics` route.
+- [x] Update `/app/page.tsx` to fetch and display the list of upcoming Games from the `Games` table. This must be accessible without authentication (relying on the public RLS policy).
+- [x] Implement `/app/api/calendar.ics/route.ts` to serialize the `Games` table into a valid iCal feed using the `ics` npm package (include Cache-Control headers to optimize performance).
+- [x] Add a "Subscribe to Calendar" button on the public page that links to the `.ics` route.
 **Runnable State:** 
 - Unauthenticated visitors can see a chronologically sorted list of games (using mock data inserted manually into Supabase). 
 - Users can successfully download/subscribe to the `.ics` feed.
