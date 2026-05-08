@@ -15,8 +15,7 @@ CREATE TABLE public.Profiles (
 -- User_Roles Table
 CREATE TABLE public.User_Roles (
   user_id uuid PRIMARY KEY REFERENCES public.Profiles(id) ON DELETE CASCADE,
-  role public.user_role DEFAULT 'PENDING'::public.user_role,
-  CONSTRAINT role_check CHECK (role IN ('PENDING', 'APPROVED', 'ADMIN'))
+  role public.user_role DEFAULT 'PENDING'::public.user_role
 );
 
 -- is_admin() Function
@@ -28,7 +27,7 @@ BEGIN
   SELECT role INTO current_role FROM public.User_Roles WHERE user_id = auth.uid();
   RETURN current_role = 'ADMIN'::public.user_role;
 END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
+$$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public;
 
 -- is_approved_or_admin() Function
 CREATE OR REPLACE FUNCTION public.is_approved_or_admin()
@@ -39,7 +38,7 @@ BEGIN
   SELECT role INTO current_role FROM public.User_Roles WHERE user_id = auth.uid();
   RETURN current_role IN ('APPROVED'::public.user_role, 'ADMIN'::public.user_role);
 END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
+$$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public;
 
 -- Trigger: handle_new_user
 CREATE OR REPLACE FUNCTION public.handle_new_user()
@@ -52,7 +51,7 @@ BEGIN
   VALUES (new.id, 'PENDING');
   RETURN new;
 END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
+$$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public;
 
 CREATE TRIGGER on_auth_user_created
   AFTER INSERT ON auth.users
@@ -81,6 +80,19 @@ CREATE TABLE public.Attendance (
   UNIQUE(user_id, game_id)
 );
 
+-- Trigger for Attendance updated_at
+CREATE OR REPLACE FUNCTION public.update_updated_at_column()
+RETURNS trigger AS $$
+BEGIN
+  NEW.updated_at = now();
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public;
+
+CREATE TRIGGER update_attendance_updated_at
+  BEFORE UPDATE ON public.Attendance
+  FOR EACH ROW EXECUTE PROCEDURE public.update_updated_at_column();
+
 -- Enable RLS
 ALTER TABLE public.Profiles ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.User_Roles ENABLE ROW LEVEL SECURITY;
@@ -106,10 +118,10 @@ CREATE POLICY "Games are viewable by everyone" ON public.Games
   FOR SELECT USING (true);
 
 CREATE POLICY "Approved users or admins can insert games" ON public.Games
-  FOR INSERT WITH CHECK (public.is_approved_or_admin());
+  FOR INSERT WITH CHECK (public.is_approved_or_admin() AND (auth.uid() = created_by));
 
 CREATE POLICY "Approved users or admins can update games" ON public.Games
-  FOR UPDATE USING (public.is_approved_or_admin());
+  FOR UPDATE USING (public.is_admin() OR (public.is_approved_or_admin() AND created_by = auth.uid()));
 
 CREATE POLICY "Only admins can delete games" ON public.Games
   FOR DELETE USING (public.is_admin());
