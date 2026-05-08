@@ -6,7 +6,8 @@ export async function GET() {
   const supabase = await createClient();
   const { data: games, error } = await supabase
     .from('Games')
-    .select('*')
+    .select('id, name, location, registration_url, start_timestamp, end_timestamp')
+    .gte('end_timestamp', new Date().toISOString())
     .order('start_timestamp', { ascending: true });
 
   if (error) {
@@ -15,14 +16,28 @@ export async function GET() {
   }
 
   const events: EventAttributes[] = (games || []).map((game) => {
+    const start = new Date(game.start_timestamp);
+    const end = new Date(game.end_timestamp);
+
     return {
+      uid: game.id,
       title: game.name,
       location: game.location || undefined,
       url: game.registration_url || undefined,
-      start: new Date(game.start_timestamp).getTime(),
-      startInputType: 'utc',
-      end: new Date(game.end_timestamp).getTime(),
-      endInputType: 'utc',
+      start: [
+        start.getUTCFullYear(),
+        start.getUTCMonth() + 1,
+        start.getUTCDate(),
+        start.getUTCHours(),
+        start.getUTCMinutes()
+      ],
+      end: [
+        end.getUTCFullYear(),
+        end.getUTCMonth() + 1,
+        end.getUTCDate(),
+        end.getUTCHours(),
+        end.getUTCMinutes()
+      ],
       description: game.registration_url ? `Registration: ${game.registration_url}` : undefined,
     };
   });
