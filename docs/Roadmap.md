@@ -12,11 +12,11 @@ This document serves as the guide for the LLM developer. The LLM should implemen
 - `Detailed_Design.md` > 2. Tech Stack & Architecture
 - `Detailed_Design.md` > 6.1 GitHub Actions
 **Tasks:**
-- [ ] Initialize a Next.js project using the App Router.
-- [ ] Configure Tailwind CSS and set up `shadcn/ui` for accessible component scaffolding (avoid raw Tailwind CSS where `shadcn/ui` provides a component).
-- [ ] Set up standard ESLint and Prettier configurations.
-- [ ] Create a basic GitHub Action workflow (`.github/workflows/ci.yml`) for linting and type-checking on PRs.
-- [ ] Create a placeholder `/app/page.tsx` and a basic application layout with a navigation header.
+- [x] Initialize a Next.js project using the App Router.
+- [x] Configure Tailwind CSS and set up `shadcn/ui` for accessible component scaffolding (avoid raw Tailwind CSS where `shadcn/ui` provides a component).
+- [x] Set up standard ESLint and Prettier configurations.
+- [x] Create a basic GitHub Action workflow (`.github/workflows/ci.yml`) for linting and type-checking on PRs.
+- [x] Create a placeholder `/app/page.tsx` and a basic application layout with a navigation header.
 **Runnable State:** 
 - Running `npm run dev` displays a basic, styled "Coming Soon" or placeholder page. 
 - The CI pipeline passes successfully on a test PR.
@@ -28,10 +28,10 @@ This document serves as the guide for the LLM developer. The LLM should implemen
 **References:** 
 - `Detailed_Design.md` > 3. Database Schema & RLS Policies
 **Tasks:**
-- [ ] Create a `database/schema.sql` file containing all table definitions (`Profiles`, `User_Roles`, `Games`, `Attendance`), custom ENUMs, the `is_admin()` security definer function, Row Level Security policies, and the `AFTER INSERT` trigger (with its associated function) on `auth.users`.
-- [ ] Set up the Supabase client utilities in the Next.js app (e.g., `/lib/supabase/server.ts`, `/lib/supabase/client.ts`).
-- [ ] Configure local environment variables (`NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`). Note: Ensure the Service Role Key is never prefixed with `NEXT_PUBLIC_`.
-- [ ] Create a simple database health check component or route to confirm the application can successfully query Supabase.
+- [x] Create a `database/schema.sql` file containing all table definitions (`Profiles`, `User_Roles`, `Games`, `Attendance`), custom ENUMs, the `is_admin()` security definer function, Row Level Security policies, and the `AFTER INSERT` trigger (with its associated function) on `auth.users`.
+- [x] Set up the Supabase client utilities in the Next.js app (e.g., `/lib/supabase/server.ts`, `/lib/supabase/client.ts`).
+- [x] Configure local environment variables (`NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`). Note: Ensure the Service Role Key is never prefixed with `NEXT_PUBLIC_`.
+- [x] Create a simple database health check component or route to confirm the application can successfully query Supabase.
 **Runnable State:** 
 - The application successfully connects to a provisioned Supabase instance. 
 - The `schema.sql` can be successfully executed in the Supabase SQL Editor without errors.
