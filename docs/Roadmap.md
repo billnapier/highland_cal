@@ -165,3 +165,18 @@ This document serves as the guide for the LLM developer. The LLM should implemen
 **Runnable State:** 
 - Actions taken in the application successfully and reliably dispatch real, styled emails to the correct recipients.
 
+
+---
+
+## Milestone 11: Custom Domain & Production Launch
+**Goal:** Configure a custom domain in Vercel and verify the domain in Resend for professional email delivery.
+**References:** 
+- `Human_Configuration.md` > 7. Custom Domain Setup & Verification
+**Tasks:**
+- [ ] Add the custom domain to the Vercel project settings and configure the necessary DNS records (A/CNAME) at the domain registrar.
+- [ ] Add the custom domain to the Resend project settings and configure the necessary DNS records (TXT/MX) to verify the domain for sending emails.
+- [ ] Update the `NEXT_PUBLIC_APP_URL` environment variable in Vercel to reflect the new custom domain.
+- [ ] Update the application codebase (where applicable) to ensure the Resend `from` address matches the verified domain.
+**Runnable State:** 
+- The application is fully accessible via the custom domain.
+- Transactional emails are successfully delivered from a custom email address without being marked as spam.
