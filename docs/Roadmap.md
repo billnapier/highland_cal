@@ -45,10 +45,10 @@ This document serves as the guide for the LLM developer. The LLM should implemen
 - `User_Journeys.md` > Journey 6: Instance Deployment & Setup
 - `Detailed_Design.md` > 4.1 Onboarding & Authentication Flow
 **Tasks:**
-- [ ] Add a "Login with Google" button to the UI, wiring it to Supabase Auth.
-- [ ] Implement the auth callback route (e.g., `/app/auth/callback/route.ts`) to handle the OAuth redirect and session exchange.
-- [ ] Implement the **Admin Bootstrapping** logic in the callback: Check if the logging-in user's email matches `process.env.INITIAL_ADMIN_EMAIL` and they do not already have the `ADMIN` role. If so, use the Service Role Key to elevate their role in `User_Roles` to `ADMIN`.
-- [ ] Create a basic authenticated `/app/dashboard/page.tsx` that displays the user's current role (`PENDING`, `APPROVED`, `ADMIN`).
+- [x] Add a "Login with Google" button to the UI, wiring it to Supabase Auth.
+- [x] Implement the auth callback route (e.g., `/app/auth/callback/route.ts`) to handle the OAuth redirect and session exchange.
+- [x] Implement the **Admin Bootstrapping** logic in the callback: Check if the logging-in user's email matches `process.env.INITIAL_ADMIN_EMAIL` and they do not already have the `ADMIN` role. If so, use the Service Role Key to elevate their role in `User_Roles` to `ADMIN`.
+- [x] Create a basic authenticated `/app/dashboard/page.tsx` that displays the user's current role (`PENDING`, `APPROVED`, `ADMIN`).
 **Runnable State:** 
 - A user can click Login, authenticate with Google, and be redirected to a dashboard. 
 - The database correctly populates `Profiles` and `User_Roles` via the SQL trigger. 
