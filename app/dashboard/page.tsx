@@ -3,6 +3,7 @@ import { redirect } from 'next/navigation'
 import { Calendar, MapPin } from 'lucide-react'
 import DeleteEventButton from '@/components/DeleteEventButton'
 import { CreateEventModal, EditEventModal } from '@/components/EventModals'
+import AttendanceManager from '@/components/AttendanceManager'
 
 export default async function DashboardPage() {
   const supabase = await createClient()
@@ -35,6 +36,14 @@ export default async function DashboardPage() {
     .select('*')
     .order('start_timestamp', { ascending: true })
     .gte('end_timestamp', new Date().toISOString())
+
+  const gameIds = games?.map(g => g.id) || []
+  
+  // Fetch attendance records for these events
+  const { data: attendanceData } = await supabase
+    .from('Attendance')
+    .select('*, Profiles(display_name)')
+    .in('game_id', gameIds)
 
   return (
     <main className="flex flex-1 flex-col p-8">
@@ -92,11 +101,12 @@ export default async function DashboardPage() {
                 const endDate = new Date(game.end_timestamp);
                 
                 const isSameDay = startDate.toDateString() === endDate.toDateString();
+                const gameAttendance = attendanceData?.filter(a => a.game_id === game.id) || [];
                 
                 return (
                   <div key={game.id} className="p-6 border rounded-lg shadow-sm bg-card text-card-foreground">
                     <div className="flex flex-col md:flex-row md:justify-between md:items-start gap-4">
-                      <div>
+                      <div className="w-full">
                         <h3 className="text-xl font-bold mb-2">{game.name}</h3>
                         <div className="space-y-1 text-sm text-muted-foreground">
                           <div className="flex items-center">
@@ -116,8 +126,15 @@ export default async function DashboardPage() {
                             </div>
                           )}
                         </div>
+                        
+                        <AttendanceManager 
+                          gameId={game.id} 
+                          currentUserId={user.id} 
+                          role={role} 
+                          attendanceRecords={gameAttendance} 
+                        />
                       </div>
-                      <div className="flex gap-2 items-start">
+                      <div className="flex gap-2 items-start shrink-0 mt-4 md:mt-0">
                         {(role === 'ADMIN' || (role === 'APPROVED' && game.created_by === user.id)) && (
                           <EditEventModal game={game} />
                         )}
