@@ -11,26 +11,16 @@ import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import * as z from 'zod'
 import { createEvent, updateEvent } from '@/app/actions/events'
+import { eventSchema, EventFormData } from '@/lib/schemas'
+import { fromZonedTime, formatInTimeZone } from 'date-fns-tz'
 
-const eventSchema = z.object({
-  name: z.string().min(1, 'Name is required'),
-  start_timestamp: z.string().min(1, 'Start time is required'),
-  end_timestamp: z.string().min(1, 'End time is required'),
-  local_timezone: z.string().min(1, 'Timezone is required'),
-  location: z.string().optional(),
-  registration_url: z.string().url('Must be a valid URL').optional().or(z.literal('')),
-  major_change: z.boolean().optional(),
-})
-
-type EventFormData = z.infer<typeof eventSchema>
-
-// Helper to convert DB timestamp to local input format
-const formatDateForInput = (isoString: string) => {
+const formatDateForInput = (isoString: string, timezone: string) => {
   if (!isoString) return ''
-  const date = new Date(isoString)
-  // Format to YYYY-MM-DDThh:mm
-  const pad = (n: number) => n.toString().padStart(2, '0')
-  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`
+  try {
+    return formatInTimeZone(isoString, timezone, "yyyy-MM-dd'T'HH:mm")
+  } catch (e) {
+    return ''
+  }
 }
 
 export function CreateEventModal() {
@@ -59,8 +49,8 @@ export function CreateEventModal() {
       try {
         const payload = {
           ...data,
-          start_timestamp: new Date(data.start_timestamp).toISOString(),
-          end_timestamp: new Date(data.end_timestamp).toISOString(),
+          start_timestamp: fromZonedTime(data.start_timestamp, data.local_timezone).toISOString(),
+          end_timestamp: fromZonedTime(data.end_timestamp, data.local_timezone).toISOString(),
         }
         const result = await createEvent(payload)
         if (result.success) {
@@ -157,8 +147,8 @@ export function EditEventModal({ game }: EditEventModalProps) {
     resolver: zodResolver(eventSchema),
     defaultValues: {
       name: game.name,
-      start_timestamp: formatDateForInput(game.start_timestamp),
-      end_timestamp: formatDateForInput(game.end_timestamp),
+      start_timestamp: formatDateForInput(game.start_timestamp, game.local_timezone),
+      end_timestamp: formatDateForInput(game.end_timestamp, game.local_timezone),
       local_timezone: game.local_timezone,
       location: game.location || '',
       registration_url: game.registration_url || '',
@@ -169,8 +159,8 @@ export function EditEventModal({ game }: EditEventModalProps) {
     if (newOpen) {
       reset({
         name: game.name,
-        start_timestamp: formatDateForInput(game.start_timestamp),
-        end_timestamp: formatDateForInput(game.end_timestamp),
+        start_timestamp: formatDateForInput(game.start_timestamp, game.local_timezone),
+        end_timestamp: formatDateForInput(game.end_timestamp, game.local_timezone),
         local_timezone: game.local_timezone,
         location: game.location || '',
         registration_url: game.registration_url || '',
@@ -187,8 +177,8 @@ export function EditEventModal({ game }: EditEventModalProps) {
       try {
         const payload = {
           ...data,
-          start_timestamp: new Date(data.start_timestamp).toISOString(),
-          end_timestamp: new Date(data.end_timestamp).toISOString(),
+          start_timestamp: fromZonedTime(data.start_timestamp, data.local_timezone).toISOString(),
+          end_timestamp: fromZonedTime(data.end_timestamp, data.local_timezone).toISOString(),
         }
         const result = await updateEvent(game.id, payload, majorChange)
         if (result.success) {

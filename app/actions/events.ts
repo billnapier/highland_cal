@@ -2,6 +2,7 @@
 
 import { createClient } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
+import { eventSchema, EventFormData } from '@/lib/schemas'
 
 export async function deleteEvent(eventId: string) {
   try {
@@ -63,15 +64,14 @@ export async function deleteEvent(eventId: string) {
   }
 }
 
-export async function createEvent(data: {
-  name: string
-  start_timestamp: string
-  end_timestamp: string
-  local_timezone: string
-  location?: string
-  registration_url?: string
-}) {
+export async function createEvent(rawData: EventFormData) {
   try {
+    const parsed = eventSchema.safeParse(rawData)
+    if (!parsed.success) {
+      return { success: false, message: 'Invalid data' }
+    }
+    const data = parsed.data
+
     const supabase = await createClient()
 
     const {
@@ -109,7 +109,8 @@ export async function createEvent(data: {
       .single()
 
     if (insertError) {
-      return { success: false, message: `Failed to create event: ${insertError.message}` }
+      console.error(insertError)
+      return { success: false, message: 'Failed to create event. Please try again later.' }
     }
 
     // Stub out the Resend email notifications with console.log()
@@ -128,15 +129,14 @@ export async function createEvent(data: {
   }
 }
 
-export async function updateEvent(eventId: string, data: {
-  name: string
-  start_timestamp: string
-  end_timestamp: string
-  local_timezone: string
-  location?: string
-  registration_url?: string
-}, majorChange: boolean) {
+export async function updateEvent(eventId: string, rawData: EventFormData, majorChange: boolean) {
   try {
+    const parsed = eventSchema.safeParse(rawData)
+    if (!parsed.success) {
+      return { success: false, message: 'Invalid data' }
+    }
+    const data = parsed.data
+
     const supabase = await createClient()
 
     const {
@@ -157,6 +157,21 @@ export async function updateEvent(eventId: string, data: {
       return { success: false, message: 'Forbidden: You do not have permission to edit events' }
     }
 
+    if (roleData.role === 'APPROVED') {
+      const { data: gameData, error: gameError } = await supabase
+        .from('Games')
+        .select('created_by')
+        .eq('id', eventId)
+        .single()
+        
+      if (gameError || !gameData) {
+         return { success: false, message: 'Event not found' }
+      }
+      if (gameData.created_by !== user.id) {
+         return { success: false, message: 'Forbidden: You can only edit events you created' }
+      }
+    }
+
     const { error: updateError } = await supabase
       .from('Games')
       .update({
@@ -170,7 +185,8 @@ export async function updateEvent(eventId: string, data: {
       .eq('id', eventId)
 
     if (updateError) {
-      return { success: false, message: `Failed to update event: ${updateError.message}` }
+      console.error(updateError)
+      return { success: false, message: 'Failed to update event. Please try again later.' }
     }
 
     // Stub out the Resend email notifications with console.log()
