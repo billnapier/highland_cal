@@ -141,12 +141,12 @@ This document serves as the guide for the LLM developer. The LLM should implemen
 - `User_Journeys.md` > Journey 9: Promoting a User to Admin
 - `Detailed_Design.md` > 4.3 User Deletion
 **Tasks:**
-- [ ] Create an `/app/dashboard/admin/page.tsx` view, strictly gated to `ADMIN` users.
-- [ ] Fetch and display a list of all users and their current roles from `Profiles` joined with `User_Roles`.
-- [ ] Implement secure Server Actions to:
-  - [ ] Approve a `PENDING` user (updates to `APPROVED`).
-  - [ ] Promote an `APPROVED` user to `ADMIN`.
-  - [ ] Delete a user (must use the Supabase Admin API via the Service Role Key to remove the identity from `auth.users`; ensure `ON DELETE CASCADE` is configured on related tables).
+- [x] Create an `/app/dashboard/admin/page.tsx` view, strictly gated to `ADMIN` users.
+- [x] Fetch and display a list of all users and their current roles from `Profiles` joined with `User_Roles`.
+- [x] Implement secure Server Actions to:
+  - [x] Approve a `PENDING` user (updates to `APPROVED`).
+  - [x] Promote an `APPROVED` user to `ADMIN`.
+  - [x] Delete a user (must use the Supabase Admin API via the Service Role Key to remove the identity from `auth.users`; ensure `ON DELETE CASCADE` is configured on related tables).
 **Runnable State:** 
 - The Admin can view the user list, approve new registrations (granting them immediate write access), and permanently delete users.
 

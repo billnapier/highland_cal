@@ -68,9 +68,16 @@ export default async function DashboardPage() {
                   <h2 className="text-xl font-semibold">Welcome, {profileData?.display_name || user.email}</h2>
                   <p className="text-sm text-muted-foreground">{user.email}</p>
                 </div>
-                <Link href="/dashboard/profile" className={buttonVariants({ variant: 'outline', size: 'sm' })}>
-                  Edit Profile
-                </Link>
+                <div className="flex gap-2">
+                  {role === 'ADMIN' && (
+                    <Link href="/dashboard/admin" className={buttonVariants({ variant: 'default', size: 'sm' })}>
+                      Admin Dashboard
+                    </Link>
+                  )}
+                  <Link href="/dashboard/profile" className={buttonVariants({ variant: 'outline', size: 'sm' })}>
+                    Edit Profile
+                  </Link>
+                </div>
               </div>
             </div>
             

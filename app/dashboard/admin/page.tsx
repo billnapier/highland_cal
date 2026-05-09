@@ -1,0 +1,117 @@
+import { createClient } from '@/lib/supabase/server'
+import { redirect } from 'next/navigation'
+import { ApproveButton, PromoteButton, DeleteUserButton } from '@/components/UserManagementButtons'
+
+export default async function AdminDashboardPage() {
+  const supabase = await createClient()
+
+  const { data: { user } } = await supabase.auth.getUser()
+
+  if (!user) {
+    redirect('/')
+  }
+
+  // Ensure only ADMINs can view this page
+  const { data: currentRoleData } = await supabase
+    .from('User_Roles')
+    .select('role')
+    .eq('user_id', user.id)
+    .single()
+
+  if (currentRoleData?.role !== 'ADMIN') {
+    redirect('/dashboard')
+  }
+
+  // Fetch all users with their roles
+  // Because Profiles and User_Roles are separate tables that share an ID (id and user_id),
+  // we can do a join.
+  const { data: users, error } = await supabase
+    .from('Profiles')
+    .select(`
+      id,
+      display_name,
+      email,
+      class,
+      created_at,
+      User_Roles (
+        role
+      )
+    `)
+    .order('created_at', { ascending: false })
+
+  if (error) {
+    console.error('Error fetching users:', error)
+  }
+
+  return (
+    <main className="flex flex-1 flex-col p-8">
+      <div className="mx-auto w-full max-w-5xl space-y-8">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight">Admin Dashboard</h1>
+          <p className="text-muted-foreground mt-2">Manage users, approve registrations, and assign roles.</p>
+        </div>
+        
+        <div className="rounded-md border bg-card text-card-foreground shadow-sm overflow-hidden">
+          {error ? (
+            <div className="p-6 text-center text-red-500">
+              Failed to load users. Please try again later.
+            </div>
+          ) : (
+          <table className="w-full text-sm text-left">
+            <thead className="text-xs uppercase bg-muted/50 border-b">
+              <tr>
+                <th scope="col" className="px-6 py-3">Name / Email</th>
+                <th scope="col" className="px-6 py-3">Class</th>
+                <th scope="col" className="px-6 py-3">Role</th>
+                <th scope="col" className="px-6 py-3 text-right">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {users?.map((u: { id: string, display_name: string | null, email: string | null, class: string | null, created_at: string, User_Roles: { role: string }[] }) => {
+                const role = u.User_Roles?.length > 0 ? u.User_Roles[0].role : 'UNKNOWN'
+                
+                return (
+                  <tr key={u.id} className="border-b last:border-b-0 hover:bg-muted/30">
+                    <td className="px-6 py-4">
+                      <div className="font-medium text-foreground">{u.display_name}</div>
+                      <div className="text-muted-foreground">{u.email}</div>
+                    </td>
+                    <td className="px-6 py-4">
+                      {u.class || '-'}
+                    </td>
+                    <td className="px-6 py-4">
+                      <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold
+                        ${role === 'ADMIN' ? 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-300' : ''}
+                        ${role === 'APPROVED' ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300' : ''}
+                        ${role === 'PENDING' ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-300' : ''}
+                        ${role === 'UNKNOWN' ? 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300' : ''}
+                      `}>
+                        {role}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 text-right">
+                      <div className="flex justify-end gap-2">
+                        {role === 'PENDING' && <ApproveButton userId={u.id} />}
+                        {role === 'APPROVED' && <PromoteButton userId={u.id} />}
+                        {/* Always allow deletion except for self? Or maybe allow self-deletion but the UX is weird. Let's prevent self-deletion from this UI */}
+                        {u.id !== user.id && <DeleteUserButton userId={u.id} />}
+                      </div>
+                    </td>
+                  </tr>
+                )
+              })}
+              {users?.length === 0 && (
+                <tr>
+                  <td colSpan={4} className="px-6 py-8 text-center text-muted-foreground">
+                    No users found.
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+          )}
+        </div>
+      </div>
+    </main>
+  )
+}
