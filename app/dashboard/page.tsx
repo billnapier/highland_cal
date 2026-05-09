@@ -40,10 +40,18 @@ export default async function DashboardPage() {
   const gameIds = games?.map(g => g.id) || []
   
   // Fetch attendance records for these events
-  const { data: attendanceData } = await supabase
-    .from('Attendance')
-    .select('*, Profiles(display_name)')
-    .in('game_id', gameIds)
+  let attendanceData = null
+  if (gameIds.length > 0) {
+    const { data, error: attendanceError } = await supabase
+      .from('Attendance')
+      .select('*, Profiles(display_name)')
+      .in('game_id', gameIds)
+    
+    if (attendanceError) {
+      console.error('Error fetching attendance:', attendanceError)
+    }
+    attendanceData = data
+  }
 
   return (
     <main className="flex flex-1 flex-col p-8">

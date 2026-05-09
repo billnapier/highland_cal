@@ -6,7 +6,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 
 interface AttendanceRecord {
   user_id: string
-  interest_level: string
+  interest_level: InterestLevel
   Profiles?: {
     display_name: string | null
   } | null
