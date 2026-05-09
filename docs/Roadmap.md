@@ -77,10 +77,10 @@ This document serves as the guide for the LLM developer. The LLM should implemen
 **References:** 
 - `User_Journeys.md` > Journey 8: Event Cleanup
 **Tasks:**
-- [ ] Create the event list view on the authenticated dashboard.
-- [ ] Implement a Next.js Server Action for deleting records from the `Games` table (ensure strict server-side authorization checks for each action).
-- [ ] Ensure the frontend respects user roles (the Delete button should only render for `ADMIN` users).
-- [ ] *Note:* Stub out the Resend email notifications with `console.log()` for now to isolate concerns.
+- [x] Create the event list view on the authenticated dashboard.
+- [x] Implement a Next.js Server Action for deleting records from the `Games` table (ensure strict server-side authorization checks for each action).
+- [x] Ensure the frontend respects user roles (the Delete button should only render for `ADMIN` users).
+- [x] *Note:* Stub out the Resend email notifications with `console.log()` for now to isolate concerns.
 **Runnable State:** 
 - An `ADMIN` can delete a game. 
 - The public page reflects these changes immediately.
