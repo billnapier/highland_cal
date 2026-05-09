@@ -1,0 +1,47 @@
+File: lib/email.ts
+Line: 69
+Body: ![high](https://www.gstatic.com/codereviewagent/high-priority.svg)
+
+In Next.js App Router, the `app` directory is the filesystem root for the router and should not be included in the URL path. Including `/app/` will result in a 404 error when users click the link in the email. This also applies to line 109.
+
+```suggestion
+    const dashboardUrl = `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/dashboard`
+```
+---
+File: app/auth/callback/route.ts
+Line: 51
+Body: ![high](https://www.gstatic.com/codereviewagent/high-priority.svg)
+
+In serverless environments (like Vercel), 'fire and forget' promises that are not awaited may be terminated prematurely when the response is sent. This makes the email notification unreliable. To ensure the notification is sent, you should `await` the call, even if it slightly increases the redirect latency, or use a background task mechanism like `request.waitUntil` if supported by your deployment platform.
+
+```typescript
+          const { sendNewRegistrationNotification } = await import('@/lib/email')
+          await sendNewRegistrationNotification(displayName, email).catch(console.error)
+```
+---
+File: lib/email.ts
+Line: 9
+Body: ![medium](https://www.gstatic.com/codereviewagent/medium-priority.svg)
+
+The `onboarding@resend.dev` address is restricted to the email associated with the Resend account. While Milestone 11 mentions custom domain setup, using this address for Milestone 10 will prevent notifications from reaching 'correct recipients' (athletes/admins) as stated in the roadmap's runnable state. Consider using a placeholder for a verified domain or ensuring the environment is ready for production sending.
+---
+File: lib/email.ts
+Line: 113
+Body: ![security-medium](https://www.gstatic.com/codereviewagent/security-medium-priority.svg) ![medium](https://www.gstatic.com/codereviewagent/medium-priority.svg)
+
+Using an array in the `to` field for a broadcast notification (like event updates to all athletes) can lead to a privacy leak, as all recipients may see each other's email addresses in the email headers. It is safer to use the `bcc` field or send individual emails.
+
+```typescript
+    await resend.emails.send({
+      from: FROM_EMAIL,
+      to: FROM_EMAIL,
+      bcc: recipientEmails,
+      subject,
+```
+---
+File: emails/EventNotificationEmail.tsx
+Line: 63
+Body: ![medium](https://www.gstatic.com/codereviewagent/medium-priority.svg)
+
+The `format` function from `date-fns` will throw a `RangeError` if the `new Date()` constructor receives an invalid date string (e.g., an empty string or malformed timestamp). Since these timestamps originate from external data, it's safer to wrap the formatting in a try-catch or use a defensive check to prevent the entire email rendering from failing. This also applies to line 68.
+---

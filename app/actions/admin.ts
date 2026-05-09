@@ -3,6 +3,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { revalidatePath } from 'next/cache'
+import { sendUserApprovedNotification } from '@/lib/email'
 
 import { SupabaseClient } from '@supabase/supabase-js'
 
@@ -39,8 +40,15 @@ export async function approveUser(userId: string) {
     return { success: false, error: 'Failed to approve user' }
   }
 
-  // TODO: Implement email notification (Milestone 10)
-  console.log(`[Email Stub] User ${userId} has been approved.`)
+  const { data: profile } = await supabase
+    .from('Profiles')
+    .select('email, display_name')
+    .eq('id', userId)
+    .single()
+
+  if (profile?.email && profile?.display_name) {
+    await sendUserApprovedNotification(profile.display_name, profile.email)
+  }
 
   revalidatePath('/dashboard/admin')
   return { success: true }

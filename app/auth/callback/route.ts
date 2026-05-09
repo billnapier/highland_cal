@@ -37,6 +37,23 @@ export async function GET(request: Request) {
       const forwardedHost = request.headers.get('x-forwarded-host') // original origin before load balancer
       const isLocalEnv = process.env.NODE_ENV === 'development'
       
+      // Dispatch email notification if the user was just created
+      const userCreatedAt = new Date(session.user.created_at).getTime()
+      const now = Date.now()
+      if (now - userCreatedAt < 60000) {
+        // Only trigger within 1 minute of account creation
+        const displayName = session.user.user_metadata?.full_name || session.user.email || 'Unknown User'
+        const email = session.user.email || ''
+        if (email) {
+          try {
+            const { sendNewRegistrationNotification } = await import('@/lib/email')
+            await sendNewRegistrationNotification(displayName, email)
+          } catch (error) {
+            console.error('Failed to send registration notification:', error)
+          }
+        }
+      }
+
       if (isLocalEnv) {
         // we can be sure that there is no load balancer in between, so no need to watch for X-Forwarded-Host
         return NextResponse.redirect(`${origin}${next}`)

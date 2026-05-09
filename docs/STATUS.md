@@ -1,6 +1,6 @@
 # Project Status
 
-- **Current Milestone:** Milestone 10
-- **Last Completed:** Milestone 9
+- **Current Milestone:** Milestone 11
+- **Last Completed:** Milestone 10
 
 *Note to LLM: See `skills/implement_milestone.md` for execution instructions.*
