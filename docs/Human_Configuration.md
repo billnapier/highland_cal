@@ -64,6 +64,8 @@ This document outlines the manual steps a human (the Site Operator/Admin) must t
    - **Global (Check ALL environments):**
      - `INITIAL_ADMIN_EMAIL`: The Google email address of the first admin.
      - `RESEND_API_KEY`: Leave blank or placeholder if not set up yet.
+     - `RESEND_FROM_EMAIL`: The verified email address to send from (e.g., `My Club <notifications@myclub.com>`). Defaults to `${NEXT_PUBLIC_APP_NAME} <onboarding@resend.dev>` for testing.
+     - `NEXT_PUBLIC_APP_NAME`: The display name of the club (e.g., `My Club`). Defaults to `Highland Cal`.
      - `NEXT_PUBLIC_APP_URL`: The production URL of the app (once known).
 5. Click **Deploy**.
 
