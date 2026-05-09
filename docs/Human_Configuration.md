@@ -75,7 +75,9 @@ This document outlines the manual steps a human (the Site Operator/Admin) must t
 ## 6. Post-Deployment Verification
 1. Once Vercel finishes deploying, note your live production URL (e.g., `https://highland-cal.vercel.app`).
 2. Go back to the **Google Cloud Console > Credentials** screen and add that exact Vercel URL to the **Authorized JavaScript origins**.
-3. Go back to your **Supabase PROD Project > Authentication > URL Configuration**, and set the **Site URL** to your new Vercel URL.
+3. Go back to your **Supabase PROD Project > Authentication > URL Configuration**:
+   - Set the **Site URL** to your new Vercel URL.
+   - Under **Redirect URLs**, add `https://your-vercel-url.vercel.app/auth/callback` (or simply `https://*` if you want to support Vercel preview branches). *If you miss this step, Supabase will redirect successful logins to `localhost`!*
 4. Navigate to your Vercel URL. Click "Login with Google" and authenticate using the exact email you set as `INITIAL_ADMIN_EMAIL`.
 5. The system will elevate your account to Admin.
 

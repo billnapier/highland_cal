@@ -13,5 +13,6 @@
    - Edit `docs/Roadmap.md` to check off the completed `[x]` tasks for this milestone.
    - Edit docs/STATUS.md to update Last Completed and increment the Current Milestone to the next logical phase (or mark as Completed).
 8. **Create PR:** Commit your changes, push the branch, and open a Pull Request.
-9. **Review & Iterate:** Wait for `gemini-code-assist` to comment on the PR (wait no more than 5 minutes). Address all reported errors and review feedback.
-10. **Ensure CI Passes:** Keep fixing code and updating the PR until all CI checks pass successfully.
+9. **Review & Iterate:** Wait for `gemini-code-assist` to comment on the PR (wait no more than 5 minutes). Address all reported errors and review feedback in the codebase.
+10. **Resolve Comments:** Once you have pushed the fixes for the feedback, explicitly resolve the `gemini-code-assist` review threads on the PR via GitHub.
+11. **Ensure CI Passes:** Keep fixing code and updating the PR until all CI checks pass successfully.
