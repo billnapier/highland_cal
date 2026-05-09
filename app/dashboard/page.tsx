@@ -2,6 +2,7 @@ import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import { Calendar, MapPin } from 'lucide-react'
 import DeleteEventButton from '@/components/DeleteEventButton'
+import { CreateEventModal, EditEventModal } from '@/components/EventModals'
 
 export default async function DashboardPage() {
   const supabase = await createClient()
@@ -69,7 +70,12 @@ export default async function DashboardPage() {
         </div>
 
         <div className="space-y-4">
-          <h2 className="text-2xl font-bold border-b pb-2">Upcoming Events</h2>
+          <div className="flex justify-between items-center border-b pb-2">
+            <h2 className="text-2xl font-bold">Upcoming Events</h2>
+            {(role === 'ADMIN' || role === 'APPROVED') && (
+              <CreateEventModal />
+            )}
+          </div>
           
           {gamesError && (
             <p className="text-red-500">Error loading events. Please try again later.</p>
@@ -112,6 +118,9 @@ export default async function DashboardPage() {
                         </div>
                       </div>
                       <div className="flex gap-2 items-start">
+                        {(role === 'ADMIN' || (role === 'APPROVED' && game.created_by === user.id)) && (
+                          <EditEventModal game={game} />
+                        )}
                         {role === 'ADMIN' && (
                           <DeleteEventButton eventId={game.id} />
                         )}
