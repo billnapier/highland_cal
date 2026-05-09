@@ -109,7 +109,7 @@ export default function ProfileForm({ initialData }: ProfileFormProps) {
                     <span className="text-xs text-red-500">{errors.customLinks[index]?.title?.message}</span>
                   )}
                 </div>
-                <div className="grid gap-2 flex-2 w-[50%]">
+                <div className="grid gap-2 flex-[2] w-[50%]">
                   <Input placeholder="URL" {...register(`customLinks.${index}.url` as const)} />
                   {errors.customLinks?.[index]?.url && (
                     <span className="text-xs text-red-500">{errors.customLinks[index]?.url?.message}</span>

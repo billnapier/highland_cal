@@ -1,5 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import { ExternalLink } from 'lucide-react'
+import { buttonVariants } from '@/components/ui/button'
 interface CustomLink {
   title: string;
   url: string;
@@ -11,7 +12,8 @@ export default async function RosterPage() {
   // Fetch all profiles
   const { data: profiles, error } = await supabase
     .from('Profiles')
-    .select('id, display_name, class, outward_links')
+    .select('id, display_name, class, outward_links, User_Roles!inner(role)')
+    .in('User_Roles.role', ['APPROVED', 'ADMIN'])
     .order('display_name', { ascending: true })
 
   return (
@@ -56,13 +58,13 @@ export default async function RosterPage() {
                       <h3 className="text-sm font-medium text-muted-foreground uppercase tracking-wider">Links</h3>
                       <div className="flex flex-wrap gap-2">
                         {links.instagram && (
-                          <a href={links.instagram} target="_blank" rel="noopener noreferrer" className="inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 border border-input bg-background shadow-sm hover:bg-accent hover:text-accent-foreground h-9 px-4 py-2">
+                          <a href={links.instagram} target="_blank" rel="noopener noreferrer" className={buttonVariants({ variant: "outline", size: "sm" })}>
                             <ExternalLink className="mr-2 h-4 w-4" />
                             Insta
                           </a>
                         )}
                         {links.facebook && (
-                          <a href={links.facebook} target="_blank" rel="noopener noreferrer" className="inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 border border-input bg-background shadow-sm hover:bg-accent hover:text-accent-foreground h-9 px-4 py-2">
+                          <a href={links.facebook} target="_blank" rel="noopener noreferrer" className={buttonVariants({ variant: "outline", size: "sm" })}>
                             <ExternalLink className="mr-2 h-4 w-4" />
                             FB
                           </a>
