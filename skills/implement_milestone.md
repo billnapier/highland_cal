@@ -3,7 +3,7 @@
 **Objective:** Autonomously implement the next pending milestone for the Highland Cal project, open a Pull Request, and update the project tracking state.
 
 ## Execution Steps:
-1. **Preparation:** Ensure you fetch the latest commit from upstream (`git pull`) and start the milestone on a fresh, appropriately named branch (`git checkout -b milestone-x-name`).
+1. **Preparation:** Fetch the latest changes from the remote (git fetch upstream) and start the milestone on a fresh branch based on the main branch (git checkout -b milestone-x-name upstream/main).
 2. **Read State:** View the `docs/STATUS.md` file to identify the `Current Milestone`.
 3. **Read Spec:** View the `docs/Roadmap.md` file and navigate to the section for the `Current Milestone`.
 4. **Plan:** Read all the tasks for that milestone. Create an Implementation Plan and wait for user approval.
