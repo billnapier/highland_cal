@@ -46,6 +46,17 @@ export default function EventNotificationEmail({
     actionText = 'The following event has been canceled/deleted:'
   }
 
+  const safeFormatDate = (dateString?: string) => {
+    if (!dateString) return ''
+    try {
+      const date = new Date(dateString)
+      if (isNaN(date.getTime())) return dateString
+      return format(date, 'PPp')
+    } catch {
+      return dateString
+    }
+  }
+
   return (
     <Html>
       <Head />
@@ -60,12 +71,12 @@ export default function EventNotificationEmail({
             </Text>
             {type !== 'DELETE' && startTimestamp && (
               <Text style={text}>
-                <strong>Start:</strong> {format(new Date(startTimestamp), 'PPp')}
+                <strong>Start:</strong> {safeFormatDate(startTimestamp)}
               </Text>
             )}
             {type !== 'DELETE' && endTimestamp && (
               <Text style={text}>
-                <strong>End:</strong> {format(new Date(endTimestamp), 'PPp')}
+                <strong>End:</strong> {safeFormatDate(endTimestamp)}
               </Text>
             )}
             {type !== 'DELETE' && location && (

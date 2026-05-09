@@ -6,7 +6,7 @@ import EventNotificationEmail from '@/emails/EventNotificationEmail'
 
 const resend = new Resend(process.env.RESEND_API_KEY)
 
-const FROM_EMAIL = 'Highland Cal <onboarding@resend.dev>'
+const FROM_EMAIL = process.env.RESEND_FROM_EMAIL || 'Highland Cal <noreply@highlandcal.com>'
 
 // Fetch emails for users with specific roles
 async function getEmailsByRoles(roles: string[]): Promise<string[]> {
@@ -66,7 +66,7 @@ export async function sendUserApprovedNotification(
   }
 
   try {
-    const dashboardUrl = `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/app/dashboard`
+    const dashboardUrl = `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/dashboard`
 
     await resend.emails.send({
       from: FROM_EMAIL,
@@ -106,11 +106,12 @@ export async function sendEventNotification(
     if (type === 'UPDATE') subject = `Event Updated: ${eventDetails.name}`
     if (type === 'DELETE') subject = `Event Canceled: ${eventDetails.name}`
 
-    const dashboardUrl = `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/app/dashboard`
+    const dashboardUrl = `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/dashboard`
 
     await resend.emails.send({
       from: FROM_EMAIL,
-      to: recipientEmails,
+      to: FROM_EMAIL,
+      bcc: recipientEmails,
       subject,
       react: EventNotificationEmail({
         type,

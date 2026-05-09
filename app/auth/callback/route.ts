@@ -45,10 +45,12 @@ export async function GET(request: Request) {
         const displayName = session.user.user_metadata?.full_name || session.user.email || 'Unknown User'
         const email = session.user.email || ''
         if (email) {
-          // Fire and forget so we don't block the login redirect
-          import('@/lib/email').then(({ sendNewRegistrationNotification }) => {
-            sendNewRegistrationNotification(displayName, email).catch(console.error)
-          })
+          try {
+            const { sendNewRegistrationNotification } = await import('@/lib/email')
+            await sendNewRegistrationNotification(displayName, email)
+          } catch (error) {
+            console.error('Failed to send registration notification:', error)
+          }
         }
       }
 
