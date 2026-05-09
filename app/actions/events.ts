@@ -55,7 +55,10 @@ export async function deleteEvent(eventId: number) {
     revalidatePath('/dashboard')
 
     return { success: true }
-  } catch (error: any) {
-    return { success: false, message: error.message || 'An unexpected error occurred' }
+  } catch (error: unknown) {
+    if (error instanceof Error) {
+      return { success: false, message: error.message || 'An unexpected error occurred' }
+    }
+    return { success: false, message: 'An unexpected error occurred' }
   }
 }
