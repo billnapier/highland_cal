@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button'
 import { deleteEvent } from '@/app/actions/events'
 
 interface DeleteEventButtonProps {
-  eventId: number
+  eventId: string
 }
 
 export default function DeleteEventButton({ eventId }: DeleteEventButtonProps) {

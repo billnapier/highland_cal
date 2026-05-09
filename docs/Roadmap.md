@@ -93,10 +93,10 @@ This document serves as the guide for the LLM developer. The LLM should implemen
 - `User_Journeys.md` > Journey 3: The High-Trust Event Management
 - `Detailed_Design.md` > 4.2 Event Management Flow
 **Tasks:**
-- [ ] Create a "Create Event" form/modal on the authenticated dashboard using `react-hook-form` and `zod` for validation.
-- [ ] Create an "Edit Event" form/modal (ensure the "major change" checkbox is included in the UI state).
-- [ ] Implement Next.js Server Actions for inserting and updating records in the `Games` table (ensure strict server-side authorization checks for each action).
-- [ ] *Note:* Continue to stub out Resend email notifications.
+- [x] Create a "Create Event" form/modal on the authenticated dashboard using `react-hook-form` and `zod` for validation.
+- [x] Create an "Edit Event" form/modal (ensure the "major change" checkbox is included in the UI state).
+- [x] Implement Next.js Server Actions for inserting and updating records in the `Games` table (ensure strict server-side authorization checks for each action).
+- [x] *Note:* Continue to stub out Resend email notifications.
 **Runnable State:** 
 - An `APPROVED` user can add or edit a game through validated forms.
 - The public page reflects these changes immediately.
