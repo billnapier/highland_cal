@@ -6,7 +6,7 @@ import EventNotificationEmail from '@/emails/EventNotificationEmail'
 
 const resend = new Resend(process.env.RESEND_API_KEY)
 
-const FROM_EMAIL = process.env.RESEND_FROM_EMAIL || 'Highland Cal <noreply@highlandcal.com>'
+const FROM_EMAIL = process.env.RESEND_FROM_EMAIL || 'Highland Cal <onboarding@resend.dev>'
 
 // Fetch emails for users with specific roles
 async function getEmailsByRoles(roles: string[]): Promise<string[]> {
