@@ -3,6 +3,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
 import { eventSchema, EventFormData } from '@/lib/schemas'
+import { sendEventNotification } from '@/lib/email'
 
 export async function deleteEvent(eventId: string) {
   try {
@@ -38,6 +39,14 @@ export async function deleteEvent(eventId: string) {
       return { success: false, message: 'Forbidden: Only admins can delete events' }
     }
 
+    // Fetch event name before deleting
+    const { data: eventData } = await supabase
+      .from('Games')
+      .select('name')
+      .eq('id', eventId)
+      .single()
+    const eventName = eventData?.name || 'Unknown Event'
+
     // Delete the event
     const { error: deleteError } = await supabase
       .from('Games')
@@ -48,8 +57,7 @@ export async function deleteEvent(eventId: string) {
       return { success: false, message: `Failed to delete event: ${deleteError.message}` }
     }
 
-    // Stub out the Resend email notifications with console.log()
-    console.log(`Email notification: Event with ID ${eventId} deleted`)
+    await sendEventNotification('DELETE', { name: eventName })
 
     // Revalidate paths to update the UI
     revalidatePath('/')
@@ -92,7 +100,7 @@ export async function createEvent(rawData: EventFormData) {
       return { success: false, message: 'Forbidden: You do not have permission to create events' }
     }
 
-    const { data: insertedGame, error: insertError } = await supabase
+    const { error: insertError } = await supabase
       .from('Games')
       .insert([
         {
@@ -113,8 +121,12 @@ export async function createEvent(rawData: EventFormData) {
       return { success: false, message: 'Failed to create event. Please try again later.' }
     }
 
-    // Stub out the Resend email notifications with console.log()
-    console.log(`Email notification: New event created with ID ${insertedGame?.id}`)
+    await sendEventNotification('CREATE', {
+      name: data.name,
+      startTimestamp: data.start_timestamp,
+      endTimestamp: data.end_timestamp,
+      location: data.location || undefined,
+    })
 
     // Revalidate paths to update the UI
     revalidatePath('/')
@@ -189,9 +201,13 @@ export async function updateEvent(eventId: string, rawData: EventFormData, major
       return { success: false, message: 'Failed to update event. Please try again later.' }
     }
 
-    // Stub out the Resend email notifications with console.log()
     if (majorChange) {
-      console.log(`Email notification: Major edit to event with ID ${eventId}`)
+      await sendEventNotification('UPDATE', {
+        name: data.name,
+        startTimestamp: data.start_timestamp,
+        endTimestamp: data.end_timestamp,
+        location: data.location || undefined,
+      })
     }
 
     // Revalidate paths to update the UI

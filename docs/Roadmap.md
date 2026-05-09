@@ -157,11 +157,11 @@ This document serves as the guide for the LLM developer. The LLM should implemen
 **References:** 
 - `Detailed_Design.md` > 4.3 Notifications (Next.js Server Actions)
 **Tasks:**
-- [ ] Integrate the Resend Node.js SDK and `react-email` for building HTML email templates.
-- [ ] Wire up the **New User Registration** email (triggered during onboarding, sent to Admins).
-- [ ] Wire up the **User Approved** email (triggered by Admin action, sent to Athlete).
-- [ ] Wire up the **New Event / Major Edit** email (triggered by event creation/edit, sent to Approved Athletes).
-- [ ] Wire up the **Event Deletion** email (triggered by Admin action, sent to Approved Athletes).
+- [x] Integrate the Resend Node.js SDK and `react-email` for building HTML email templates.
+- [x] Wire up the **New User Registration** email (triggered during onboarding, sent to Admins).
+- [x] Wire up the **User Approved** email (triggered by Admin action, sent to Athlete).
+- [x] Wire up the **New Event / Major Edit** email (triggered by event creation/edit, sent to Approved Athletes).
+- [x] Wire up the **Event Deletion** email (triggered by Admin action, sent to Approved Athletes).
 **Runnable State:** 
 - Actions taken in the application successfully and reliably dispatch real, styled emails to the correct recipients.
 
