@@ -124,10 +124,10 @@ This document serves as the guide for the LLM developer. The LLM should implemen
 **References:** 
 - `User_Journeys.md` > Journey 5: Managing Personal Profile
 **Tasks:**
-- [ ] Create a dedicated `/app/dashboard/profile` page.
-- [ ] Build a form using `react-hook-form` and `zod` to update the user's `class` and `outward_links` (JSONB). The form should explicitly include inputs for Instagram and Facebook, and allow up to 5 additional custom links.
-- [ ] Implement a Server Action to securely update the `Profiles` table for the authenticated user.
-- [ ] Create a public roster view or profile card component so the club can show off its athletes.
+- [x] Create a dedicated `/app/dashboard/profile/page.tsx` (using `/app/dashboard/profile/page.tsx` since `/app/dashboard/profile` is a directory for the page).
+- [x] Build a form using `react-hook-form` and `zod` to update the user's `class` and `outward_links` (JSONB). The form should explicitly include inputs for Instagram and Facebook, and allow up to 5 additional custom links.
+- [x] Implement a Server Action to securely update the `Profiles` table for the authenticated user.
+- [x] Create a public roster view or profile card component so the club can show off its athletes.
 **Runnable State:** 
 - Users can successfully update their competition class and add social media links. 
 - These changes persist to the database and are viewable in the public roster.

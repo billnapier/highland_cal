@@ -4,6 +4,8 @@ import { Calendar, MapPin } from 'lucide-react'
 import DeleteEventButton from '@/components/DeleteEventButton'
 import { CreateEventModal, EditEventModal } from '@/components/EventModals'
 import AttendanceManager from '@/components/AttendanceManager'
+import Link from 'next/link'
+import { buttonVariants } from '@/components/ui/button'
 
 export default async function DashboardPage() {
   const supabase = await createClient()
@@ -61,8 +63,15 @@ export default async function DashboardPage() {
         <div className="rounded-lg border bg-card text-card-foreground shadow-sm p-6">
           <div className="space-y-4">
             <div>
-              <h2 className="text-xl font-semibold">Welcome, {profileData?.display_name || user.email}</h2>
-              <p className="text-sm text-muted-foreground">{user.email}</p>
+              <div className="flex items-center justify-between">
+                <div>
+                  <h2 className="text-xl font-semibold">Welcome, {profileData?.display_name || user.email}</h2>
+                  <p className="text-sm text-muted-foreground">{user.email}</p>
+                </div>
+                <Link href="/dashboard/profile" className={buttonVariants({ variant: 'outline', size: 'sm' })}>
+                  Edit Profile
+                </Link>
+              </div>
             </div>
             
             <div className="pt-4 border-t">
