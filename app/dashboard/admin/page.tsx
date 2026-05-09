@@ -52,6 +52,11 @@ export default async function AdminDashboardPage() {
         </div>
         
         <div className="rounded-md border bg-card text-card-foreground shadow-sm overflow-hidden">
+          {error ? (
+            <div className="p-6 text-center text-red-500">
+              Failed to load users. Please try again later.
+            </div>
+          ) : (
           <table className="w-full text-sm text-left">
             <thead className="text-xs uppercase bg-muted/50 border-b">
               <tr>
@@ -104,6 +109,7 @@ export default async function AdminDashboardPage() {
               )}
             </tbody>
           </table>
+          )}
         </div>
       </div>
     </main>

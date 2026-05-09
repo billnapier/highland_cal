@@ -14,6 +14,8 @@ export function ApproveButton({ userId }: { userId: string }) {
       if (!res.success) {
         alert(res.error)
       }
+    } catch (err) {
+      alert(err instanceof Error ? err.message : 'An unexpected error occurred')
     } finally {
       setLoading(false)
     }
@@ -38,6 +40,8 @@ export function PromoteButton({ userId }: { userId: string }) {
       if (!res.success) {
         alert(res.error)
       }
+    } catch (err) {
+      alert(err instanceof Error ? err.message : 'An unexpected error occurred')
     } finally {
       setLoading(false)
     }
@@ -62,6 +66,8 @@ export function DeleteUserButton({ userId }: { userId: string }) {
       if (!res.success) {
         alert(res.error)
       }
+    } catch (err) {
+      alert(err instanceof Error ? err.message : 'An unexpected error occurred')
     } finally {
       setLoading(false)
     }

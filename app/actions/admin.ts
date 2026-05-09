@@ -69,7 +69,11 @@ export async function promoteToAdmin(userId: string) {
 
 export async function deleteUser(userId: string) {
   const supabase = await createClient()
-  await checkAdminRole(supabase)
+  const user = await checkAdminRole(supabase)
+
+  if (userId === user.id) {
+    return { success: false, error: 'Cannot delete your own account' }
+  }
 
   // Use the admin client to bypass RLS and delete the auth identity
   const adminClient = createAdminClient()
