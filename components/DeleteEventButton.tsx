@@ -18,9 +18,12 @@ export default function DeleteEventButton({ eventId }: DeleteEventButtonProps) {
       startTransition(async () => {
         try {
           setError(null)
-          await deleteEvent(eventId)
+          const result = await deleteEvent(eventId)
+          if (!result.success) {
+            setError(result.message || 'Failed to delete event')
+          }
         } catch (err: any) {
-          setError(err.message || 'Failed to delete event')
+          setError(err.message || 'An unexpected error occurred')
         }
       })
     }
