@@ -109,10 +109,10 @@ This document serves as the guide for the LLM developer. The LLM should implemen
 - `User_Journeys.md` > Journey 4: Registering & RSVPing for a Competition
 - `Detailed_Design.md` > 3.3 Attendance Table
 **Tasks:**
-- [ ] Build the Attendance UI component, embedded within the event view on the authenticated dashboard.
-- [ ] Allow `APPROVED` users to select/update their `interest_level` (`WATCHING`, `INTERESTED`, `REGISTERED`, `NOT_GOING`).
-- [ ] Display an aggregated summary of who is attending the event.
-- [ ] Ensure RLS policies restrict attendance modification strictly to `auth.uid()`.
+- [x] Build the Attendance UI component, embedded within the event view on the authenticated dashboard.
+- [x] Allow `APPROVED` users to select/update their `interest_level` (`WATCHING`, `INTERESTED`, `REGISTERED`, `NOT_GOING`).
+- [x] Display an aggregated summary of who is attending the event.
+- [x] Ensure RLS policies restrict attendance modification strictly to `auth.uid()`.
 **Runnable State:** 
 - Authenticated users can set and change their RSVP status. 
 - The UI dynamically updates to reflect their selection and lists other attendees.
