@@ -127,7 +127,8 @@ export default async function AthleteProfilePage({ params }: { params: Promise<{
                 const startDate = new Date(game.start_date + 'T00:00:00');
                 const isTwoDay = game.is_two_day;
                 const isSameDay = !isTwoDay;
-                const endDate = isTwoDay ? new Date(startDate.getTime() + 86400000) : startDate;
+                const endDate = new Date(startDate);
+                if (isTwoDay) endDate.setDate(endDate.getDate() + 1);
                 
                 let dayText = '';
                 if (isTwoDay && record.attend_day && record.attend_day !== 'BOTH') {

@@ -57,7 +57,7 @@ export default function EventNotificationEmail({
   const renderDateString = () => {
     if (!startDate) return ''
     try {
-      const start = new Date(startDate)
+      const start = new Date(startDate + 'T00:00:00')
       // adjust for local timezone offset if needed, or simply let format(..., 'PP') handle it 
       // since startDate is 'YYYY-MM-DD', new Date() parses as UTC midnight.
       // Actually we must format using utc helper or add 'T00:00:00' to avoid timezone shifts.
