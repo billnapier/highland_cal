@@ -25,12 +25,21 @@ export async function GET(request: Request) {
           .eq('user_id', session.user.id)
           .single()
 
-        if (roleData && roleData.role !== 'ADMIN') {
+        if (!roleData || roleData.role !== 'ADMIN') {
           const adminSupabase = createAdminClient()
+          
+          // Ensure profile exists (it might not if they were created before triggers or trigger failed)
+          await adminSupabase
+            .from('Profiles')
+            .upsert({ 
+              id: session.user.id, 
+              email: session.user.email,
+              display_name: session.user.user_metadata?.full_name || session.user.email?.split('@')[0] || 'Admin User'
+            })
+
           await adminSupabase
             .from('User_Roles')
-            .update({ role: 'ADMIN' })
-            .eq('user_id', session.user.id)
+            .upsert({ user_id: session.user.id, role: 'ADMIN' })
         }
       }
 
