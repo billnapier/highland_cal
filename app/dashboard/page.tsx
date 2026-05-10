@@ -74,6 +74,9 @@ export default async function DashboardPage() {
                       Admin Dashboard
                     </Link>
                   )}
+                  <Link href={`/roster/${user.id}`} className={buttonVariants({ variant: 'outline', size: 'sm' })}>
+                    View Public Profile
+                  </Link>
                   <Link href="/dashboard/profile" className={buttonVariants({ variant: 'outline', size: 'sm' })}>
                     Edit Profile
                   </Link>
@@ -156,6 +159,7 @@ export default async function DashboardPage() {
                           currentUserId={user.id} 
                           role={role} 
                           attendanceRecords={gameAttendance} 
+                          isTwoDay={!isSameDay}
                         />
                       </div>
                       <div className="flex gap-2 items-start shrink-0 mt-4 md:mt-0">

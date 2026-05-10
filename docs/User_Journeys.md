@@ -28,7 +28,7 @@ The journeys are broken down by the two main personas: **Athletes (End Users)** 
 **Goal:** Expand or correct the club's schedule by adding/editing games or practices.
 1. **Trigger:** An *approved* athlete discovers a game that isn't on the dashboard, or realizes a start time is wrong.
 2. **Action:** They log in and navigate to "Add Event" or click "Edit" on an existing event.
-3. **Action:** They provide/update the details: Name, Date, Location, and Registration URL. If editing, they can optionally check a box labeled "This is a major change—notify all athletes."
+3. **Action:** They provide/update the details: Name, Start Date, whether it is a two-day event, Location, and Registration URL. If editing, they can optionally check a box labeled "This is a major change—notify all athletes."
 4. **System:** A Next.js Server Action receives the payload, inserts/updates the record in the `Games` table, and the event becomes instantly visible to everyone.
 5. **System Action:** The *same* Server Action uses Resend to send an email to all approved athletes notifying them that a new event was added. If an event is edited, the Server Action *only* dispatches the email if the "major change" checkbox was selected on the frontend form.
 
@@ -37,7 +37,7 @@ The journeys are broken down by the two main personas: **Athletes (End Users)** 
 1. **Trigger:** An *approved* athlete decides to compete in a specific game.
 2. **Action:** They select the game on the dashboard and click the provided **Registration URL**.
 3. **System:** The athlete is redirected to the independent registration site.
-4. **Action:** After returning to the site, they update their RSVP `interest_level` to **`REGISTERED`**, **`INTERESTED`**, or **`NOT_GOING`**.
+4. **Action:** After returning to the site, they update their RSVP `interest_level` to **`REGISTERED`**, **`INTERESTED`**, or **`NOT_GOING`**. If it is a two-day event and they are registered, they specify which day they are competing (Day 1, Day 2, or Both).
 5. **System:** Row Level Security (RLS) ensures they can only edit their own attendance. Other logged-in users can view this status to coordinate travel via external channels (text/email). *(Note: No emails are triggered by RSVP changes).*
 
 ### Journey 5: Managing Personal Profile
@@ -46,7 +46,7 @@ The journeys are broken down by the two main personas: **Athletes (End Users)** 
 2. **Action:** They navigate to their "Profile" page.
 3. **Action:** They update their competition `class` (e.g., A-Class, Masters, Women).
 4. **Action:** They configure outward-facing links, explicitly adding their Instagram and Facebook profiles, and optionally providing up to 5 additional custom links (e.g., NASGA, HeavyAthlete).
-5. **System:** The system saves the extended profile data. Profiles are publicly viewable to promote the club's roster.
+5. **System:** The system saves the extended profile data. Profiles are publicly viewable on the main roster page, and athletes have a dedicated public profile page (e.g., `/roster/[id]`) that they can share with others, displaying their info and the events they are attending.
 
 ---
 

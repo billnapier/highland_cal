@@ -22,10 +22,10 @@ CREATE TABLE public.User_Roles (
 CREATE OR REPLACE FUNCTION public.is_admin()
 RETURNS boolean AS $$
 DECLARE
-  current_role public.user_role;
+  user_role_val public.user_role;
 BEGIN
-  SELECT role INTO current_role FROM public.User_Roles WHERE user_id = auth.uid();
-  RETURN current_role = 'ADMIN'::public.user_role;
+  SELECT role INTO user_role_val FROM public.User_Roles WHERE user_id = auth.uid();
+  RETURN user_role_val = 'ADMIN'::public.user_role;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public;
 
@@ -33,10 +33,10 @@ $$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public;
 CREATE OR REPLACE FUNCTION public.is_approved_or_admin()
 RETURNS boolean AS $$
 DECLARE
-  current_role public.user_role;
+  user_role_val public.user_role;
 BEGIN
-  SELECT role INTO current_role FROM public.User_Roles WHERE user_id = auth.uid();
-  RETURN current_role IN ('APPROVED'::public.user_role, 'ADMIN'::public.user_role);
+  SELECT role INTO user_role_val FROM public.User_Roles WHERE user_id = auth.uid();
+  RETURN user_role_val IN ('APPROVED'::public.user_role, 'ADMIN'::public.user_role);
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public;
 
@@ -76,6 +76,7 @@ CREATE TABLE public.Attendance (
   user_id uuid REFERENCES public.Profiles(id) ON DELETE CASCADE,
   game_id uuid REFERENCES public.Games(id) ON DELETE CASCADE,
   interest_level public.interest_level,
+  attend_day text,
   updated_at timestamptz DEFAULT now(),
   UNIQUE(user_id, game_id)
 );

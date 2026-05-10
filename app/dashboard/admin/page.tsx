@@ -67,8 +67,11 @@ export default async function AdminDashboardPage() {
               </tr>
             </thead>
             <tbody>
-              {users?.map((u: { id: string, display_name: string | null, email: string | null, class: string | null, created_at: string, user_roles: { role: string }[] }) => {
-                const role = u.user_roles?.length > 0 ? u.user_roles[0].role : 'UNKNOWN'
+              {users?.map((u: { id: string, display_name: string | null, email: string | null, class: string | null, created_at: string, user_roles: { role: string }[] | { role: string } | null }) => {
+                const roleObj = u.user_roles;
+                const role = Array.isArray(roleObj) 
+                  ? (roleObj.length > 0 ? roleObj[0].role : 'UNKNOWN') 
+                  : (roleObj?.role || 'UNKNOWN')
                 
                 return (
                   <tr key={u.id} className="border-b last:border-b-0 hover:bg-muted/30">

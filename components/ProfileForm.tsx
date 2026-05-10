@@ -52,7 +52,7 @@ export default function ProfileForm({ initialData }: ProfileFormProps) {
         } else {
           setError(result.message || 'Failed to update profile')
         }
-      } catch (err) {
+      } catch {
         setError('An unexpected error occurred')
       }
     })

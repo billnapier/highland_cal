@@ -1,12 +1,13 @@
 'use client'
 
 import { useState, useTransition } from 'react'
-import { setAttendance, InterestLevel } from '@/app/actions/attendance'
+import { setAttendance, InterestLevel, AttendDay } from '@/app/actions/attendance'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 
 interface AttendanceRecord {
   user_id: string
   interest_level: InterestLevel
+  attend_day?: AttendDay
   profiles?: {
     display_name: string | null
   } | null
@@ -17,28 +18,44 @@ interface AttendanceManagerProps {
   currentUserId: string
   role: string
   attendanceRecords: AttendanceRecord[]
+  isTwoDay?: boolean
 }
 
-export default function AttendanceManager({ gameId, currentUserId, role, attendanceRecords }: AttendanceManagerProps) {
+export default function AttendanceManager({ gameId, currentUserId, role, attendanceRecords, isTwoDay }: AttendanceManagerProps) {
   const [isPending, startTransition] = useTransition()
   const [message, setMessage] = useState<{ text: string, type: 'error' | 'success' } | null>(null)
 
   const currentUserRecord = attendanceRecords.find((r) => r.user_id === currentUserId)
   const [currentLevel, setCurrentLevel] = useState<string>(currentUserRecord?.interest_level || '')
+  const [currentDay, setCurrentDay] = useState<string>(currentUserRecord?.attend_day || 'DAY_1')
 
   const handleValueChange = (value: string | null) => {
     if (!value) return
     setCurrentLevel(value)
     setMessage(null)
     startTransition(async () => {
-      const result = await setAttendance(gameId, value as InterestLevel)
+      const result = await setAttendance(gameId, value as InterestLevel, value === 'REGISTERED' ? currentDay as AttendDay : undefined)
       if (!result.success) {
         setMessage({ text: result.message || 'Failed to update RSVP', type: 'error' })
-        // revert local state on error
         setCurrentLevel(currentUserRecord?.interest_level || '')
       } else {
         setMessage({ text: 'RSVP updated', type: 'success' })
-        // clear success message after 3 seconds
+        setTimeout(() => setMessage(null), 3000)
+      }
+    })
+  }
+
+  const handleDayChange = (value: string | null) => {
+    if (!value) return
+    setCurrentDay(value)
+    setMessage(null)
+    startTransition(async () => {
+      const result = await setAttendance(gameId, currentLevel as InterestLevel, value as AttendDay)
+      if (!result.success) {
+        setMessage({ text: result.message || 'Failed to update RSVP day', type: 'error' })
+        setCurrentDay(currentUserRecord?.attend_day || 'DAY_1')
+      } else {
+        setMessage({ text: 'RSVP day updated', type: 'success' })
         setTimeout(() => setMessage(null), 3000)
       }
     })
@@ -47,7 +64,11 @@ export default function AttendanceManager({ gameId, currentUserId, role, attenda
   const grouped = attendanceRecords.reduce((acc, record) => {
     const level = record.interest_level;
     if (!acc[level]) acc[level] = [];
-    acc[level].push(record.profiles?.display_name || 'Unknown User');
+    let name = record.profiles?.display_name || 'Unknown User';
+    if (level === 'REGISTERED' && isTwoDay && record.attend_day && record.attend_day !== 'BOTH') {
+      name += ` (${record.attend_day === 'DAY_1' ? 'Day 1' : 'Day 2'})`;
+    }
+    acc[level].push(name);
     return acc;
   }, {} as Record<string, string[]>);
 
@@ -78,6 +99,19 @@ export default function AttendanceManager({ gameId, currentUserId, role, attenda
               <SelectItem value="NOT_GOING">Not Going</SelectItem>
             </SelectContent>
           </Select>
+          
+          {currentLevel === 'REGISTERED' && isTwoDay && (
+            <Select value={currentDay} onValueChange={handleDayChange} disabled={isPending}>
+              <SelectTrigger className="w-[150px]">
+                <SelectValue placeholder="Which day?" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="BOTH">Both Days</SelectItem>
+                <SelectItem value="DAY_1">Day 1</SelectItem>
+                <SelectItem value="DAY_2">Day 2</SelectItem>
+              </SelectContent>
+            </Select>
+          )}
         </div>
       ) : (
         <div className="text-sm text-muted-foreground">
