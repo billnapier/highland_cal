@@ -156,6 +156,7 @@ export default async function DashboardPage() {
                           currentUserId={user.id} 
                           role={role} 
                           attendanceRecords={gameAttendance} 
+                          isTwoDay={!isSameDay}
                         />
                       </div>
                       <div className="flex gap-2 items-start shrink-0 mt-4 md:mt-0">
