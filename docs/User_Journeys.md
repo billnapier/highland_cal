@@ -46,7 +46,7 @@ The journeys are broken down by the two main personas: **Athletes (End Users)** 
 2. **Action:** They navigate to their "Profile" page.
 3. **Action:** They update their competition `class` (e.g., A-Class, Masters, Women).
 4. **Action:** They configure outward-facing links, explicitly adding their Instagram and Facebook profiles, and optionally providing up to 5 additional custom links (e.g., NASGA, HeavyAthlete).
-5. **System:** The system saves the extended profile data. Profiles are publicly viewable to promote the club's roster.
+5. **System:** The system saves the extended profile data. Profiles are publicly viewable on the main roster page, and athletes have a dedicated public profile page (e.g., `/roster/[id]`) that they can share with others, displaying their info and the events they are attending.
 
 ---
 

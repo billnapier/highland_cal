@@ -1,5 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import { ExternalLink } from 'lucide-react'
+import Link from 'next/link'
 import { buttonVariants } from '@/components/ui/button'
 interface CustomLink {
   title: string;
@@ -45,7 +46,11 @@ export default async function RosterPage() {
               <div key={profile.id} className="bg-card text-card-foreground rounded-xl border shadow-sm overflow-hidden flex flex-col transition-all hover:shadow-md">
                 <div className="p-6 flex-1">
                   <div className="flex justify-between items-start mb-4">
-                    <h2 className="text-2xl font-bold line-clamp-2">{profile.display_name || 'Anonymous Athlete'}</h2>
+                    <h2 className="text-2xl font-bold line-clamp-2">
+                      <Link href={`/roster/${profile.id}`} className="hover:underline">
+                        {profile.display_name || 'Anonymous Athlete'}
+                      </Link>
+                    </h2>
                     {profile.class && (
                       <span className="inline-flex items-center rounded-full bg-blue-100 px-2.5 py-0.5 text-xs font-semibold text-blue-800 dark:bg-blue-900 dark:text-blue-300 whitespace-nowrap ml-2">
                         {profile.class}

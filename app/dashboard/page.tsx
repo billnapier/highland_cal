@@ -74,6 +74,9 @@ export default async function DashboardPage() {
                       Admin Dashboard
                     </Link>
                   )}
+                  <Link href={`/roster/${user.id}`} className={buttonVariants({ variant: 'outline', size: 'sm' })}>
+                    View Public Profile
+                  </Link>
                   <Link href="/dashboard/profile" className={buttonVariants({ variant: 'outline', size: 'sm' })}>
                     Edit Profile
                   </Link>
