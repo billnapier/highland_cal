@@ -4,7 +4,6 @@ export const eventSchema = z.object({
   name: z.string().min(1, 'Name is required'),
   start_date: z.string().min(1, 'Start date is required'),
   is_two_day: z.boolean(),
-  local_timezone: z.string().min(1, 'Timezone is required'),
   location: z.string().optional(),
   registration_url: z.string().url('Must be a valid URL').optional().or(z.literal('')),
   major_change: z.boolean().optional(),

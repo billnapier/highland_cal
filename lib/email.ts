@@ -84,8 +84,8 @@ export async function sendEventNotification(
   type: 'CREATE' | 'UPDATE' | 'DELETE',
   eventDetails: {
     name: string
-    startTimestamp?: string
-    endTimestamp?: string
+    startDate?: string
+    isTwoDay?: boolean
     location?: string
   }
 ) {
@@ -117,8 +117,8 @@ export async function sendEventNotification(
       react: EventNotificationEmail({
         type,
         eventName: eventDetails.name,
-        startTimestamp: eventDetails.startTimestamp,
-        endTimestamp: eventDetails.endTimestamp,
+        startDate: eventDetails.startDate,
+        isTwoDay: eventDetails.isTwoDay,
         location: eventDetails.location,
         dashboardUrl,
       }),

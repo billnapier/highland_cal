@@ -61,9 +61,8 @@ CREATE TRIGGER on_auth_user_created
 CREATE TABLE public.Games (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   name text NOT NULL,
-  start_timestamp timestamptz NOT NULL,
-  end_timestamp timestamptz NOT NULL,
-  local_timezone text NOT NULL,
+  start_date date NOT NULL,
+  is_two_day boolean NOT NULL DEFAULT false,
   location text,
   registration_url text,
   created_by uuid REFERENCES public.Profiles(id) ON DELETE SET NULL,

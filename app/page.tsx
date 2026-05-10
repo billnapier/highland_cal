@@ -24,8 +24,8 @@ export default async function Home() {
         )
       )
     `)
-    .order('start_timestamp', { ascending: true })
-    .gte('end_timestamp', new Date().toISOString());
+    .order('start_date', { ascending: true })
+    .gte('start_date', new Date().toISOString().split('T')[0]);
 
   return (
     <main className="flex flex-1 flex-col items-center p-8 max-w-4xl mx-auto w-full">
@@ -60,11 +60,10 @@ export default async function Home() {
         {!error && games && games.length > 0 && (
           <div className="grid gap-4">
             {games.map((game) => {
-              const startDate = new Date(game.start_timestamp);
-              const endDate = new Date(game.end_timestamp);
-              
-              const isSameDay = startDate.toDateString() === endDate.toDateString();
-              const isTwoDay = !isSameDay;
+              const startDate = new Date(game.start_date + 'T00:00:00');
+              const isTwoDay = game.is_two_day;
+              const isSameDay = !isTwoDay;
+              const endDate = isTwoDay ? new Date(startDate.getTime() + 86400000) : startDate;
               
               const attendees = game.attendance?.filter((a: AttendanceRecord) => a.interest_level === 'REGISTERED' || a.interest_level === 'INTERESTED') || [];
               const registeredAthletes = attendees.filter((a: AttendanceRecord) => a.interest_level === 'REGISTERED');
@@ -80,10 +79,7 @@ export default async function Home() {
                           <Calendar className="mr-2 h-4 w-4" />
                           <span>
                             {startDate.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' })}
-                            {isSameDay 
-                              ? ` • ${startDate.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })} - ${endDate.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}` 
-                              : ` - ${endDate.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' })}`
-                            }
+                            {!isSameDay && ` - ${endDate.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' })}`}
                           </span>
                         </div>
                         {game.location && (

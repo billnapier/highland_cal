@@ -36,8 +36,8 @@ export default async function DashboardPage() {
   const { data: games, error: gamesError } = await supabase
     .from('games')
     .select('*')
-    .order('start_timestamp', { ascending: true })
-    .gte('end_timestamp', new Date().toISOString())
+    .order('start_date', { ascending: true })
+    .gte('start_date', new Date().toISOString().split('T')[0])
 
   const gameIds = games?.map(g => g.id) || []
   
@@ -124,10 +124,11 @@ export default async function DashboardPage() {
           {!gamesError && games && games.length > 0 && (
             <div className="grid gap-4">
               {games.map((game) => {
-                const startDate = new Date(game.start_timestamp);
-                const endDate = new Date(game.end_timestamp);
+                const startDate = new Date(game.start_date + 'T00:00:00');
+                const isTwoDay = game.is_two_day;
+                const isSameDay = !isTwoDay;
+                const endDate = isTwoDay ? new Date(startDate.getTime() + 86400000) : startDate;
                 
-                const isSameDay = startDate.toDateString() === endDate.toDateString();
                 const gameAttendance = attendanceData?.filter(a => a.game_id === game.id) || [];
                 
                 return (
@@ -140,10 +141,7 @@ export default async function DashboardPage() {
                             <Calendar className="mr-2 h-4 w-4" />
                             <span>
                               {startDate.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' })}
-                              {isSameDay 
-                                ? ` • ${startDate.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })} - ${endDate.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}` 
-                                : ` - ${endDate.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' })}`
-                              }
+                              {!isSameDay && ` - ${endDate.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' })}`}
                             </span>
                           </div>
                           {game.location && (

@@ -11,22 +11,7 @@ import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { createEvent, updateEvent } from '@/app/actions/events'
 import { eventSchema, EventFormData } from '@/lib/schemas'
-import { formatInTimeZone } from 'date-fns-tz'
 
-const formatDateForInput = (isoString: string, timezone: string) => {
-  if (!isoString) return ''
-  try {
-    return formatInTimeZone(isoString, timezone, "yyyy-MM-dd")
-  } catch {
-    return ''
-  }
-}
-
-const computeIsTwoDay = (startIso: string, endIso: string, tz: string) => {
-  const start = formatDateForInput(startIso, tz)
-  const end = formatDateForInput(endIso, tz)
-  return start !== end
-}
 
 export function CreateEventModal() {
   const [open, setOpen] = useState(false)
@@ -36,8 +21,7 @@ export function CreateEventModal() {
   const { register, handleSubmit, setValue, watch, formState: { errors }, reset } = useForm<EventFormData>({
     resolver: zodResolver(eventSchema),
     defaultValues: {
-      local_timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
-      is_two_day: true,
+      is_two_day: false,
     }
   })
 
@@ -46,8 +30,7 @@ export function CreateEventModal() {
   const handleOpenChange = (newOpen: boolean) => {
     if (!newOpen) {
       reset({
-        local_timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
-        is_two_day: true,
+        is_two_day: false,
       })
       setError(null)
     }
@@ -110,11 +93,7 @@ export function CreateEventModal() {
               </Label>
             </div>
           </div>
-          <div className="grid gap-2">
-            <Label htmlFor="local_timezone">Timezone</Label>
-            <Input id="local_timezone" {...register('local_timezone')} />
-            {errors.local_timezone && <span className="text-xs text-red-500">{errors.local_timezone.message}</span>}
-          </div>
+
           <div className="grid gap-2">
             <Label htmlFor="location">Location (optional)</Label>
             <Input id="location" {...register('location')} />
@@ -141,9 +120,8 @@ interface EditEventModalProps {
   game: {
     id: string
     name: string
-    start_timestamp: string
-    end_timestamp: string
-    local_timezone: string
+    start_date: string
+    is_two_day: boolean
     location?: string | null
     registration_url?: string | null
   }
@@ -161,9 +139,8 @@ export function EditEventModal({ game }: EditEventModalProps) {
     resolver: zodResolver(eventSchema),
     defaultValues: {
       name: game.name,
-      start_date: formatDateForInput(game.start_timestamp, game.local_timezone),
-      is_two_day: computeIsTwoDay(game.start_timestamp, game.end_timestamp, game.local_timezone),
-      local_timezone: game.local_timezone,
+      start_date: game.start_date,
+      is_two_day: game.is_two_day,
       location: game.location || '',
       registration_url: game.registration_url || '',
     }
@@ -175,9 +152,8 @@ export function EditEventModal({ game }: EditEventModalProps) {
     if (newOpen) {
       reset({
         name: game.name,
-        start_date: formatDateForInput(game.start_timestamp, game.local_timezone),
-        is_two_day: computeIsTwoDay(game.start_timestamp, game.end_timestamp, game.local_timezone),
-        local_timezone: game.local_timezone,
+        start_date: game.start_date,
+        is_two_day: game.is_two_day,
         location: game.location || '',
         registration_url: game.registration_url || '',
       })
@@ -243,11 +219,7 @@ export function EditEventModal({ game }: EditEventModalProps) {
               </Label>
             </div>
           </div>
-          <div className="grid gap-2">
-            <Label htmlFor="edit-local_timezone">Timezone</Label>
-            <Input id="edit-local_timezone" {...register('local_timezone')} />
-            {errors.local_timezone && <span className="text-xs text-red-500">{errors.local_timezone.message}</span>}
-          </div>
+
           <div className="grid gap-2">
             <Label htmlFor="edit-location">Location (optional)</Label>
             <Input id="edit-location" {...register('location')} />

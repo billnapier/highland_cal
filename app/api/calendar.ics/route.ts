@@ -6,9 +6,9 @@ export async function GET() {
   const supabase = await createClient();
   const { data: games, error } = await supabase
     .from('games')
-    .select('id, name, location, registration_url, start_timestamp, end_timestamp')
-    .gte('end_timestamp', new Date().toISOString())
-    .order('start_timestamp', { ascending: true });
+    .select('id, name, location, registration_url, start_date, is_two_day')
+    .gte('start_date', new Date().toISOString().split('T')[0])
+    .order('start_date', { ascending: true });
 
   if (error) {
     console.error('Error fetching games for iCal feed:', error);
@@ -16,28 +16,22 @@ export async function GET() {
   }
 
   const events: EventAttributes[] = (games || []).map((game) => {
-    const start = new Date(game.start_timestamp);
-    const end = new Date(game.end_timestamp);
-
+    const start = new Date(game.start_date + 'T00:00:00');
+    // For all-day events, `ics` uses start: [year, month, day]
+    // And if duration is passed, it specifies how many days it spans.
+    // If it's a 1-day event, we can specify a duration of 1 day.
+    
     return {
       uid: game.id,
       title: game.name,
       location: game.location || undefined,
       url: game.registration_url || undefined,
       start: [
-        start.getUTCFullYear(),
-        start.getUTCMonth() + 1,
-        start.getUTCDate(),
-        start.getUTCHours(),
-        start.getUTCMinutes()
+        start.getFullYear(),
+        start.getMonth() + 1,
+        start.getDate()
       ],
-      end: [
-        end.getUTCFullYear(),
-        end.getUTCMonth() + 1,
-        end.getUTCDate(),
-        end.getUTCHours(),
-        end.getUTCMinutes()
-      ],
+      duration: { days: game.is_two_day ? 2 : 1 },
       description: game.registration_url ? `Registration: ${game.registration_url}` : undefined,
     };
   });

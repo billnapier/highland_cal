@@ -14,8 +14,8 @@ import { format } from 'date-fns'
 interface EventNotificationEmailProps {
   type: 'CREATE' | 'UPDATE' | 'DELETE'
   eventName: string
-  startTimestamp?: string
-  endTimestamp?: string
+  startDate?: string
+  isTwoDay?: boolean
   location?: string
   dashboardUrl: string
 }
@@ -23,8 +23,8 @@ interface EventNotificationEmailProps {
 export default function EventNotificationEmail({
   type,
   eventName,
-  startTimestamp,
-  endTimestamp,
+  startDate,
+  isTwoDay,
   location,
   dashboardUrl,
 }: EventNotificationEmailProps) {
@@ -46,14 +46,21 @@ export default function EventNotificationEmail({
     actionText = 'The following event has been canceled/deleted:'
   }
 
-  const safeFormatDate = (dateString?: string) => {
-    if (!dateString) return ''
+  const renderDateString = () => {
+    if (!startDate) return ''
     try {
-      const date = new Date(dateString)
-      if (isNaN(date.getTime())) return dateString
-      return format(date, 'PPp')
+      const start = new Date(startDate)
+      if (isNaN(start.getTime())) return startDate
+      
+      const startStr = format(start, 'PP')
+      if (isTwoDay) {
+        const end = new Date(start)
+        end.setDate(end.getDate() + 1)
+        return `${startStr} - ${format(end, 'PP')}`
+      }
+      return startStr
     } catch {
-      return dateString
+      return startDate
     }
   }
 
@@ -69,14 +76,9 @@ export default function EventNotificationEmail({
             <Text style={text}>
               <strong>Event:</strong> {eventName}
             </Text>
-            {type !== 'DELETE' && startTimestamp && (
+            {type !== 'DELETE' && startDate && (
               <Text style={text}>
-                <strong>Start:</strong> {safeFormatDate(startTimestamp)}
-              </Text>
-            )}
-            {type !== 'DELETE' && endTimestamp && (
-              <Text style={text}>
-                <strong>End:</strong> {safeFormatDate(endTimestamp)}
+                <strong>Date:</strong> {renderDateString()}
               </Text>
             )}
             {type !== 'DELETE' && location && (

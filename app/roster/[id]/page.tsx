@@ -34,8 +34,8 @@ export default async function AthleteProfilePage({ params }: { params: Promise<{
       games (
         id,
         name,
-        start_timestamp,
-        end_timestamp,
+        start_date,
+        is_two_day,
         location,
         registration_url
       )
@@ -56,7 +56,7 @@ export default async function AthleteProfilePage({ params }: { params: Promise<{
     const gameB = Array.isArray(b.games) ? b.games[0] : b.games
     
     if (!gameA || !gameB) return 0
-    return new Date(gameA.start_timestamp).getTime() - new Date(gameB.start_timestamp).getTime()
+    return new Date(gameA.start_date).getTime() - new Date(gameB.start_date).getTime()
   })
 
   return (
@@ -124,10 +124,10 @@ export default async function AthleteProfilePage({ params }: { params: Promise<{
                 const game = Array.isArray(record.games) ? record.games[0] : record.games;
                 if (!game) return null;
 
-                const startDate = new Date(game.start_timestamp);
-                const endDate = new Date(game.end_timestamp);
-                const isSameDay = startDate.toDateString() === endDate.toDateString();
-                const isTwoDay = endDate.getTime() - startDate.getTime() > 24 * 60 * 60 * 1000;
+                const startDate = new Date(game.start_date + 'T00:00:00');
+                const isTwoDay = game.is_two_day;
+                const isSameDay = !isTwoDay;
+                const endDate = isTwoDay ? new Date(startDate.getTime() + 86400000) : startDate;
                 
                 let dayText = '';
                 if (isTwoDay && record.attend_day && record.attend_day !== 'BOTH') {
@@ -153,10 +153,7 @@ export default async function AthleteProfilePage({ params }: { params: Promise<{
                             <Calendar className="mr-2 h-4 w-4" />
                             <span>
                               {startDate.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' })}
-                              {isSameDay 
-                                ? '' 
-                                : ` - ${endDate.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' })}`
-                              }
+                              {!isSameDay && ` - ${endDate.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' })}`}
                             </span>
                           </div>
                           {game.location && (

@@ -63,9 +63,8 @@ CREATE TRIGGER on_auth_user_created
 Stores upcoming games and practices.
 - `id` (uuid, Primary Key): Default `gen_random_uuid()`.
 - **name** (text): Name of the game or practice.
-- **start_timestamp** (timestamptz): Start date and time of the event.
-- **end_timestamp** (timestamptz): End date and time of the event.
-- **local_timezone** (text): Timezone identifier (e.g., 'America/Los_Angeles') for display purposes.
+- **start_date** (date): Start date of the event.
+- **is_two_day** (boolean): Whether the event is a two-day event.
 - `location` (text): Location (City, State).
 - `registration_url` (text): External registration link.
 - `created_by` (uuid): References `Profiles(id)` on delete set null.
