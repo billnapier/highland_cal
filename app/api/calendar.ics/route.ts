@@ -5,7 +5,7 @@ import { NextResponse } from 'next/server';
 export async function GET() {
   const supabase = await createClient();
   const { data: games, error } = await supabase
-    .from('Games')
+    .from('games')
     .select('id, name, location, registration_url, start_timestamp, end_timestamp')
     .gte('end_timestamp', new Date().toISOString())
     .order('start_timestamp', { ascending: true });

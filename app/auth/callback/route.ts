@@ -17,20 +17,37 @@ export async function GET(request: Request) {
       const userEmail = session.user.email
       const initialAdminEmail = process.env.INITIAL_ADMIN_EMAIL
 
-      if (userEmail && initialAdminEmail && userEmail === initialAdminEmail) {
+      if (userEmail && initialAdminEmail && userEmail.toLowerCase() === initialAdminEmail.toLowerCase()) {
         // Fetch current role to see if they are already admin
         const { data: roleData } = await supabase
-          .from('User_Roles')
+          .from('user_roles')
           .select('role')
           .eq('user_id', session.user.id)
           .single()
 
-        if (roleData && roleData.role !== 'ADMIN') {
+        if (!roleData || roleData.role !== 'ADMIN') {
           const adminSupabase = createAdminClient()
-          await adminSupabase
-            .from('User_Roles')
-            .update({ role: 'ADMIN' })
-            .eq('user_id', session.user.id)
+          
+          // Ensure profile exists (it might not if they were created before triggers or trigger failed)
+          const { error: profileError } = await adminSupabase
+            .from('profiles')
+            .upsert({ 
+              id: session.user.id, 
+              email: session.user.email,
+              display_name: session.user.user_metadata?.full_name || session.user.email?.split('@')?.[0] || 'Admin User'
+            }, { onConflict: 'id', ignoreDuplicates: true })
+            
+          if (profileError) {
+            console.error('Failed to upsert Profile for admin:', profileError)
+          }
+
+          const { error: roleError } = await adminSupabase
+            .from('user_roles')
+            .upsert({ user_id: session.user.id, role: 'ADMIN' })
+            
+          if (roleError) {
+            console.error('Failed to upsert User_Roles for admin:', roleError)
+          }
         }
       }
 

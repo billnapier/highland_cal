@@ -18,7 +18,7 @@ export async function setAttendance(gameId: string, interestLevel: InterestLevel
     }
 
     const { data: roleData, error: roleError } = await supabase
-      .from('User_Roles')
+      .from('user_roles')
       .select('role')
       .eq('user_id', user.id)
       .single()
@@ -28,7 +28,7 @@ export async function setAttendance(gameId: string, interestLevel: InterestLevel
     }
 
     const { error: upsertError } = await supabase
-      .from('Attendance')
+      .from('attendance')
       .upsert({
         user_id: user.id,
         game_id: gameId,

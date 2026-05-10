@@ -19,7 +19,7 @@ export async function deleteEvent(eventId: string) {
 
     // Defensive check: verify user exists in Profiles
     const { data: profileData, error: profileError } = await supabase
-      .from('Profiles')
+      .from('profiles')
       .select('id')
       .eq('id', user.id)
       .single()
@@ -30,7 +30,7 @@ export async function deleteEvent(eventId: string) {
 
     // Verify the user is an ADMIN
     const { data: roleData, error: roleError } = await supabase
-      .from('User_Roles')
+      .from('user_roles')
       .select('role')
       .eq('user_id', user.id)
       .single()
@@ -41,7 +41,7 @@ export async function deleteEvent(eventId: string) {
 
     // Fetch event name before deleting
     const { data: eventData } = await supabase
-      .from('Games')
+      .from('games')
       .select('name')
       .eq('id', eventId)
       .single()
@@ -49,7 +49,7 @@ export async function deleteEvent(eventId: string) {
 
     // Delete the event
     const { error: deleteError } = await supabase
-      .from('Games')
+      .from('games')
       .delete()
       .eq('id', eventId)
 
@@ -91,7 +91,7 @@ export async function createEvent(rawData: EventFormData) {
     }
 
     const { data: roleData, error: roleError } = await supabase
-      .from('User_Roles')
+      .from('user_roles')
       .select('role')
       .eq('user_id', user.id)
       .single()
@@ -101,7 +101,7 @@ export async function createEvent(rawData: EventFormData) {
     }
 
     const { error: insertError } = await supabase
-      .from('Games')
+      .from('games')
       .insert([
         {
           name: data.name,
@@ -160,7 +160,7 @@ export async function updateEvent(eventId: string, rawData: EventFormData, major
     }
 
     const { data: roleData, error: roleError } = await supabase
-      .from('User_Roles')
+      .from('user_roles')
       .select('role')
       .eq('user_id', user.id)
       .single()
@@ -171,7 +171,7 @@ export async function updateEvent(eventId: string, rawData: EventFormData, major
 
     if (roleData.role === 'APPROVED') {
       const { data: gameData, error: gameError } = await supabase
-        .from('Games')
+        .from('games')
         .select('created_by')
         .eq('id', eventId)
         .single()
@@ -185,7 +185,7 @@ export async function updateEvent(eventId: string, rawData: EventFormData, major
     }
 
     const { error: updateError } = await supabase
-      .from('Games')
+      .from('games')
       .update({
         name: data.name,
         start_timestamp: data.start_timestamp,

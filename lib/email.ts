@@ -15,9 +15,9 @@ async function getEmailsByRoles(roles: string[]): Promise<string[]> {
 
   // To get the emails we need to join Profiles and User_Roles
   const { data, error } = await supabase
-    .from('Profiles')
-    .select('email, User_Roles!inner(role)')
-    .in('User_Roles.role', roles)
+    .from('profiles')
+    .select('email, user_roles!inner(role)')
+    .in('user_roles.role', roles)
 
   if (error || !data) {
     console.error('Error fetching emails for roles:', roles, error)

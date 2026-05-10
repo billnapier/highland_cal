@@ -7,7 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 interface AttendanceRecord {
   user_id: string
   interest_level: InterestLevel
-  Profiles?: {
+  profiles?: {
     display_name: string | null
   } | null
 }
@@ -47,7 +47,7 @@ export default function AttendanceManager({ gameId, currentUserId, role, attenda
   const grouped = attendanceRecords.reduce((acc, record) => {
     const level = record.interest_level;
     if (!acc[level]) acc[level] = [];
-    acc[level].push(record.Profiles?.display_name || 'Unknown User');
+    acc[level].push(record.profiles?.display_name || 'Unknown User');
     return acc;
   }, {} as Record<string, string[]>);
 

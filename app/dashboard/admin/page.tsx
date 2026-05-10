@@ -13,7 +13,7 @@ export default async function AdminDashboardPage() {
 
   // Ensure only ADMINs can view this page
   const { data: currentRoleData } = await supabase
-    .from('User_Roles')
+    .from('user_roles')
     .select('role')
     .eq('user_id', user.id)
     .single()
@@ -26,14 +26,14 @@ export default async function AdminDashboardPage() {
   // Because Profiles and User_Roles are separate tables that share an ID (id and user_id),
   // we can do a join.
   const { data: users, error } = await supabase
-    .from('Profiles')
+    .from('profiles')
     .select(`
       id,
       display_name,
       email,
       class,
       created_at,
-      User_Roles (
+      user_roles (
         role
       )
     `)
@@ -67,8 +67,8 @@ export default async function AdminDashboardPage() {
               </tr>
             </thead>
             <tbody>
-              {users?.map((u: { id: string, display_name: string | null, email: string | null, class: string | null, created_at: string, User_Roles: { role: string }[] }) => {
-                const role = u.User_Roles?.length > 0 ? u.User_Roles[0].role : 'UNKNOWN'
+              {users?.map((u: { id: string, display_name: string | null, email: string | null, class: string | null, created_at: string, user_roles: { role: string }[] }) => {
+                const role = u.user_roles?.length > 0 ? u.user_roles[0].role : 'UNKNOWN'
                 
                 return (
                   <tr key={u.id} className="border-b last:border-b-0 hover:bg-muted/30">

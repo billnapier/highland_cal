@@ -7,7 +7,7 @@ import Link from 'next/link';
 export default async function Home() {
   const supabase = await createClient();
   const { data: games, error } = await supabase
-    .from('Games')
+    .from('games')
     .select('*')
     .order('start_timestamp', { ascending: true })
     .gte('end_timestamp', new Date().toISOString());

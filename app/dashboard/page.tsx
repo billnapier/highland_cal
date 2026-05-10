@@ -18,14 +18,14 @@ export default async function DashboardPage() {
 
   // Fetch the user's role
   const { data: roleData } = await supabase
-    .from('User_Roles')
+    .from('user_roles')
     .select('role')
     .eq('user_id', user.id)
     .single()
 
   // Fetch the user's profile
   const { data: profileData } = await supabase
-    .from('Profiles')
+    .from('profiles')
     .select('display_name, email')
     .eq('id', user.id)
     .single()
@@ -34,7 +34,7 @@ export default async function DashboardPage() {
 
   // Fetch upcoming events
   const { data: games, error: gamesError } = await supabase
-    .from('Games')
+    .from('games')
     .select('*')
     .order('start_timestamp', { ascending: true })
     .gte('end_timestamp', new Date().toISOString())
@@ -45,8 +45,8 @@ export default async function DashboardPage() {
   let attendanceData = null
   if (gameIds.length > 0) {
     const { data, error: attendanceError } = await supabase
-      .from('Attendance')
-      .select('*, Profiles(display_name)')
+      .from('attendance')
+      .select('*, profiles(display_name)')
       .in('game_id', gameIds)
     
     if (attendanceError) {
