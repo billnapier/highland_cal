@@ -34,7 +34,7 @@ export default function AttendanceManager({ gameId, currentUserId, role, attenda
     setCurrentLevel(value)
     setMessage(null)
     startTransition(async () => {
-      const result = await setAttendance(gameId, value as InterestLevel, currentDay as AttendDay)
+      const result = await setAttendance(gameId, value as InterestLevel, value === 'REGISTERED' ? currentDay as AttendDay : undefined)
       if (!result.success) {
         setMessage({ text: result.message || 'Failed to update RSVP', type: 'error' })
         setCurrentLevel(currentUserRecord?.interest_level || '')

@@ -64,7 +64,7 @@ export default async function Home() {
               const endDate = new Date(game.end_timestamp);
               
               const isSameDay = startDate.toDateString() === endDate.toDateString();
-              const isTwoDay = endDate.getTime() - startDate.getTime() > 24 * 60 * 60 * 1000;
+              const isTwoDay = !isSameDay;
               
               const attendees = game.attendance?.filter((a: AttendanceRecord) => a.interest_level === 'REGISTERED' || a.interest_level === 'INTERESTED') || [];
               const registeredAthletes = attendees.filter((a: AttendanceRecord) => a.interest_level === 'REGISTERED');
