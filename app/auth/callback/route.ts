@@ -34,8 +34,8 @@ export async function GET(request: Request) {
             .upsert({ 
               id: session.user.id, 
               email: session.user.email,
-              display_name: session.user.user_metadata?.full_name || session.user.email?.split('@')[0] || 'Admin User'
-            })
+              display_name: session.user.user_metadata?.full_name || session.user.email?.split('@')?.[0] || 'Admin User'
+            }, { onConflict: 'id', ignoreDuplicates: true })
             
           if (profileError) {
             console.error('Failed to upsert Profile for admin:', profileError)
