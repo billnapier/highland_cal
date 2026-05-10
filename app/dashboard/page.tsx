@@ -33,7 +33,7 @@ export default async function DashboardPage() {
 
   const role = roleData?.role || 'UNKNOWN'
   
-  const hasSubmittedApplication = !!profileData?.throwing_experience || profileData?.attended_practice !== null
+  const hasSubmittedApplication = !!profileData?.throwing_experience || typeof profileData?.attended_practice === 'boolean'
 
   // Fetch upcoming events
   const { data: games, error: gamesError } = await supabase
