@@ -17,10 +17,16 @@ import { fromZonedTime, formatInTimeZone } from 'date-fns-tz'
 const formatDateForInput = (isoString: string, timezone: string) => {
   if (!isoString) return ''
   try {
-    return formatInTimeZone(isoString, timezone, "yyyy-MM-dd'T'HH:mm")
+    return formatInTimeZone(isoString, timezone, "yyyy-MM-dd")
   } catch (e) {
     return ''
   }
+}
+
+const computeIsTwoDay = (startIso: string, endIso: string, tz: string) => {
+  const start = formatDateForInput(startIso, tz)
+  const end = formatDateForInput(endIso, tz)
+  return start !== end
 }
 
 export function CreateEventModal() {
@@ -28,16 +34,22 @@ export function CreateEventModal() {
   const [isPending, startTransition] = useTransition()
   const [error, setError] = useState<string | null>(null)
 
-  const { register, handleSubmit, formState: { errors }, reset } = useForm<EventFormData>({
+  const { register, handleSubmit, setValue, watch, formState: { errors }, reset } = useForm<EventFormData>({
     resolver: zodResolver(eventSchema),
     defaultValues: {
       local_timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+      is_two_day: true,
     }
   })
 
+  const isTwoDay = watch('is_two_day')
+
   const handleOpenChange = (newOpen: boolean) => {
     if (!newOpen) {
-      reset()
+      reset({
+        local_timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+        is_two_day: true,
+      })
       setError(null)
     }
     setOpen(newOpen)
@@ -49,8 +61,6 @@ export function CreateEventModal() {
       try {
         const payload = {
           ...data,
-          start_timestamp: fromZonedTime(data.start_timestamp, data.local_timezone).toISOString(),
-          end_timestamp: fromZonedTime(data.end_timestamp, data.local_timezone).toISOString(),
         }
         const result = await createEvent(payload)
         if (result.success) {
@@ -86,14 +96,19 @@ export function CreateEventModal() {
           </div>
           <div className="grid grid-cols-2 gap-4">
             <div className="grid gap-2">
-              <Label htmlFor="start_timestamp">Start Time</Label>
-              <Input id="start_timestamp" type="datetime-local" {...register('start_timestamp')} />
-              {errors.start_timestamp && <span className="text-xs text-red-500">{errors.start_timestamp.message}</span>}
+              <Label htmlFor="start_date">Start Date</Label>
+              <Input id="start_date" type="date" {...register('start_date')} />
+              {errors.start_date && <span className="text-xs text-red-500">{errors.start_date.message}</span>}
             </div>
-            <div className="grid gap-2">
-              <Label htmlFor="end_timestamp">End Time</Label>
-              <Input id="end_timestamp" type="datetime-local" {...register('end_timestamp')} />
-              {errors.end_timestamp && <span className="text-xs text-red-500">{errors.end_timestamp.message}</span>}
+            <div className="flex items-center space-x-2 pt-8">
+              <Checkbox 
+                id="is_two_day" 
+                checked={isTwoDay} 
+                onCheckedChange={(c) => setValue('is_two_day', !!c)} 
+              />
+              <Label htmlFor="is_two_day" className="font-normal text-sm">
+                Two-day event
+              </Label>
             </div>
           </div>
           <div className="grid gap-2">
@@ -143,24 +158,26 @@ export function EditEventModal({ game }: EditEventModalProps) {
   // We need to manage the checkbox state manually if not using react-hook-form Controller
   const [majorChange, setMajorChange] = useState(false)
 
-  const { register, handleSubmit, formState: { errors }, reset } = useForm<EventFormData>({
+  const { register, handleSubmit, setValue, watch, formState: { errors }, reset } = useForm<EventFormData>({
     resolver: zodResolver(eventSchema),
     defaultValues: {
       name: game.name,
-      start_timestamp: formatDateForInput(game.start_timestamp, game.local_timezone),
-      end_timestamp: formatDateForInput(game.end_timestamp, game.local_timezone),
+      start_date: formatDateForInput(game.start_timestamp, game.local_timezone),
+      is_two_day: computeIsTwoDay(game.start_timestamp, game.end_timestamp, game.local_timezone),
       local_timezone: game.local_timezone,
       location: game.location || '',
       registration_url: game.registration_url || '',
     }
   })
 
+  const isTwoDay = watch('is_two_day')
+
   const handleOpenChange = (newOpen: boolean) => {
     if (newOpen) {
       reset({
         name: game.name,
-        start_timestamp: formatDateForInput(game.start_timestamp, game.local_timezone),
-        end_timestamp: formatDateForInput(game.end_timestamp, game.local_timezone),
+        start_date: formatDateForInput(game.start_timestamp, game.local_timezone),
+        is_two_day: computeIsTwoDay(game.start_timestamp, game.end_timestamp, game.local_timezone),
         local_timezone: game.local_timezone,
         location: game.location || '',
         registration_url: game.registration_url || '',
@@ -177,8 +194,6 @@ export function EditEventModal({ game }: EditEventModalProps) {
       try {
         const payload = {
           ...data,
-          start_timestamp: fromZonedTime(data.start_timestamp, data.local_timezone).toISOString(),
-          end_timestamp: fromZonedTime(data.end_timestamp, data.local_timezone).toISOString(),
         }
         const result = await updateEvent(game.id, payload, majorChange)
         if (result.success) {
@@ -214,14 +229,19 @@ export function EditEventModal({ game }: EditEventModalProps) {
           </div>
           <div className="grid grid-cols-2 gap-4">
             <div className="grid gap-2">
-              <Label htmlFor="edit-start_timestamp">Start Time</Label>
-              <Input id="edit-start_timestamp" type="datetime-local" {...register('start_timestamp')} />
-              {errors.start_timestamp && <span className="text-xs text-red-500">{errors.start_timestamp.message}</span>}
+              <Label htmlFor="edit-start_date">Start Date</Label>
+              <Input id="edit-start_date" type="date" {...register('start_date')} />
+              {errors.start_date && <span className="text-xs text-red-500">{errors.start_date.message}</span>}
             </div>
-            <div className="grid gap-2">
-              <Label htmlFor="edit-end_timestamp">End Time</Label>
-              <Input id="edit-end_timestamp" type="datetime-local" {...register('end_timestamp')} />
-              {errors.end_timestamp && <span className="text-xs text-red-500">{errors.end_timestamp.message}</span>}
+            <div className="flex items-center space-x-2 pt-8">
+              <Checkbox 
+                id="edit-is_two_day" 
+                checked={isTwoDay} 
+                onCheckedChange={(c) => setValue('is_two_day', !!c)} 
+              />
+              <Label htmlFor="edit-is_two_day" className="font-normal text-sm">
+                Two-day event
+              </Label>
             </div>
           </div>
           <div className="grid gap-2">

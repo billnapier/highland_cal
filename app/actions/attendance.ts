@@ -4,8 +4,9 @@ import { createClient } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
 
 export type InterestLevel = 'WATCHING' | 'INTERESTED' | 'REGISTERED' | 'NOT_GOING';
+export type AttendDay = 'DAY_1' | 'DAY_2' | 'BOTH' | null;
 
-export async function setAttendance(gameId: string, interestLevel: InterestLevel) {
+export async function setAttendance(gameId: string, interestLevel: InterestLevel, attendDay?: AttendDay) {
   try {
     const supabase = await createClient()
 
@@ -33,6 +34,7 @@ export async function setAttendance(gameId: string, interestLevel: InterestLevel
         user_id: user.id,
         game_id: gameId,
         interest_level: interestLevel,
+        attend_day: attendDay || null,
       }, { onConflict: 'user_id, game_id' })
 
     if (upsertError) {

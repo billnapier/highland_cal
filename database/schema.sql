@@ -76,6 +76,7 @@ CREATE TABLE public.Attendance (
   user_id uuid REFERENCES public.Profiles(id) ON DELETE CASCADE,
   game_id uuid REFERENCES public.Games(id) ON DELETE CASCADE,
   interest_level public.interest_level,
+  attend_day text,
   updated_at timestamptz DEFAULT now(),
   UNIQUE(user_id, game_id)
 );
