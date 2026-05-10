@@ -27,7 +27,7 @@ export default function AttendanceManager({ gameId, currentUserId, role, attenda
 
   const currentUserRecord = attendanceRecords.find((r) => r.user_id === currentUserId)
   const [currentLevel, setCurrentLevel] = useState<string>(currentUserRecord?.interest_level || '')
-  const [currentDay, setCurrentDay] = useState<string>(currentUserRecord?.attend_day || 'BOTH')
+  const [currentDay, setCurrentDay] = useState<string>(currentUserRecord?.attend_day || 'DAY_1')
 
   const handleValueChange = (value: string | null) => {
     if (!value) return
@@ -53,7 +53,7 @@ export default function AttendanceManager({ gameId, currentUserId, role, attenda
       const result = await setAttendance(gameId, currentLevel as InterestLevel, value as AttendDay)
       if (!result.success) {
         setMessage({ text: result.message || 'Failed to update RSVP day', type: 'error' })
-        setCurrentDay(currentUserRecord?.attend_day || 'BOTH')
+        setCurrentDay(currentUserRecord?.attend_day || 'DAY_1')
       } else {
         setMessage({ text: 'RSVP day updated', type: 'success' })
         setTimeout(() => setMessage(null), 3000)
