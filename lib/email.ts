@@ -84,9 +84,13 @@ export async function sendEventNotification(
   type: 'CREATE' | 'UPDATE' | 'DELETE',
   eventDetails: {
     name: string
-    startTimestamp?: string
-    endTimestamp?: string
-    location?: string
+    startDate?: string
+    isTwoDay?: boolean
+    type?: 'EVENT' | 'PRACTICE'
+    startTime?: string | null
+    endTime?: string | null
+    location?: string | null
+    registrationUrl?: string | null
   }
 ) {
   if (!process.env.RESEND_API_KEY) {
@@ -115,11 +119,15 @@ export async function sendEventNotification(
       bcc: recipientEmails,
       subject,
       react: EventNotificationEmail({
-        type,
+        actionType: type,
         eventName: eventDetails.name,
-        startTimestamp: eventDetails.startTimestamp,
-        endTimestamp: eventDetails.endTimestamp,
-        location: eventDetails.location,
+        startDate: eventDetails.startDate,
+        isTwoDay: eventDetails.isTwoDay,
+        eventType: eventDetails.type,
+        startTime: eventDetails.startTime,
+        endTime: eventDetails.endTime,
+        location: eventDetails.location || undefined,
+        registrationUrl: eventDetails.registrationUrl || undefined,
         dashboardUrl,
       }),
     })

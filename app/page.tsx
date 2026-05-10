@@ -24,8 +24,8 @@ export default async function Home() {
         )
       )
     `)
-    .order('start_timestamp', { ascending: true })
-    .gte('end_timestamp', new Date().toISOString());
+    .order('start_date', { ascending: true })
+    .gte('start_date', new Date(new Date().getTime() - 86400000).toISOString().split('T')[0]);
 
   return (
     <main className="flex flex-1 flex-col items-center p-8 max-w-4xl mx-auto w-full">
@@ -60,11 +60,11 @@ export default async function Home() {
         {!error && games && games.length > 0 && (
           <div className="grid gap-4">
             {games.map((game) => {
-              const startDate = new Date(game.start_timestamp);
-              const endDate = new Date(game.end_timestamp);
-              
-              const isSameDay = startDate.toDateString() === endDate.toDateString();
-              const isTwoDay = !isSameDay;
+              const startDate = new Date(game.start_date + 'T00:00:00');
+              const isTwoDay = game.is_two_day;
+              const isSameDay = !isTwoDay;
+              const endDate = new Date(startDate);
+              if (isTwoDay) endDate.setDate(endDate.getDate() + 1);
               
               const attendees = game.attendance?.filter((a: AttendanceRecord) => a.interest_level === 'REGISTERED' || a.interest_level === 'INTERESTED') || [];
               const registeredAthletes = attendees.filter((a: AttendanceRecord) => a.interest_level === 'REGISTERED');
@@ -74,16 +74,22 @@ export default async function Home() {
                 <div key={game.id} className="p-6 border rounded-lg shadow-sm bg-card text-card-foreground">
                   <div className="flex flex-col md:flex-row md:justify-between md:items-start gap-4">
                     <div>
-                      <h3 className="text-xl font-bold mb-2">{game.name}</h3>
+                      <div className="flex items-center gap-2 mb-2">
+                        <h3 className="text-xl font-bold">{game.name}</h3>
+                        {game.type === 'PRACTICE' && (
+                          <span className="inline-flex items-center rounded-md bg-purple-50 px-2 py-1 text-xs font-medium text-purple-700 ring-1 ring-inset ring-purple-700/10 dark:bg-purple-900 dark:text-purple-200 dark:ring-purple-500/20">
+                            Practice
+                          </span>
+                        )}
+                      </div>
                       <div className="space-y-1 text-sm text-muted-foreground">
                         <div className="flex items-center">
                           <Calendar className="mr-2 h-4 w-4" />
                           <span>
                             {startDate.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' })}
-                            {isSameDay 
-                              ? ` • ${startDate.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })} - ${endDate.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}` 
-                              : ` - ${endDate.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' })}`
-                            }
+                            {game.type === 'PRACTICE' && game.start_time ? ` from ${game.start_time}` : ''}
+                            {game.type === 'PRACTICE' && game.end_time ? ` to ${game.end_time}` : ''}
+                            {game.type !== 'PRACTICE' && !isSameDay && ` - ${endDate.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' })}`}
                           </span>
                         </div>
                         {game.location && (

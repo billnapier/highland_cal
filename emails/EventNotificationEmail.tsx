@@ -12,48 +12,77 @@ import {
 import { format } from 'date-fns'
 
 interface EventNotificationEmailProps {
-  type: 'CREATE' | 'UPDATE' | 'DELETE'
+  actionType: 'CREATE' | 'UPDATE' | 'DELETE'
   eventName: string
-  startTimestamp?: string
-  endTimestamp?: string
+  startDate?: string
+  isTwoDay?: boolean
+  eventType?: 'EVENT' | 'PRACTICE'
+  startTime?: string | null
+  endTime?: string | null
   location?: string
+  registrationUrl?: string
   dashboardUrl: string
 }
 
 export default function EventNotificationEmail({
-  type,
+  actionType,
   eventName,
-  startTimestamp,
-  endTimestamp,
+  startDate,
+  isTwoDay,
+  eventType,
+  startTime,
+  endTime,
   location,
+  registrationUrl,
   dashboardUrl,
 }: EventNotificationEmailProps) {
   let title = ''
   let previewText = ''
   let actionText = ''
 
-  if (type === 'CREATE') {
-    title = 'New Event Added'
-    previewText = `New event: ${eventName}`
-    actionText = 'A new event has been added to the calendar:'
-  } else if (type === 'UPDATE') {
-    title = 'Event Updated'
-    previewText = `Event update: ${eventName}`
-    actionText = 'An event has been updated:'
-  } else if (type === 'DELETE') {
-    title = 'Event Canceled'
-    previewText = `Event canceled: ${eventName}`
-    actionText = 'The following event has been canceled/deleted:'
+  if (actionType === 'CREATE') {
+    title = eventType === 'PRACTICE' ? 'New Practice Added' : 'New Event Added'
+    previewText = `New ${eventType === 'PRACTICE' ? 'practice' : 'event'}: ${eventName}`
+    actionText = `A new ${eventType === 'PRACTICE' ? 'practice' : 'event'} has been added to the calendar:`
+  } else if (actionType === 'UPDATE') {
+    title = eventType === 'PRACTICE' ? 'Practice Updated' : 'Event Updated'
+    previewText = `${eventType === 'PRACTICE' ? 'Practice' : 'Event'} update: ${eventName}`
+    actionText = `A${eventType === 'PRACTICE' ? ' practice' : 'n event'} has been updated:`
+  } else if (actionType === 'DELETE') {
+    title = eventType === 'PRACTICE' ? 'Practice Canceled' : 'Event Canceled'
+    previewText = `${eventType === 'PRACTICE' ? 'Practice' : 'Event'} canceled: ${eventName}`
+    actionText = `The following ${eventType === 'PRACTICE' ? 'practice' : 'event'} has been canceled/deleted:`
   }
 
-  const safeFormatDate = (dateString?: string) => {
-    if (!dateString) return ''
+  const renderDateString = () => {
+    if (!startDate) return ''
     try {
-      const date = new Date(dateString)
-      if (isNaN(date.getTime())) return dateString
-      return format(date, 'PPp')
+      const start = new Date(startDate + 'T00:00:00')
+      // adjust for local timezone offset if needed, or simply let format(..., 'PP') handle it 
+      // since startDate is 'YYYY-MM-DD', new Date() parses as UTC midnight.
+      // Actually we must format using utc helper or add 'T00:00:00' to avoid timezone shifts.
+      // But preserving existing logic for now
+      if (isNaN(start.getTime())) return startDate
+      
+      const startStr = format(start, 'PP')
+      if (eventType === 'PRACTICE') {
+        let timeStr = ''
+        if (startTime) {
+           // We can format "15:00" to "3:00 PM" if we want, or just leave it. Let's just output it directly.
+           timeStr = ` from ${startTime}`
+           if (endTime) timeStr += ` to ${endTime}`
+        }
+        return `${startStr}${timeStr}`
+      }
+
+      if (isTwoDay) {
+        const end = new Date(start)
+        end.setDate(end.getDate() + 1)
+        return `${startStr} - ${format(end, 'PP')}`
+      }
+      return startStr
     } catch {
-      return dateString
+      return startDate
     }
   }
 
@@ -69,23 +98,23 @@ export default function EventNotificationEmail({
             <Text style={text}>
               <strong>Event:</strong> {eventName}
             </Text>
-            {type !== 'DELETE' && startTimestamp && (
+            {actionType !== 'DELETE' && startDate && (
               <Text style={text}>
-                <strong>Start:</strong> {safeFormatDate(startTimestamp)}
+                <strong>Date:</strong> {renderDateString()}
               </Text>
             )}
-            {type !== 'DELETE' && endTimestamp && (
-              <Text style={text}>
-                <strong>End:</strong> {safeFormatDate(endTimestamp)}
-              </Text>
-            )}
-            {type !== 'DELETE' && location && (
+            {actionType !== 'DELETE' && location && (
               <Text style={text}>
                 <strong>Location:</strong> {location}
               </Text>
             )}
+            {actionType !== 'DELETE' && registrationUrl && (
+              <Text style={text}>
+                <strong>Registration:</strong> <a href={registrationUrl}>{registrationUrl}</a>
+              </Text>
+            )}
           </Section>
-          {type !== 'DELETE' && (
+          {actionType !== 'DELETE' && (
             <Text style={text}>
               <Link href={dashboardUrl} style={link}>
                 View on Dashboard & RSVP

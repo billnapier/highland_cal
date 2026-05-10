@@ -4,24 +4,7 @@ import { createClient } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
 import { eventSchema, EventFormData } from '@/lib/schemas'
 import { sendEventNotification } from '@/lib/email'
-import { fromZonedTime } from 'date-fns-tz'
 
-function getTimestamps(startDate: string, isTwoDay: boolean, timezone: string) {
-  const start_timestamp = fromZonedTime(`${startDate}T00:00:00`, timezone).toISOString()
-  
-  const [year, month, day] = startDate.split('-').map(Number)
-  const d = new Date(year, month - 1, day)
-  if (isTwoDay) {
-    d.setDate(d.getDate() + 1)
-  }
-  const endYear = d.getFullYear()
-  const endMonth = String(d.getMonth() + 1).padStart(2, '0')
-  const endDay = String(d.getDate()).padStart(2, '0')
-  const endDateStr = `${endYear}-${endMonth}-${endDay}`
-  
-  const end_timestamp = fromZonedTime(`${endDateStr}T23:59:59`, timezone).toISOString()
-  return { start_timestamp, end_timestamp }
-}
 
 export async function deleteEvent(eventId: string) {
   try {
@@ -118,35 +101,40 @@ export async function createEvent(rawData: EventFormData) {
       return { success: false, message: 'Forbidden: You do not have permission to create events' }
     }
 
-    const { start_timestamp, end_timestamp } = getTimestamps(data.start_date, data.is_two_day, data.local_timezone)
+    const payload = {
+      name: data.name,
+      start_date: data.start_date,
+      is_two_day: data.is_two_day,
+      type: data.type,
+      start_time: data.start_time || null,
+      end_time: data.end_time || null,
+      location: data.location || null,
+      registration_url: data.registration_url || null,
+      created_by: user.id
+    }
 
-    const { error: insertError } = await supabase
+    const { error } = await supabase
       .from('games')
-      .insert([
-        {
-          name: data.name,
-          start_timestamp,
-          end_timestamp,
-          local_timezone: data.local_timezone,
-          location: data.location || null,
-          registration_url: data.registration_url || null,
-          created_by: user.id
-        }
-      ])
-      .select('id')
+      .insert(payload)
+      .select()
       .single()
 
-    if (insertError) {
-      console.error(insertError)
+    if (error) {
+      console.error('Error creating event:', error)
       return { success: false, message: 'Failed to create event. Please try again later.' }
     }
 
+    // Send notifications to APPROVED and ADMIN users
     await sendEventNotification('CREATE', {
       name: data.name,
-      startTimestamp: start_timestamp,
-      endTimestamp: end_timestamp,
-      location: data.location || undefined,
-    })
+      startDate: data.start_date,
+      isTwoDay: data.is_two_day,
+      type: data.type,
+      startTime: data.start_time,
+      endTime: data.end_time,
+      location: data.location,
+      registrationUrl: data.registration_url,
+    });
 
     // Revalidate paths to update the UI
     revalidatePath('/')
@@ -204,31 +192,37 @@ export async function updateEvent(eventId: string, rawData: EventFormData, major
       }
     }
 
-    const { start_timestamp, end_timestamp } = getTimestamps(data.start_date, data.is_two_day, data.local_timezone)
+    const payload = {
+      name: data.name,
+      start_date: data.start_date,
+      is_two_day: data.is_two_day,
+      type: data.type,
+      start_time: data.start_time || null,
+      end_time: data.end_time || null,
+      location: data.location || null,
+      registration_url: data.registration_url || null,
+    }
 
     const { error: updateError } = await supabase
       .from('games')
-      .update({
-        name: data.name,
-        start_timestamp,
-        end_timestamp,
-        local_timezone: data.local_timezone,
-        location: data.location || null,
-        registration_url: data.registration_url || null,
-      })
+      .update(payload)
       .eq('id', eventId)
 
     if (updateError) {
-      console.error(updateError)
+      console.error('Error updating event:', updateError)
       return { success: false, message: 'Failed to update event. Please try again later.' }
     }
 
     if (majorChange) {
       await sendEventNotification('UPDATE', {
         name: data.name,
-        startTimestamp: start_timestamp,
-        endTimestamp: end_timestamp,
-        location: data.location || undefined,
+        startDate: data.start_date,
+        isTwoDay: data.is_two_day,
+        type: data.type,
+        startTime: data.start_time,
+        endTime: data.end_time,
+        location: data.location,
+        registrationUrl: data.registration_url,
       })
     }
 
