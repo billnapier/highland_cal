@@ -27,7 +27,7 @@ export async function updateProfile(data: ProfileFormData) {
   }
 
   const { error } = await supabase
-    .from('Profiles')
+    .from('profiles')
     .update({ 
       class: competitionClass || null,
       outward_links

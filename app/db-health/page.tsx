@@ -6,7 +6,7 @@ export default async function DbHealthPage() {
   // Attempt to query the database.
   // Since we haven't authenticated, this tests the connection 
   // and the public RLS policy on the Games table.
-  const { data, error } = await supabase.from('Games').select('id').limit(1)
+  const { data, error } = await supabase.from('games').select('id').limit(1)
 
   return (
     <div className="p-8">

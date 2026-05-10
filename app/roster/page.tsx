@@ -11,7 +11,7 @@ export default async function RosterPage() {
 
   // Fetch all profiles
   const { data: profiles, error } = await supabase
-    .from('Profiles')
+    .from('profiles')
     .select('id, display_name, class, outward_links, User_Roles!inner(role)')
     .in('User_Roles.role', ['APPROVED', 'ADMIN'])
     .order('display_name', { ascending: true })

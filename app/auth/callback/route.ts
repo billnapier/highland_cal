@@ -20,7 +20,7 @@ export async function GET(request: Request) {
       if (userEmail && initialAdminEmail && userEmail.toLowerCase() === initialAdminEmail.toLowerCase()) {
         // Fetch current role to see if they are already admin
         const { data: roleData } = await supabase
-          .from('User_Roles')
+          .from('user_roles')
           .select('role')
           .eq('user_id', session.user.id)
           .single()
@@ -30,7 +30,7 @@ export async function GET(request: Request) {
           
           // Ensure profile exists (it might not if they were created before triggers or trigger failed)
           const { error: profileError } = await adminSupabase
-            .from('Profiles')
+            .from('profiles')
             .upsert({ 
               id: session.user.id, 
               email: session.user.email,
@@ -42,7 +42,7 @@ export async function GET(request: Request) {
           }
 
           const { error: roleError } = await adminSupabase
-            .from('User_Roles')
+            .from('user_roles')
             .upsert({ user_id: session.user.id, role: 'ADMIN' })
             
           if (roleError) {

@@ -14,7 +14,7 @@ async function checkAdminRole(supabase: SupabaseClient) {
   }
 
   const { data: roleData } = await supabase
-    .from('User_Roles')
+    .from('user_roles')
     .select('role')
     .eq('user_id', user.id)
     .single()
@@ -31,7 +31,7 @@ export async function approveUser(userId: string) {
   await checkAdminRole(supabase)
 
   const { error } = await supabase
-    .from('User_Roles')
+    .from('user_roles')
     .update({ role: 'APPROVED' })
     .eq('user_id', userId)
 
@@ -41,7 +41,7 @@ export async function approveUser(userId: string) {
   }
 
   const { data: profile } = await supabase
-    .from('Profiles')
+    .from('profiles')
     .select('email, display_name')
     .eq('id', userId)
     .single()
@@ -59,7 +59,7 @@ export async function promoteToAdmin(userId: string) {
   await checkAdminRole(supabase)
 
   const { error } = await supabase
-    .from('User_Roles')
+    .from('user_roles')
     .update({ role: 'ADMIN' })
     .eq('user_id', userId)
 
