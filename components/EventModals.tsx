@@ -7,30 +7,34 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, Dialog
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Checkbox } from '@/components/ui/checkbox'
-import { useForm } from 'react-hook-form'
+import { useForm, Controller } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { createEvent, updateEvent } from '@/app/actions/events'
 import { eventSchema, EventFormData } from '@/lib/schemas'
-
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 
 export function CreateEventModal() {
   const [open, setOpen] = useState(false)
   const [isPending, startTransition] = useTransition()
   const [error, setError] = useState<string | null>(null)
 
-  const { register, handleSubmit, setValue, watch, formState: { errors }, reset } = useForm<EventFormData>({
-    resolver: zodResolver(eventSchema),
+  const { register, handleSubmit, setValue, watch, control, formState: { errors }, reset } = useForm<EventFormData>({
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    resolver: zodResolver(eventSchema) as any,
     defaultValues: {
       is_two_day: false,
+      type: 'EVENT',
     }
   })
 
   const isTwoDay = watch('is_two_day')
+  const eventType = watch('type')
 
   const handleOpenChange = (newOpen: boolean) => {
     if (!newOpen) {
       reset({
         is_two_day: false,
+        type: 'EVENT',
       })
       setError(null)
     }
@@ -72,27 +76,62 @@ export function CreateEventModal() {
         </DialogHeader>
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
           <div className="grid gap-2">
+            <Label htmlFor="type">Event Type</Label>
+            <Controller
+              control={control}
+              name="type"
+              render={({ field }) => (
+                <Select onValueChange={field.onChange} defaultValue={field.value}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select type" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="EVENT">Event (e.g. Game/Tournament)</SelectItem>
+                    <SelectItem value="PRACTICE">Practice</SelectItem>
+                  </SelectContent>
+                </Select>
+              )}
+            />
+          </div>
+          <div className="grid gap-2">
             <Label htmlFor="name">Name</Label>
             <Input id="name" {...register('name')} />
             {errors.name && <span className="text-xs text-red-500">{errors.name.message}</span>}
           </div>
           <div className="grid grid-cols-2 gap-4">
             <div className="grid gap-2">
-              <Label htmlFor="start_date">Start Date</Label>
+              <Label htmlFor="start_date">Date</Label>
               <Input id="start_date" type="date" {...register('start_date')} />
               {errors.start_date && <span className="text-xs text-red-500">{errors.start_date.message}</span>}
             </div>
-            <div className="flex items-center space-x-2 pt-8">
-              <Checkbox 
-                id="is_two_day" 
-                checked={isTwoDay} 
-                onCheckedChange={(c) => setValue('is_two_day', !!c)} 
-              />
-              <Label htmlFor="is_two_day" className="font-normal text-sm">
-                Two-day event
-              </Label>
-            </div>
+            {eventType === 'EVENT' && (
+              <div className="flex items-center space-x-2 pt-8">
+                <Checkbox 
+                  id="is_two_day" 
+                  checked={isTwoDay} 
+                  onCheckedChange={(c) => setValue('is_two_day', !!c)} 
+                />
+                <Label htmlFor="is_two_day" className="font-normal text-sm">
+                  Two-day event
+                </Label>
+              </div>
+            )}
           </div>
+          
+          {eventType === 'PRACTICE' && (
+            <div className="grid grid-cols-2 gap-4">
+              <div className="grid gap-2">
+                <Label htmlFor="start_time">Start Time</Label>
+                <Input id="start_time" type="time" {...register('start_time')} />
+                {errors.start_time && <span className="text-xs text-red-500">{errors.start_time.message}</span>}
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="end_time">End Time</Label>
+                <Input id="end_time" type="time" {...register('end_time')} />
+                {errors.end_time && <span className="text-xs text-red-500">{errors.end_time.message}</span>}
+              </div>
+            </div>
+          )}
 
           <div className="grid gap-2">
             <Label htmlFor="location">Location (optional)</Label>
@@ -122,6 +161,9 @@ interface EditEventModalProps {
     name: string
     start_date: string
     is_two_day: boolean
+    type: 'EVENT' | 'PRACTICE'
+    start_time?: string | null
+    end_time?: string | null
     location?: string | null
     registration_url?: string | null
   }
@@ -135,18 +177,23 @@ export function EditEventModal({ game }: EditEventModalProps) {
   // We need to manage the checkbox state manually if not using react-hook-form Controller
   const [majorChange, setMajorChange] = useState(false)
 
-  const { register, handleSubmit, setValue, watch, formState: { errors }, reset } = useForm<EventFormData>({
-    resolver: zodResolver(eventSchema),
+  const { register, handleSubmit, setValue, watch, control, formState: { errors }, reset } = useForm<EventFormData>({
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    resolver: zodResolver(eventSchema) as any,
     defaultValues: {
       name: game.name,
       start_date: game.start_date,
       is_two_day: game.is_two_day,
+      type: game.type,
+      start_time: game.start_time || '',
+      end_time: game.end_time || '',
       location: game.location || '',
       registration_url: game.registration_url || '',
     }
   })
 
   const isTwoDay = watch('is_two_day')
+  const eventType = watch('type')
 
   const handleOpenChange = (newOpen: boolean) => {
     if (newOpen) {
@@ -154,6 +201,9 @@ export function EditEventModal({ game }: EditEventModalProps) {
         name: game.name,
         start_date: game.start_date,
         is_two_day: game.is_two_day,
+        type: game.type,
+        start_time: game.start_time || '',
+        end_time: game.end_time || '',
         location: game.location || '',
         registration_url: game.registration_url || '',
       })
@@ -198,27 +248,62 @@ export function EditEventModal({ game }: EditEventModalProps) {
         </DialogHeader>
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
           <div className="grid gap-2">
+            <Label htmlFor="edit-type">Event Type</Label>
+            <Controller
+              control={control}
+              name="type"
+              render={({ field }) => (
+                <Select onValueChange={field.onChange} defaultValue={field.value}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select type" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="EVENT">Event (e.g. Game/Tournament)</SelectItem>
+                    <SelectItem value="PRACTICE">Practice</SelectItem>
+                  </SelectContent>
+                </Select>
+              )}
+            />
+          </div>
+          <div className="grid gap-2">
             <Label htmlFor="edit-name">Name</Label>
             <Input id="edit-name" {...register('name')} />
             {errors.name && <span className="text-xs text-red-500">{errors.name.message}</span>}
           </div>
           <div className="grid grid-cols-2 gap-4">
             <div className="grid gap-2">
-              <Label htmlFor="edit-start_date">Start Date</Label>
+              <Label htmlFor="edit-start_date">Date</Label>
               <Input id="edit-start_date" type="date" {...register('start_date')} />
               {errors.start_date && <span className="text-xs text-red-500">{errors.start_date.message}</span>}
             </div>
-            <div className="flex items-center space-x-2 pt-8">
-              <Checkbox 
-                id="edit-is_two_day" 
-                checked={isTwoDay} 
-                onCheckedChange={(c) => setValue('is_two_day', !!c)} 
-              />
-              <Label htmlFor="edit-is_two_day" className="font-normal text-sm">
-                Two-day event
-              </Label>
-            </div>
+            {eventType === 'EVENT' && (
+              <div className="flex items-center space-x-2 pt-8">
+                <Checkbox 
+                  id="edit-is_two_day" 
+                  checked={isTwoDay} 
+                  onCheckedChange={(c) => setValue('is_two_day', !!c)} 
+                />
+                <Label htmlFor="edit-is_two_day" className="font-normal text-sm">
+                  Two-day event
+                </Label>
+              </div>
+            )}
           </div>
+          
+          {eventType === 'PRACTICE' && (
+            <div className="grid grid-cols-2 gap-4">
+              <div className="grid gap-2">
+                <Label htmlFor="edit-start_time">Start Time</Label>
+                <Input id="edit-start_time" type="time" {...register('start_time')} />
+                {errors.start_time && <span className="text-xs text-red-500">{errors.start_time.message}</span>}
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="edit-end_time">End Time</Label>
+                <Input id="edit-end_time" type="time" {...register('end_time')} />
+                {errors.end_time && <span className="text-xs text-red-500">{errors.end_time.message}</span>}
+              </div>
+            </div>
+          )}
 
           <div className="grid gap-2">
             <Label htmlFor="edit-location">Location (optional)</Label>

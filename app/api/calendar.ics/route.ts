@@ -7,7 +7,7 @@ export async function GET() {
   const { data: games, error } = await supabase
     .from('games')
     .select('id, name, location, registration_url, start_date, is_two_day')
-    .gte('start_date', new Date().toISOString().split('T')[0])
+    .gte('start_date', new Date(new Date().getTime() - 86400000).toISOString().split('T')[0])
     .order('start_date', { ascending: true });
 
   if (error) {

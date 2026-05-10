@@ -101,32 +101,40 @@ export async function createEvent(rawData: EventFormData) {
       return { success: false, message: 'Forbidden: You do not have permission to create events' }
     }
 
-    const { error: insertError } = await supabase
+    const payload = {
+      name: data.name,
+      start_date: data.start_date,
+      is_two_day: data.is_two_day,
+      type: data.type,
+      start_time: data.start_time || null,
+      end_time: data.end_time || null,
+      location: data.location || null,
+      registration_url: data.registration_url || null,
+      created_by: user.id
+    }
+
+    const { error } = await supabase
       .from('games')
-      .insert([
-        {
-          name: data.name,
-          start_date: data.start_date,
-          is_two_day: data.is_two_day,
-          location: data.location || null,
-          registration_url: data.registration_url || null,
-          created_by: user.id
-        }
-      ])
-      .select('id')
+      .insert(payload)
+      .select()
       .single()
 
-    if (insertError) {
-      console.error(insertError)
+    if (error) {
+      console.error('Error creating event:', error)
       return { success: false, message: 'Failed to create event. Please try again later.' }
     }
 
+    // Send notifications to APPROVED and ADMIN users
     await sendEventNotification('CREATE', {
       name: data.name,
       startDate: data.start_date,
       isTwoDay: data.is_two_day,
-      location: data.location || undefined,
-    })
+      type: data.type,
+      startTime: data.start_time,
+      endTime: data.end_time,
+      location: data.location,
+      registrationUrl: data.registration_url,
+    });
 
     // Revalidate paths to update the UI
     revalidatePath('/')
@@ -184,19 +192,24 @@ export async function updateEvent(eventId: string, rawData: EventFormData, major
       }
     }
 
+    const payload = {
+      name: data.name,
+      start_date: data.start_date,
+      is_two_day: data.is_two_day,
+      type: data.type,
+      start_time: data.start_time || null,
+      end_time: data.end_time || null,
+      location: data.location || null,
+      registration_url: data.registration_url || null,
+    }
+
     const { error: updateError } = await supabase
       .from('games')
-      .update({
-        name: data.name,
-        start_date: data.start_date,
-        is_two_day: data.is_two_day,
-        location: data.location || null,
-        registration_url: data.registration_url || null,
-      })
+      .update(payload)
       .eq('id', eventId)
 
     if (updateError) {
-      console.error(updateError)
+      console.error('Error updating event:', updateError)
       return { success: false, message: 'Failed to update event. Please try again later.' }
     }
 
@@ -205,7 +218,11 @@ export async function updateEvent(eventId: string, rawData: EventFormData, major
         name: data.name,
         startDate: data.start_date,
         isTwoDay: data.is_two_day,
-        location: data.location || undefined,
+        type: data.type,
+        startTime: data.start_time,
+        endTime: data.end_time,
+        location: data.location,
+        registrationUrl: data.registration_url,
       })
     }
 

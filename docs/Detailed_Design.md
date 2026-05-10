@@ -63,8 +63,11 @@ CREATE TRIGGER on_auth_user_created
 Stores upcoming games and practices.
 - `id` (uuid, Primary Key): Default `gen_random_uuid()`.
 - **name** (text): Name of the game or practice.
-- **start_date** (date): Start date of the event.
-- **is_two_day** (boolean): Whether the event is a two-day event.
+- **start_date** (date): Start date of the event/practice.
+- **is_two_day** (boolean): Whether the event is a two-day event. Applicable only when `type` is 'EVENT'.
+- **type** (text): Must be a PostgreSQL `ENUM` type or `CHECK` constraint: `['EVENT', 'PRACTICE']`. Default: `'EVENT'`.
+- **start_time** (time): The starting time (e.g., '14:00:00'). Required only for 'PRACTICE' type.
+- **end_time** (time): The ending time (e.g., '16:00:00'). Required only for 'PRACTICE' type.
 - `location` (text): Location (City, State).
 - `registration_url` (text): External registration link.
 - `created_by` (uuid): References `Profiles(id)` on delete set null.
