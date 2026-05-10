@@ -3,7 +3,19 @@
 import { createClient } from '@/lib/supabase/client'
 import { Button } from './ui/button'
 
-export default function LoginButton() {
+interface LoginButtonProps {
+  text?: string;
+  variant?: "default" | "destructive" | "outline" | "secondary" | "ghost" | "link";
+  size?: "default" | "sm" | "lg" | "icon";
+  className?: string;
+}
+
+export default function LoginButton({ 
+  text = "Login with Google", 
+  variant = "default",
+  size = "lg",
+  className = "w-full sm:w-auto"
+}: LoginButtonProps) {
   const supabase = createClient()
 
   const handleLogin = async () => {
@@ -17,8 +29,8 @@ export default function LoginButton() {
   }
 
   return (
-    <Button onClick={handleLogin} size="lg" className="w-full sm:w-auto">
-      Login with Google
+    <Button onClick={handleLogin} variant={variant} size={size} className={className}>
+      {text}
     </Button>
   )
 }

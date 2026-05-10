@@ -38,11 +38,17 @@ export default async function Home() {
             The schedule of Highland Games and practices.
           </p>
         </div>
-        <div className="flex space-x-4 items-center flex-wrap justify-center gap-y-4">
-          <LoginButton />
-          <Link href="/api/calendar.ics" prefetch={false} className={buttonVariants({ variant: 'outline' })}>
-            <Calendar className="mr-2 h-4 w-4" /> Subscribe to Calendar
-          </Link>
+        <div className="flex flex-col space-y-4 items-center justify-center mt-4 w-full">
+          <div className="flex flex-col sm:flex-row gap-4 items-center">
+            <LoginButton text="Apply to Join" variant="default" />
+            <Link href="/api/calendar.ics" prefetch={false} className={buttonVariants({ variant: 'outline', size: 'lg' })}>
+              <Calendar className="mr-2 h-4 w-4" /> Subscribe to Calendar
+            </Link>
+          </div>
+          <div className="mt-4 text-sm text-muted-foreground flex items-center gap-2">
+            Already a member? 
+            <LoginButton text="Log in" variant="link" className="px-0 font-semibold text-primary" />
+          </div>
         </div>
       </div>
 
