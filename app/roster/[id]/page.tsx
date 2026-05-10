@@ -115,7 +115,7 @@ export default async function AthleteProfilePage({ params }: { params: Promise<{
           )}
 
           {!attendanceError && validAttendances.length === 0 && (
-            <p className="text-muted-foreground italic">This athlete hasn't signed up for any upcoming events yet.</p>
+            <p className="text-muted-foreground italic">This athlete hasn&apos;t signed up for any upcoming events yet.</p>
           )}
 
           {!attendanceError && validAttendances.length > 0 && (

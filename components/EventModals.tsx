@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useTransition, useEffect } from 'react'
+import { useState, useTransition } from 'react'
 import { Plus, Edit } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from '@/components/ui/dialog'
@@ -9,16 +9,15 @@ import { Label } from '@/components/ui/label'
 import { Checkbox } from '@/components/ui/checkbox'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
-import * as z from 'zod'
 import { createEvent, updateEvent } from '@/app/actions/events'
 import { eventSchema, EventFormData } from '@/lib/schemas'
-import { fromZonedTime, formatInTimeZone } from 'date-fns-tz'
+import { formatInTimeZone } from 'date-fns-tz'
 
 const formatDateForInput = (isoString: string, timezone: string) => {
   if (!isoString) return ''
   try {
     return formatInTimeZone(isoString, timezone, "yyyy-MM-dd")
-  } catch (e) {
+  } catch {
     return ''
   }
 }

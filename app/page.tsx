@@ -4,6 +4,12 @@ import { Calendar, MapPin, ExternalLink } from 'lucide-react';
 import { buttonVariants } from '@/components/ui/button';
 import Link from 'next/link';
 
+interface AttendanceRecord {
+  interest_level: string;
+  attend_day: string | null;
+  profiles: { display_name: string | null } | null;
+}
+
 export default async function Home() {
   const supabase = await createClient();
   const { data: games, error } = await supabase
@@ -60,9 +66,9 @@ export default async function Home() {
               const isSameDay = startDate.toDateString() === endDate.toDateString();
               const isTwoDay = endDate.getTime() - startDate.getTime() > 24 * 60 * 60 * 1000;
               
-              const attendees = game.attendance?.filter((a: any) => a.interest_level === 'REGISTERED' || a.interest_level === 'INTERESTED') || [];
-              const registeredAthletes = attendees.filter((a: any) => a.interest_level === 'REGISTERED');
-              const interestedAthletes = attendees.filter((a: any) => a.interest_level === 'INTERESTED');
+              const attendees = game.attendance?.filter((a: AttendanceRecord) => a.interest_level === 'REGISTERED' || a.interest_level === 'INTERESTED') || [];
+              const registeredAthletes = attendees.filter((a: AttendanceRecord) => a.interest_level === 'REGISTERED');
+              const interestedAthletes = attendees.filter((a: AttendanceRecord) => a.interest_level === 'INTERESTED');
               
               return (
                 <div key={game.id} className="p-6 border rounded-lg shadow-sm bg-card text-card-foreground">
@@ -99,7 +105,7 @@ export default async function Home() {
                     <div className="mt-4 pt-4 border-t text-sm">
                       <h4 className="font-semibold mb-2 text-muted-foreground">Athletes Attending</h4>
                       <div className="flex flex-wrap gap-2">
-                        {registeredAthletes.map((a: any, idx: number) => {
+                        {registeredAthletes.map((a: AttendanceRecord, idx: number) => {
                           const name = a.profiles?.display_name || 'Anonymous';
                           let daySuffix = '';
                           if (isTwoDay && a.attend_day && a.attend_day !== 'BOTH') {
@@ -111,7 +117,7 @@ export default async function Home() {
                             </span>
                           );
                         })}
-                        {interestedAthletes.map((a: any, idx: number) => {
+                        {interestedAthletes.map((a: AttendanceRecord, idx: number) => {
                           const name = a.profiles?.display_name || 'Anonymous';
                           return (
                             <span key={`int-${idx}`} className="inline-flex items-center rounded-md bg-gray-50 px-2 py-1 text-xs font-medium text-gray-600 ring-1 ring-inset ring-gray-500/10 dark:bg-gray-800 dark:text-gray-300 dark:ring-gray-600/20">
