@@ -42,3 +42,12 @@ export const profileSchema = z.object({
 })
 
 export type ProfileFormData = z.infer<typeof profileSchema>
+
+export const applicationSchema = z.object({
+  throwing_experience: z.string().min(1, 'Please tell us about your throwing experience.'),
+  attended_practice: z.boolean({
+    message: "Please let us know if you've attended a practice.",
+  }),
+})
+
+export type ApplicationFormData = z.infer<typeof applicationSchema>

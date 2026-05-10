@@ -6,6 +6,7 @@ import { CreateEventModal, EditEventModal } from '@/components/EventModals'
 import AttendanceManager from '@/components/AttendanceManager'
 import Link from 'next/link'
 import { buttonVariants } from '@/components/ui/button'
+import ApplicationForm from '@/components/ApplicationForm'
 
 export default async function DashboardPage() {
   const supabase = await createClient()
@@ -26,11 +27,13 @@ export default async function DashboardPage() {
   // Fetch the user's profile
   const { data: profileData } = await supabase
     .from('profiles')
-    .select('display_name, email')
+    .select('display_name, email, throwing_experience, attended_practice')
     .eq('id', user.id)
     .single()
 
   const role = roleData?.role || 'UNKNOWN'
+  
+  const hasSubmittedApplication = !!profileData?.throwing_experience || profileData?.attended_practice !== null
 
   // Fetch upcoming events
   const { data: games, error: gamesError } = await supabase
@@ -95,15 +98,24 @@ export default async function DashboardPage() {
                 `}>
                   {role}
                 </span>
-                {role === 'PENDING' && (
+                {role === 'PENDING' && !hasSubmittedApplication && (
                   <p className="text-sm text-muted-foreground">
-                    Your account is pending approval by an administrator.
+                    Please fill out the application form below to request approval.
+                  </p>
+                )}
+                {role === 'PENDING' && hasSubmittedApplication && (
+                  <p className="text-sm text-muted-foreground">
+                    Your application is under review by an administrator.
                   </p>
                 )}
               </div>
             </div>
           </div>
         </div>
+
+        {role === 'PENDING' && !hasSubmittedApplication && (
+          <ApplicationForm />
+        )}
 
         <div className="space-y-4">
           <div className="flex justify-between items-center border-b pb-2">

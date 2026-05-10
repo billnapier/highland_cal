@@ -9,6 +9,8 @@ CREATE TABLE public.Profiles (
   email text,
   class text,
   outward_links jsonb,
+  throwing_experience text,
+  attended_practice boolean,
   created_at timestamptz DEFAULT now()
 );
 
