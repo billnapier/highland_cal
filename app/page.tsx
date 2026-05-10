@@ -8,7 +8,16 @@ export default async function Home() {
   const supabase = await createClient();
   const { data: games, error } = await supabase
     .from('games')
-    .select('*')
+    .select(`
+      *,
+      attendance (
+        interest_level,
+        attend_day,
+        profiles (
+          display_name
+        )
+      )
+    `)
     .order('start_timestamp', { ascending: true })
     .gte('end_timestamp', new Date().toISOString());
 
@@ -49,6 +58,11 @@ export default async function Home() {
               const endDate = new Date(game.end_timestamp);
               
               const isSameDay = startDate.toDateString() === endDate.toDateString();
+              const isTwoDay = endDate.getTime() - startDate.getTime() > 24 * 60 * 60 * 1000;
+              
+              const attendees = game.attendance?.filter((a: any) => a.interest_level === 'REGISTERED' || a.interest_level === 'INTERESTED') || [];
+              const registeredAthletes = attendees.filter((a: any) => a.interest_level === 'REGISTERED');
+              const interestedAthletes = attendees.filter((a: any) => a.interest_level === 'INTERESTED');
               
               return (
                 <div key={game.id} className="p-6 border rounded-lg shadow-sm bg-card text-card-foreground">
@@ -80,6 +94,34 @@ export default async function Home() {
                       </a>
                     )}
                   </div>
+                  
+                  {attendees.length > 0 && (
+                    <div className="mt-4 pt-4 border-t text-sm">
+                      <h4 className="font-semibold mb-2 text-muted-foreground">Athletes Attending</h4>
+                      <div className="flex flex-wrap gap-2">
+                        {registeredAthletes.map((a: any, idx: number) => {
+                          const name = a.profiles?.display_name || 'Anonymous';
+                          let daySuffix = '';
+                          if (isTwoDay && a.attend_day && a.attend_day !== 'BOTH') {
+                            daySuffix = a.attend_day === 'DAY_1' ? ' (Day 1)' : ' (Day 2)';
+                          }
+                          return (
+                            <span key={`reg-${idx}`} className="inline-flex items-center rounded-md bg-blue-50 px-2 py-1 text-xs font-medium text-blue-700 ring-1 ring-inset ring-blue-700/10 dark:bg-blue-900 dark:text-blue-200 dark:ring-blue-500/20">
+                              {name}{daySuffix}
+                            </span>
+                          );
+                        })}
+                        {interestedAthletes.map((a: any, idx: number) => {
+                          const name = a.profiles?.display_name || 'Anonymous';
+                          return (
+                            <span key={`int-${idx}`} className="inline-flex items-center rounded-md bg-gray-50 px-2 py-1 text-xs font-medium text-gray-600 ring-1 ring-inset ring-gray-500/10 dark:bg-gray-800 dark:text-gray-300 dark:ring-gray-600/20">
+                              {name} (Interested)
+                            </span>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
                 </div>
               );
             })}
