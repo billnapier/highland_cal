@@ -9,6 +9,16 @@ import { buttonVariants } from '@/components/ui/button'
 import ApplicationForm from '@/components/ApplicationForm'
 import { EventDateTime } from '@/components/EventDateTime'
 
+const PAGE_TITLE = "Dashboard"
+const GAME_TYPES = { PRACTICE: 'Practice' }
+const CARD_CLASSES = "p-6 border border-slate-200/60 dark:border-slate-800/60 rounded-2xl shadow-sm hover:shadow-md hover:border-blue-300 dark:hover:border-blue-700 transition-all duration-300 bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl text-card-foreground"
+const ROLE_BADGE_CLASSES: Record<string, string> = {
+  ADMIN: 'bg-gradient-to-r from-fuchsia-500 to-purple-600 text-white border-purple-400/30',
+  APPROVED: 'bg-gradient-to-r from-emerald-400 to-teal-500 text-white border-emerald-400/30',
+  PENDING: 'bg-gradient-to-r from-amber-400 to-orange-500 text-white border-amber-400/30',
+  UNKNOWN: 'bg-gradient-to-r from-slate-400 to-slate-500 text-white border-slate-400/30'
+}
+
 export default async function DashboardPage() {
   const supabase = await createClient()
 
@@ -62,7 +72,7 @@ export default async function DashboardPage() {
   return (
     <main className="flex flex-1 flex-col p-4 md:p-8 bg-gradient-to-br from-slate-50 via-blue-50/50 to-indigo-50/80 dark:from-slate-950 dark:via-blue-950/20 dark:to-indigo-950/30 min-h-[calc(100vh-4rem)]">
       <div className="mx-auto w-full max-w-6xl space-y-8">
-        <h1 className="text-4xl font-extrabold tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-blue-600 to-indigo-600 dark:from-blue-400 dark:to-indigo-400 drop-shadow-sm">Dashboard</h1>
+        <h1 className="text-4xl font-extrabold tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-blue-600 to-indigo-600 dark:from-blue-400 dark:to-indigo-400 drop-shadow-sm">{PAGE_TITLE}</h1>
         
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8 items-start">
           
@@ -101,14 +111,14 @@ export default async function DashboardPage() {
                     const gameAttendance = attendanceData?.filter(a => a.game_id === game.id) || [];
                     
                     return (
-                      <div key={game.id} className="p-6 border border-slate-200/60 dark:border-slate-800/60 rounded-2xl shadow-sm hover:shadow-md hover:border-blue-300 dark:hover:border-blue-700 transition-all duration-300 bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl text-card-foreground">
+                      <div key={game.id} className={CARD_CLASSES}>
                         <div className="flex flex-col md:flex-row md:justify-between md:items-start gap-4">
                           <div className="w-full">
                             <div className="flex items-center gap-2 mb-2">
                               <h3 className="text-xl font-bold">{game.name}</h3>
                               {game.type === 'PRACTICE' && (
                                 <span className="inline-flex items-center rounded-full bg-gradient-to-r from-purple-500 to-fuchsia-500 px-3 py-1 text-xs font-bold text-white shadow-sm ring-1 ring-inset ring-white/20">
-                                  Practice
+                                  {GAME_TYPES.PRACTICE}
                                 </span>
                               )}
                             </div>
@@ -181,12 +191,7 @@ export default async function DashboardPage() {
                   <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-3">Account Status</h3>
                   <div className="flex flex-col space-y-3">
                     <div>
-                      <span className={`inline-flex items-center rounded-full px-4 py-1.5 text-xs font-extrabold shadow-md border
-                        ${role === 'ADMIN' ? 'bg-gradient-to-r from-fuchsia-500 to-purple-600 text-white border-purple-400/30' : ''}
-                        ${role === 'APPROVED' ? 'bg-gradient-to-r from-emerald-400 to-teal-500 text-white border-emerald-400/30' : ''}
-                        ${role === 'PENDING' ? 'bg-gradient-to-r from-amber-400 to-orange-500 text-white border-amber-400/30' : ''}
-                        ${role === 'UNKNOWN' ? 'bg-gradient-to-r from-slate-400 to-slate-500 text-white border-slate-400/30' : ''}
-                      `}>
+                      <span className={`inline-flex items-center rounded-full px-4 py-1.5 text-xs font-extrabold shadow-md border ${ROLE_BADGE_CLASSES[role] || ROLE_BADGE_CLASSES.UNKNOWN}`}>
                         {role}
                       </span>
                     </div>
