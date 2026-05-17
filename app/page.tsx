@@ -69,9 +69,6 @@ export default async function Home() {
             <h1 className="text-5xl font-extrabold tracking-tighter sm:text-6xl md:text-7xl lg:text-8xl text-white drop-shadow-lg">
               {clubName}
             </h1>
-            <p className="mx-auto max-w-[700px] text-gray-200 md:text-2xl font-medium drop-shadow text-lg">
-              The official schedule and roster for the {clubName} throwing community.
-            </p>
           </div>
           
           <div className="backdrop-blur-md bg-black/40 border border-white/20 p-6 sm:p-8 rounded-2xl text-gray-100 shadow-xl max-w-[800px] text-left md:text-center w-full">
@@ -197,7 +194,7 @@ export default async function Home() {
       <section id="roster" className="w-full space-y-6 scroll-m-20 pb-12">
         <div className="border-b pb-4">
           <h2 className="text-3xl font-bold tracking-tight">Club Roster</h2>
-          <p className="text-muted-foreground mt-1">Meet the athletes of Highland Cal.</p>
+          <p className="text-muted-foreground mt-1">Meet the athletes of {clubName}.</p>
         </div>
 
         {profilesError && (
