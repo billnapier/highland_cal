@@ -13,7 +13,7 @@ export default async function AthleteProfilePage({ params }: { params: Promise<{
   // Fetch the profile
   const { data: profile, error: profileError } = await supabase
     .from('profiles')
-    .select('id, display_name, class, outward_links, user_roles!inner(role)')
+    .select('id, display_name, class, avatar_url, outward_links, user_roles!inner(role)')
     .eq('id', id)
     .single()
 
@@ -62,15 +62,22 @@ export default async function AthleteProfilePage({ params }: { params: Promise<{
         {/* Profile Header */}
         <div className="bg-card text-card-foreground rounded-xl border shadow-sm p-8">
           <div className="flex flex-col md:flex-row justify-between items-start gap-6">
-            <div>
-              <h1 className="text-4xl font-extrabold tracking-tight">{profile.display_name || 'Anonymous Athlete'}</h1>
-              {profile.class && (
-                <div className="mt-2">
-                  <span className="inline-flex items-center rounded-full bg-blue-100 px-3 py-1 text-sm font-semibold text-blue-800 dark:bg-blue-900 dark:text-blue-300">
-                    Class: {profile.class}
-                  </span>
+            <div className="flex items-center gap-6">
+              {profile.avatar_url && (
+                <div className="relative h-24 w-24 overflow-hidden rounded-full border-4 border-white shadow-lg">
+                  <img src={profile.avatar_url} alt={profile.display_name || 'Profile Photo'} className="object-cover h-full w-full" />
                 </div>
               )}
+              <div>
+                <h1 className="text-4xl font-extrabold tracking-tight">{profile.display_name || 'Anonymous Athlete'}</h1>
+                {profile.class && (
+                  <div className="mt-2">
+                    <span className="inline-flex items-center rounded-full bg-blue-100 px-3 py-1 text-sm font-semibold text-blue-800 dark:bg-blue-900 dark:text-blue-300">
+                      Class: {profile.class}
+                    </span>
+                  </div>
+                )}
+              </div>
             </div>
             
             {hasSocials && (

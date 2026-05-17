@@ -27,6 +27,7 @@ export default async function Home() {
 
   const clubName = settingsMap['club_name'] || 'Highland Cal'
   const clubBlurb = settingsMap['club_blurb'] || 'We are a community of athletes dedicated to the traditional Scottish Highland Games. Whether you are a seasoned A-class thrower or looking to try the caber toss for the very first time, Highland Cal is where we organize practices, coordinate game attendance, and support each other on the field.'
+  const heroImage = settingsMap['hero_image_url'] || null
 
   const { data: games, error } = await supabase
     .from('games')
@@ -46,15 +47,22 @@ export default async function Home() {
   // Fetch all profiles for the roster
   const { data: profiles, error: profilesError } = await supabase
     .from('profiles')
-    .select('id, display_name, class, outward_links, user_roles!inner(role)')
+    .select('id, display_name, class, avatar_url, outward_links, user_roles!inner(role)')
     .in('user_roles.role', ['APPROVED', 'ADMIN'])
     .order('display_name', { ascending: true });
 
   return (
     <main className="flex flex-1 flex-col items-center p-8 max-w-5xl mx-auto w-full space-y-24">
       {/* Hero Section */}
-      <section id="about" className="flex flex-col items-center space-y-8 text-center w-full pt-12">
-        <div className="space-y-4">
+      <section id="about" className="relative flex flex-col items-center space-y-8 text-center w-full pt-12 overflow-hidden rounded-3xl">
+        {heroImage && (
+          <div className="absolute inset-0 z-0">
+            <img src={heroImage} alt={`${clubName} Hero`} className="object-cover w-full h-full opacity-20" />
+            <div className="absolute inset-0 bg-gradient-to-b from-transparent to-background" />
+          </div>
+        )}
+        
+        <div className="relative z-10 space-y-4">
           <h1 className="text-4xl font-extrabold tracking-tighter sm:text-5xl md:text-6xl lg:text-7xl">
             {clubName}
           </h1>
@@ -63,7 +71,7 @@ export default async function Home() {
           </p>
         </div>
         
-        <div className="max-w-[800px] text-left md:text-center text-muted-foreground bg-secondary/20 p-6 rounded-2xl">
+        <div className="relative z-10 max-w-[800px] text-left md:text-center text-muted-foreground bg-secondary/20 backdrop-blur-sm p-6 rounded-2xl">
           <p className="leading-relaxed">
             {clubBlurb}
           </p>
@@ -206,14 +214,21 @@ export default async function Home() {
             return (
               <div key={profile.id} className="bg-card text-card-foreground rounded-xl border shadow-sm flex flex-col transition-all hover:shadow-md">
                 <div className="p-5 flex-1">
-                  <div className="flex justify-between items-start mb-3">
-                    <h3 className="text-xl font-bold line-clamp-1">
-                      <Link href={`/roster/${profile.id}`} className="hover:underline">
-                        {profile.display_name || 'Anonymous Athlete'}
-                      </Link>
-                    </h3>
+                  <div className="flex justify-between items-start mb-3 gap-3">
+                    <div className="flex items-center gap-3">
+                      {profile.avatar_url && (
+                        <div className="h-10 w-10 shrink-0 overflow-hidden rounded-full border">
+                          <img src={profile.avatar_url} alt={profile.display_name || 'Profile'} className="h-full w-full object-cover" />
+                        </div>
+                      )}
+                      <h3 className="text-xl font-bold line-clamp-1">
+                        <Link href={`/roster/${profile.id}`} className="hover:underline">
+                          {profile.display_name || 'Anonymous Athlete'}
+                        </Link>
+                      </h3>
+                    </div>
                     {profile.class && (
-                      <span className="inline-flex items-center rounded-full bg-blue-100 px-2.5 py-0.5 text-xs font-semibold text-blue-800 dark:bg-blue-900 dark:text-blue-300 whitespace-nowrap ml-2 shrink-0">
+                      <span className="inline-flex items-center rounded-full bg-blue-100 px-2.5 py-0.5 text-xs font-semibold text-blue-800 dark:bg-blue-900 dark:text-blue-300 whitespace-nowrap shrink-0">
                         {profile.class}
                       </span>
                     )}

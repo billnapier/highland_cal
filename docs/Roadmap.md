@@ -180,3 +180,18 @@ This document serves as the guide for the LLM developer. The LLM should implemen
 **Runnable State:** 
 - The application is fully accessible via the custom domain.
 - Transactional emails are successfully delivered from a custom email address without being marked as spam.
+
+---
+
+## Milestone 12: Image Uploads & Visual Enhancements
+**Goal:** Allow users to personalize their profiles and allow admins to customize the public homepage with imagery.
+**Tasks:**
+- [x] Create a `public_images` bucket in Supabase and add the `avatar_url` column to the `Profiles` table in `schema.sql`.
+- [x] Build an `ImageUpload` React component using `@supabase/supabase-js` storage API.
+- [x] Update the athlete `ProfileForm` to include a profile photo upload.
+- [x] Update the `AdminSettings` page to allow admins to upload a custom `hero_image_url`.
+- [x] Render the hero image on the public `/app/page.tsx` behind the club name and blurb.
+- [x] Render the athlete's `avatar_url` on their `/app/roster/[id]/page.tsx` profile page and the roster list.
+**Runnable State:** 
+- Admins can customize the main landing page with a hero image.
+- Athletes can upload their own profile photos, which are visible to the public.

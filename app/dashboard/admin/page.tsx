@@ -56,6 +56,7 @@ export default async function AdminDashboardPage() {
 
   const clubName = settingsMap['club_name'] || 'Highland Cal'
   const clubBlurb = settingsMap['club_blurb'] || 'We are a community of athletes dedicated to the traditional Scottish Highland Games. Whether you are a seasoned A-class thrower or looking to try the caber toss for the very first time, Highland Cal is where we organize practices, coordinate game attendance, and support each other on the field.'
+  const heroImage = settingsMap['hero_image_url'] || ''
 
   return (
     <main className="flex flex-1 flex-col p-8">
@@ -68,7 +69,7 @@ export default async function AdminDashboardPage() {
         <section className="space-y-4">
           <h2 className="text-2xl font-semibold tracking-tight">Site Settings</h2>
           <div className="rounded-md border bg-card text-card-foreground shadow-sm p-6">
-            <AdminSettings initialClubName={clubName} initialClubBlurb={clubBlurb} />
+            <AdminSettings initialClubName={clubName} initialClubBlurb={clubBlurb} initialHeroImage={heroImage} />
           </div>
         </section>
         
