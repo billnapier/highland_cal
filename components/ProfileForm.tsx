@@ -9,10 +9,12 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { profileSchema, ProfileFormData } from '@/lib/schemas'
 import { updateProfile } from '@/app/actions/profile'
+import { ImageUpload } from '@/components/ImageUpload'
 
 interface ProfileFormProps {
   initialData: {
     class?: string | null
+    avatar_url?: string | null
     outward_links?: {
       instagram?: string | null
       facebook?: string | null
@@ -26,10 +28,11 @@ export default function ProfileForm({ initialData }: ProfileFormProps) {
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState(false)
 
-  const { register, control, handleSubmit, formState: { errors } } = useForm<ProfileFormData>({
+  const { register, control, handleSubmit, setValue, watch, formState: { errors } } = useForm<ProfileFormData>({
     resolver: zodResolver(profileSchema),
     defaultValues: {
       class: initialData.class || '',
+      avatar_url: initialData.avatar_url || '',
       instagram: initialData.outward_links?.instagram || '',
       facebook: initialData.outward_links?.facebook || '',
       customLinks: initialData.outward_links?.customLinks || [],
@@ -40,6 +43,8 @@ export default function ProfileForm({ initialData }: ProfileFormProps) {
     control,
     name: 'customLinks'
   })
+
+  const avatarUrl = watch('avatar_url')
 
   const onSubmit = (data: ProfileFormData) => {
     startTransition(async () => {
@@ -61,6 +66,16 @@ export default function ProfileForm({ initialData }: ProfileFormProps) {
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
       <div className="space-y-4">
+        <div className="grid gap-2">
+          <Label>Profile Photo</Label>
+          <ImageUpload 
+            value={avatarUrl || ''} 
+            onChange={(url) => setValue('avatar_url', url, { shouldValidate: true })} 
+            pathPrefix="avatars"
+          />
+          {errors.avatar_url && <span className="text-xs text-red-500">{errors.avatar_url.message}</span>}
+        </div>
+
         <div className="grid gap-2">
           <Label htmlFor="class">Competition Class</Label>
           <Input id="class" placeholder="e.g. A-Class, Masters, Women" {...register('class')} />

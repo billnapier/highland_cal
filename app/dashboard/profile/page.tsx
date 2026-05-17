@@ -14,7 +14,7 @@ export default async function ProfilePage() {
   // Fetch the user's profile
   const { data: profileData } = await supabase
     .from('profiles')
-    .select('class, outward_links')
+    .select('class, avatar_url, outward_links')
     .eq('id', user.id)
     .single()
 

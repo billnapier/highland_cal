@@ -33,6 +33,7 @@ export type EventFormData = z.infer<typeof eventSchema>
 
 export const profileSchema = z.object({
   class: z.string().optional(),
+  avatar_url: z.string().url('Must be a valid URL').optional().or(z.literal('')),
   instagram: z.string().url('Must be a valid URL').optional().or(z.literal('')),
   facebook: z.string().url('Must be a valid URL').optional().or(z.literal('')),
   customLinks: z.array(z.object({

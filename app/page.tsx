@@ -5,6 +5,7 @@ import { buttonVariants } from '@/components/ui/button';
 import Link from 'next/link';
 import { EventDateTime } from '@/components/EventDateTime';
 import { CustomLink } from '@/lib/schemas';
+import Image from 'next/image';
 
 interface AttendanceRecord {
   interest_level: string;
@@ -27,6 +28,7 @@ export default async function Home() {
 
   const clubName = settingsMap['club_name'] || 'Highland Cal'
   const clubBlurb = settingsMap['club_blurb'] || 'We are a community of athletes dedicated to the traditional Scottish Highland Games. Whether you are a seasoned A-class thrower or looking to try the caber toss for the very first time, Highland Cal is where we organize practices, coordinate game attendance, and support each other on the field.'
+  const heroImage = settingsMap['hero_image_url'] || null
 
   const { data: games, error } = await supabase
     .from('games')
@@ -46,13 +48,12 @@ export default async function Home() {
   // Fetch all profiles for the roster
   const { data: profiles, error: profilesError } = await supabase
     .from('profiles')
-    .select('id, display_name, class, outward_links, user_roles!inner(role)')
+    .select('id, display_name, class, avatar_url, outward_links, user_roles!inner(role)')
     .in('user_roles.role', ['APPROVED', 'ADMIN'])
     .order('display_name', { ascending: true });
 
   return (
     <main className="flex flex-1 flex-col items-center p-8 max-w-5xl mx-auto w-full space-y-24">
-      {/* Hero Section */}
       <section id="about" className="flex flex-col items-center space-y-8 text-center w-full pt-12">
         <div className="space-y-4">
           <h1 className="text-4xl font-extrabold tracking-tighter sm:text-5xl md:text-6xl lg:text-7xl">
@@ -62,8 +63,14 @@ export default async function Home() {
             The official schedule and roster for the {clubName} throwing community.
           </p>
         </div>
+
+        {heroImage && (
+          <div className="w-full max-w-5xl rounded-3xl shadow-2xl border overflow-hidden bg-muted/20 flex items-center justify-center">
+            <Image src={heroImage} alt={`${clubName} Hero`} width={1200} height={500} className="w-full h-auto max-h-[80vh] object-contain" />
+          </div>
+        )}
         
-        <div className="max-w-[800px] text-left md:text-center text-muted-foreground bg-secondary/20 p-6 rounded-2xl">
+        <div className="max-w-[800px] text-left md:text-center text-muted-foreground bg-secondary/10 p-6 rounded-2xl border shadow-sm">
           <p className="leading-relaxed">
             {clubBlurb}
           </p>
@@ -206,14 +213,21 @@ export default async function Home() {
             return (
               <div key={profile.id} className="bg-card text-card-foreground rounded-xl border shadow-sm flex flex-col transition-all hover:shadow-md">
                 <div className="p-5 flex-1">
-                  <div className="flex justify-between items-start mb-3">
-                    <h3 className="text-xl font-bold line-clamp-1">
-                      <Link href={`/roster/${profile.id}`} className="hover:underline">
-                        {profile.display_name || 'Anonymous Athlete'}
-                      </Link>
-                    </h3>
+                  <div className="flex justify-between items-start mb-3 gap-3">
+                    <div className="flex items-center gap-3">
+                      {profile.avatar_url && (
+                        <div className="relative h-10 w-10 shrink-0 overflow-hidden rounded-full border">
+                          <Image src={profile.avatar_url} alt={profile.display_name || 'Profile'} fill className="object-cover" sizes="40px" />
+                        </div>
+                      )}
+                      <h3 className="text-xl font-bold line-clamp-1">
+                        <Link href={`/roster/${profile.id}`} className="hover:underline">
+                          {profile.display_name || 'Anonymous Athlete'}
+                        </Link>
+                      </h3>
+                    </div>
                     {profile.class && (
-                      <span className="inline-flex items-center rounded-full bg-blue-100 px-2.5 py-0.5 text-xs font-semibold text-blue-800 dark:bg-blue-900 dark:text-blue-300 whitespace-nowrap ml-2 shrink-0">
+                      <span className="inline-flex items-center rounded-full bg-blue-100 px-2.5 py-0.5 text-xs font-semibold text-blue-800 dark:bg-blue-900 dark:text-blue-300 whitespace-nowrap shrink-0">
                         {profile.class}
                       </span>
                     )}

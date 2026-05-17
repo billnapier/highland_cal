@@ -11,6 +11,7 @@ CREATE TABLE public.Profiles (
   outward_links jsonb,
   throwing_experience text,
   attended_practice boolean,
+  avatar_url text,
   created_at timestamptz DEFAULT now()
 );
 
@@ -168,3 +169,37 @@ CREATE POLICY "Only admins can manage settings" ON public.Settings
 
 -- Insert default club name
 INSERT INTO public.Settings (key, value) VALUES ('club_name', 'Highland Cal');
+
+-- Storage Setup
+-- Note: Storage policies require the "storage" schema to be enabled in Supabase.
+-- Create the "public_images" bucket
+INSERT INTO storage.buckets (id, name, public) VALUES ('public_images', 'public_images', true) ON CONFLICT DO NOTHING;
+
+-- Storage RLS Policies for "public_images" bucket
+CREATE POLICY "Public Access"
+ON storage.objects FOR SELECT
+USING ( bucket_id = 'public_images' );
+
+CREATE POLICY "Authenticated users can upload images"
+ON storage.objects FOR INSERT
+WITH CHECK (
+  bucket_id = 'public_images' 
+  AND auth.role() = 'authenticated'
+  AND public.is_approved_or_admin()
+);
+
+CREATE POLICY "Users can update their own images or admins can update any"
+ON storage.objects FOR UPDATE
+USING (
+  bucket_id = 'public_images' 
+  AND auth.role() = 'authenticated'
+  AND (owner = auth.uid() OR public.is_admin())
+);
+
+CREATE POLICY "Users can delete their own images or admins can delete any"
+ON storage.objects FOR DELETE
+USING (
+  bucket_id = 'public_images' 
+  AND auth.role() = 'authenticated'
+  AND (owner = auth.uid() OR public.is_admin())
+);

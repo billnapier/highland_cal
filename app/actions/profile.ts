@@ -18,7 +18,7 @@ export async function updateProfile(data: ProfileFormData) {
     return { success: false, message: 'Invalid fields', details: validatedFields.error.flatten() }
   }
 
-  const { class: competitionClass, instagram, facebook, customLinks } = validatedFields.data
+  const { class: competitionClass, avatar_url, instagram, facebook, customLinks } = validatedFields.data
 
   const outward_links = {
     instagram: instagram || null,
@@ -30,6 +30,7 @@ export async function updateProfile(data: ProfileFormData) {
     .from('profiles')
     .update({ 
       class: competitionClass || null,
+      avatar_url: avatar_url || null,
       outward_links
     })
     .eq('id', user.id)

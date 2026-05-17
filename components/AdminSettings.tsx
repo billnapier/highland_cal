@@ -5,15 +5,18 @@ import { updateSetting } from '@/app/actions/settings'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
+import { ImageUpload } from '@/components/ImageUpload'
 
 interface AdminSettingsProps {
   initialClubName: string
   initialClubBlurb: string
+  initialHeroImage: string
 }
 
-export function AdminSettings({ initialClubName, initialClubBlurb }: AdminSettingsProps) {
+export function AdminSettings({ initialClubName, initialClubBlurb, initialHeroImage }: AdminSettingsProps) {
   const [clubName, setClubName] = useState(initialClubName)
   const [clubBlurb, setClubBlurb] = useState(initialClubBlurb)
+  const [heroImage, setHeroImage] = useState(initialHeroImage)
   const [isSaving, setIsSaving] = useState(false)
   const [message, setMessage] = useState<{ text: string; type: 'success' | 'error' } | null>(null)
 
@@ -31,6 +34,13 @@ export function AdminSettings({ initialClubName, initialClubBlurb }: AdminSettin
     const blurbResult = await updateSetting('club_blurb', clubBlurb)
     if (!blurbResult.success) {
       setMessage({ text: blurbResult.message || 'Failed to save club blurb', type: 'error' })
+      setIsSaving(false)
+      return
+    }
+
+    const heroResult = await updateSetting('hero_image_url', heroImage)
+    if (!heroResult.success) {
+      setMessage({ text: heroResult.message || 'Failed to save hero image', type: 'error' })
       setIsSaving(false)
       return
     }
@@ -63,6 +73,16 @@ export function AdminSettings({ initialClubName, initialClubBlurb }: AdminSettin
             onChange={(e) => setClubBlurb(e.target.value)}
             placeholder="We are a community of athletes..."
             className="min-h-[100px]"
+          />
+        </div>
+        <div>
+          <label className="block text-sm font-medium text-foreground mb-1">
+            Hero Image
+          </label>
+          <ImageUpload
+            value={heroImage}
+            onChange={setHeroImage}
+            pathPrefix="hero"
           />
         </div>
       </div>
