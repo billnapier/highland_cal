@@ -64,8 +64,8 @@ export default async function Home() {
         </div>
 
         {heroImage && (
-          <div className="w-full max-w-5xl aspect-[21/9] overflow-hidden rounded-3xl shadow-2xl border">
-            <img src={heroImage} alt={`${clubName} Hero`} className="object-cover w-full h-full" />
+          <div className="w-full max-w-5xl rounded-3xl shadow-2xl border overflow-hidden bg-muted/20 flex items-center justify-center">
+            <img src={heroImage} alt={`${clubName} Hero`} className="w-full h-auto max-h-[80vh] object-contain" />
           </div>
         )}
         
