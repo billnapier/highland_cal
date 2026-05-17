@@ -61,10 +61,22 @@ export default async function RootLayout({
         
         {children}
 
-        <footer className="border-t border-slate-200/60 dark:border-slate-800/60 py-6 md:py-0 mt-auto bg-white/50 dark:bg-slate-900/50 backdrop-blur-md">
-          <div className="container mx-auto flex flex-col items-center justify-center gap-4 md:h-16 md:flex-row px-4">
+        <footer className="border-t border-slate-200/60 dark:border-slate-800/60 py-6 md:py-8 mt-auto bg-white/50 dark:bg-slate-900/50 backdrop-blur-md">
+          <div className="container mx-auto flex flex-col items-center justify-center gap-2 px-4 text-center">
             <p className="text-sm font-medium text-slate-500 dark:text-slate-400">
               © {new Date().getFullYear()} {clubName}. All rights reserved.
+            </p>
+            <p className="text-sm font-medium text-slate-500 dark:text-slate-400">
+              Hey, want your own copy of this site for your club?{" "}
+              <a 
+                href="https://github.com/billnapier/highland_cal" 
+                className="text-indigo-600 hover:text-indigo-700 dark:text-indigo-400 dark:hover:text-indigo-300 underline underline-offset-4 transition-colors"
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                Go here
+              </a>
+              .
             </p>
           </div>
         </footer>
