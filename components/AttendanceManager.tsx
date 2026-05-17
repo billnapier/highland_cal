@@ -75,9 +75,9 @@ export default function AttendanceManager({ gameId, currentUserId, role, attenda
   const canEdit = role === 'APPROVED' || role === 'ADMIN'
 
   return (
-    <div className="mt-4 p-4 border rounded-md bg-secondary/20 space-y-4">
+    <div className="mt-4 p-6 border border-slate-200/60 dark:border-slate-800/60 rounded-xl bg-white/50 dark:bg-slate-900/50 backdrop-blur-sm space-y-4 shadow-sm transition-all hover:shadow-md">
       <div className="flex items-center justify-between">
-        <h4 className="font-semibold text-lg">Attendance</h4>
+        <h4 className="font-extrabold text-lg tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-blue-600 to-indigo-600 dark:from-blue-400 dark:to-indigo-400">Attendance</h4>
         {message && (
           <span className={`text-sm ${message.type === 'success' ? 'text-green-600' : 'text-red-600'}`}>
             {message.text}

@@ -5,7 +5,6 @@ import Link from "next/link";
 import { createClient } from '@/lib/supabase/server';
 
 const geistSans = Geist({
-
   variable: "--font-geist-sans",
   subsets: ["latin"],
 });
@@ -46,24 +45,25 @@ export default async function RootLayout({
       lang="en"
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
-      <body className="min-h-full flex flex-col">
-        <header className="flex h-16 shrink-0 items-center justify-between border-b px-4 md:px-6">
-          <Link href="/" className="font-semibold text-lg tracking-tight">
+      <body className="min-h-full flex flex-col bg-slate-50 dark:bg-slate-950 text-foreground">
+        <header className="sticky top-0 z-50 flex h-16 shrink-0 items-center justify-between border-b border-slate-200/60 dark:border-slate-800/60 bg-white/70 dark:bg-slate-900/70 backdrop-blur-xl px-4 md:px-6 shadow-sm">
+          <Link href="/" className="font-extrabold text-xl tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-blue-600 to-indigo-600 dark:from-blue-400 dark:to-indigo-400">
             {clubName}
           </Link>
           {user && (
             <nav className="flex items-center gap-4">
-              <Link href="/dashboard" className="text-sm font-medium hover:underline text-muted-foreground hover:text-foreground">
+              <Link href="/dashboard" className="text-sm font-bold text-slate-600 hover:text-indigo-600 dark:text-slate-300 dark:hover:text-indigo-400 transition-colors">
                 Dashboard
               </Link>
             </nav>
           )}
         </header>
+        
         {children}
 
-        <footer className="border-t py-6 md:py-0 mt-auto">
-          <div className="container flex flex-col items-center justify-center gap-4 md:h-16 md:flex-row">
-            <p className="text-sm text-muted-foreground">
+        <footer className="border-t border-slate-200/60 dark:border-slate-800/60 py-6 md:py-0 mt-auto bg-white/50 dark:bg-slate-900/50 backdrop-blur-md">
+          <div className="container mx-auto flex flex-col items-center justify-center gap-4 md:h-16 md:flex-row px-4">
+            <p className="text-sm font-medium text-slate-500 dark:text-slate-400">
               © {new Date().getFullYear()} {clubName}. All rights reserved.
             </p>
           </div>

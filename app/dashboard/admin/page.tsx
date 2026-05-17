@@ -59,23 +59,23 @@ export default async function AdminDashboardPage() {
   const heroImage = settingsMap['hero_image_url'] || ''
 
   return (
-    <main className="flex flex-1 flex-col p-8">
+    <main className="flex flex-1 flex-col p-8 bg-gradient-to-br from-slate-50 via-blue-50/50 to-indigo-50/80 dark:from-slate-950 dark:via-blue-950/20 dark:to-indigo-950/30 min-h-[calc(100vh-4rem)]">
       <div className="mx-auto w-full max-w-5xl space-y-12">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Admin Dashboard</h1>
+          <h1 className="text-4xl font-extrabold tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-blue-600 to-indigo-600 dark:from-blue-400 dark:to-indigo-400 drop-shadow-sm">Admin Dashboard</h1>
           <p className="text-muted-foreground mt-2">Manage settings, approve registrations, and assign roles.</p>
         </div>
 
         <section className="space-y-4">
-          <h2 className="text-2xl font-semibold tracking-tight">Site Settings</h2>
-          <div className="rounded-md border bg-card text-card-foreground shadow-sm p-6">
+          <h2 className="text-3xl font-extrabold tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-blue-600 to-indigo-600 dark:from-blue-400 dark:to-indigo-400 drop-shadow-sm">Site Settings</h2>
+          <div className="rounded-2xl border border-slate-200/60 dark:border-slate-800/60 bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl text-card-foreground shadow-xl p-6">
             <AdminSettings initialClubName={clubName} initialClubBlurb={clubBlurb} initialHeroImage={heroImage} />
           </div>
         </section>
         
         <section className="space-y-4">
-          <h2 className="text-2xl font-semibold tracking-tight">User Management</h2>
-          <div className="rounded-md border bg-card text-card-foreground shadow-sm overflow-hidden">
+          <h2 className="text-3xl font-extrabold tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-blue-600 to-indigo-600 dark:from-blue-400 dark:to-indigo-400 drop-shadow-sm">User Management</h2>
+          <div className="rounded-2xl border border-slate-200/60 dark:border-slate-800/60 bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl text-card-foreground shadow-xl overflow-hidden">
             {error ? (
               <div className="p-6 text-center text-red-500">
                 Failed to load users. Please try again later.
@@ -107,11 +107,11 @@ export default async function AdminDashboardPage() {
                         {u.class || '-'}
                       </td>
                       <td className="px-6 py-4">
-                        <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold
-                          ${role === 'ADMIN' ? 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-300' : ''}
-                          ${role === 'APPROVED' ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300' : ''}
-                          ${role === 'PENDING' ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-300' : ''}
-                          ${role === 'UNKNOWN' ? 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300' : ''}
+                        <span className={`inline-flex items-center rounded-full px-3 py-1 text-xs font-bold text-white shadow-sm ring-1 ring-inset ring-white/20
+                          ${role === 'ADMIN' ? 'bg-gradient-to-r from-fuchsia-500 to-purple-600' : ''}
+                          ${role === 'APPROVED' ? 'bg-gradient-to-r from-emerald-400 to-teal-500' : ''}
+                          ${role === 'PENDING' ? 'bg-gradient-to-r from-amber-400 to-orange-500' : ''}
+                          ${role === 'UNKNOWN' ? 'bg-gradient-to-r from-slate-400 to-slate-500' : ''}
                         `}>
                           {role}
                         </span>

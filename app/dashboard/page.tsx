@@ -9,6 +9,16 @@ import { buttonVariants } from '@/components/ui/button'
 import ApplicationForm from '@/components/ApplicationForm'
 import { EventDateTime } from '@/components/EventDateTime'
 
+const PAGE_TITLE = "Dashboard"
+const GAME_TYPES = { PRACTICE: 'Practice' }
+const CARD_CLASSES = "p-6 border border-slate-200/60 dark:border-slate-800/60 rounded-2xl shadow-sm hover:shadow-md hover:border-blue-300 dark:hover:border-blue-700 transition-all duration-300 bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl text-card-foreground"
+const ROLE_BADGE_CLASSES: Record<string, string> = {
+  ADMIN: 'bg-gradient-to-r from-fuchsia-500 to-purple-600 text-white border-purple-400/30',
+  APPROVED: 'bg-gradient-to-r from-emerald-400 to-teal-500 text-white border-emerald-400/30',
+  PENDING: 'bg-gradient-to-r from-amber-400 to-orange-500 text-white border-amber-400/30',
+  UNKNOWN: 'bg-gradient-to-r from-slate-400 to-slate-500 text-white border-slate-400/30'
+}
+
 export default async function DashboardPage() {
   const supabase = await createClient()
 
@@ -28,7 +38,7 @@ export default async function DashboardPage() {
   // Fetch the user's profile
   const { data: profileData } = await supabase
     .from('profiles')
-    .select('display_name, email, throwing_experience, attended_practice')
+    .select('display_name, email, throwing_experience, attended_practice, avatar_url')
     .eq('id', user.id)
     .single()
 
@@ -60,9 +70,9 @@ export default async function DashboardPage() {
   }
 
   return (
-    <main className="flex flex-1 flex-col p-4 md:p-8">
+    <main className="flex flex-1 flex-col p-4 md:p-8 bg-gradient-to-br from-slate-50 via-blue-50/50 to-indigo-50/80 dark:from-slate-950 dark:via-blue-950/20 dark:to-indigo-950/30 min-h-[calc(100vh-4rem)]">
       <div className="mx-auto w-full max-w-6xl space-y-8">
-        <h1 className="text-3xl font-bold tracking-tight">Dashboard</h1>
+        <h1 className="text-4xl font-extrabold tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-blue-600 to-indigo-600 dark:from-blue-400 dark:to-indigo-400 drop-shadow-sm">{PAGE_TITLE}</h1>
         
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8 items-start">
           
@@ -74,8 +84,8 @@ export default async function DashboardPage() {
             )}
 
             <div className="space-y-4">
-              <div className="flex justify-between items-center border-b pb-2">
-                <h2 className="text-2xl font-bold">Upcoming Events</h2>
+              <div className="flex justify-between items-center border-b border-slate-200 dark:border-slate-800 pb-2">
+                <h2 className="text-2xl font-extrabold tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-blue-600 to-indigo-600 dark:from-blue-400 dark:to-indigo-400 drop-shadow-sm">Upcoming Events</h2>
                 {(role === 'ADMIN' || role === 'APPROVED') && (
                   <CreateEventModal />
                 )}
@@ -101,14 +111,14 @@ export default async function DashboardPage() {
                     const gameAttendance = attendanceData?.filter(a => a.game_id === game.id) || [];
                     
                     return (
-                      <div key={game.id} className="p-6 border rounded-lg shadow-sm bg-card text-card-foreground">
+                      <div key={game.id} className={CARD_CLASSES}>
                         <div className="flex flex-col md:flex-row md:justify-between md:items-start gap-4">
                           <div className="w-full">
                             <div className="flex items-center gap-2 mb-2">
                               <h3 className="text-xl font-bold">{game.name}</h3>
                               {game.type === 'PRACTICE' && (
-                                <span className="inline-flex items-center rounded-md bg-purple-50 px-2 py-1 text-xs font-medium text-purple-700 ring-1 ring-inset ring-purple-700/10 dark:bg-purple-900 dark:text-purple-200 dark:ring-purple-500/20">
-                                  Practice
+                                <span className="inline-flex items-center rounded-full bg-gradient-to-r from-purple-500 to-fuchsia-500 px-3 py-1 text-xs font-bold text-white shadow-sm ring-1 ring-inset ring-white/20">
+                                  {GAME_TYPES.PRACTICE}
                                 </span>
                               )}
                             </div>
@@ -157,12 +167,18 @@ export default async function DashboardPage() {
 
           {/* Sidebar Column (Status & Profile) */}
           <div className="md:col-span-1 space-y-6 order-1 md:order-2 sticky top-6">
-            <div className="rounded-2xl border bg-card text-card-foreground shadow-lg overflow-hidden">
-              <div className="h-20 w-full bg-gradient-to-r from-primary/20 to-primary/5"></div>
+            <div className="rounded-3xl border border-slate-200/50 dark:border-slate-800/50 bg-white/60 dark:bg-slate-900/60 backdrop-blur-xl text-card-foreground shadow-xl overflow-hidden transition-all duration-300 hover:shadow-2xl">
+              <div className="h-24 w-full bg-gradient-to-r from-blue-500 via-indigo-500 to-purple-500 relative">
+                <div className="absolute inset-0 bg-white/10 dark:bg-black/10 mix-blend-overlay"></div>
+              </div>
               <div className="p-6 pt-0 space-y-6">
-                <div className="-mt-10 mb-2">
-                  <div className="h-20 w-20 rounded-full border-4 border-background bg-muted flex items-center justify-center text-3xl font-bold text-muted-foreground shadow-sm">
-                     {(profileData?.display_name?.[0] || user.email?.[0] || '?').toUpperCase()}
+                <div className="-mt-12 mb-2 relative">
+                  <div className="h-24 w-24 rounded-full border-4 border-white dark:border-slate-950 bg-gradient-to-br from-indigo-100 to-purple-100 dark:from-indigo-900 dark:to-purple-900 flex items-center justify-center text-4xl font-extrabold text-indigo-700 dark:text-indigo-300 shadow-lg ring-2 ring-indigo-500/20 overflow-hidden">
+                    {profileData?.avatar_url ? (
+                      <img src={profileData.avatar_url} alt="Profile" className="h-full w-full object-cover" />
+                    ) : (
+                      <>{(profileData?.display_name?.[0] || user.email?.[0] || '?').toUpperCase()}</>
+                    )}
                   </div>
                 </div>
                 
@@ -175,12 +191,7 @@ export default async function DashboardPage() {
                   <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-3">Account Status</h3>
                   <div className="flex flex-col space-y-3">
                     <div>
-                      <span className={`inline-flex items-center rounded-full px-3 py-1 text-xs font-bold shadow-sm border
-                        ${role === 'ADMIN' ? 'bg-purple-100 text-purple-800 border-purple-200 dark:bg-purple-900 dark:text-purple-300 dark:border-purple-800' : ''}
-                        ${role === 'APPROVED' ? 'bg-green-100 text-green-800 border-green-200 dark:bg-green-900 dark:text-green-300 dark:border-green-800' : ''}
-                        ${role === 'PENDING' ? 'bg-yellow-100 text-yellow-800 border-yellow-200 dark:bg-yellow-900 dark:text-yellow-300 dark:border-yellow-800' : ''}
-                        ${role === 'UNKNOWN' ? 'bg-gray-100 text-gray-800 border-gray-200 dark:bg-gray-800 dark:text-gray-300 dark:border-gray-700' : ''}
-                      `}>
+                      <span className={`inline-flex items-center rounded-full px-4 py-1.5 text-xs font-extrabold shadow-md border ${ROLE_BADGE_CLASSES[role] || ROLE_BADGE_CLASSES.UNKNOWN}`}>
                         {role}
                       </span>
                     </div>

@@ -19,16 +19,16 @@ export default async function ProfilePage() {
     .single()
 
   return (
-    <main className="flex flex-1 flex-col p-8">
+    <main className="flex flex-1 flex-col p-8 bg-gradient-to-br from-slate-50 via-blue-50/50 to-indigo-50/80 dark:from-slate-950 dark:via-blue-950/20 dark:to-indigo-950/30 min-h-[calc(100vh-4rem)]">
       <div className="mx-auto w-full max-w-2xl space-y-8">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Personal Profile</h1>
+          <h1 className="text-4xl font-extrabold tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-blue-600 to-indigo-600 dark:from-blue-400 dark:to-indigo-400 drop-shadow-sm">Personal Profile</h1>
           <p className="text-muted-foreground mt-2">
             Manage your public identity, competition class, and social media links.
           </p>
         </div>
 
-        <div className="rounded-lg border bg-card text-card-foreground shadow-sm p-6">
+        <div className="rounded-2xl border border-slate-200/60 dark:border-slate-800/60 bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl text-card-foreground shadow-xl p-6">
           <ProfileForm initialData={profileData || {}} />
         </div>
       </div>
