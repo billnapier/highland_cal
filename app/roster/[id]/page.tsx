@@ -4,6 +4,7 @@ import { buttonVariants } from '@/components/ui/button'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { CustomLink } from '@/lib/schemas'
+import Image from 'next/image'
 
 export default async function AthleteProfilePage({ params }: { params: Promise<{ id: string }> }) {
   const resolvedParams = await params
@@ -64,8 +65,8 @@ export default async function AthleteProfilePage({ params }: { params: Promise<{
           <div className="flex flex-col md:flex-row justify-between items-start gap-6">
             <div className="flex items-center gap-6">
               {profile.avatar_url && (
-                <div className="relative h-24 w-24 overflow-hidden rounded-full border-4 border-white shadow-lg">
-                  <img src={profile.avatar_url} alt={profile.display_name || 'Profile Photo'} className="object-cover h-full w-full" />
+                <div className="relative h-24 w-24 overflow-hidden rounded-full border-4 border-background shadow-lg">
+                  <Image src={profile.avatar_url} alt={profile.display_name || 'Profile Photo'} fill className="object-cover" sizes="96px" />
                 </div>
               )}
               <div>

@@ -5,6 +5,7 @@ import { buttonVariants } from '@/components/ui/button';
 import Link from 'next/link';
 import { EventDateTime } from '@/components/EventDateTime';
 import { CustomLink } from '@/lib/schemas';
+import Image from 'next/image';
 
 interface AttendanceRecord {
   interest_level: string;
@@ -65,7 +66,7 @@ export default async function Home() {
 
         {heroImage && (
           <div className="w-full max-w-5xl rounded-3xl shadow-2xl border overflow-hidden bg-muted/20 flex items-center justify-center">
-            <img src={heroImage} alt={`${clubName} Hero`} className="w-full h-auto max-h-[80vh] object-contain" />
+            <Image src={heroImage} alt={`${clubName} Hero`} width={1200} height={500} className="w-full h-auto max-h-[80vh] object-contain" />
           </div>
         )}
         
@@ -215,8 +216,8 @@ export default async function Home() {
                   <div className="flex justify-between items-start mb-3 gap-3">
                     <div className="flex items-center gap-3">
                       {profile.avatar_url && (
-                        <div className="h-10 w-10 shrink-0 overflow-hidden rounded-full border">
-                          <img src={profile.avatar_url} alt={profile.display_name || 'Profile'} className="h-full w-full object-cover" />
+                        <div className="relative h-10 w-10 shrink-0 overflow-hidden rounded-full border">
+                          <Image src={profile.avatar_url} alt={profile.display_name || 'Profile'} fill className="object-cover" sizes="40px" />
                         </div>
                       )}
                       <h3 className="text-xl font-bold line-clamp-1">
