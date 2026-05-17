@@ -272,7 +272,7 @@ export default async function Home() {
 
                   <div className="mt-4 pt-4 border-t w-full">
                     <Link href={`/roster/${profile.id}`} className="text-sm font-black text-primary hover:text-primary/80 inline-flex items-center w-full justify-between uppercase tracking-wider">
-                      View Player Stats <ChevronRight className="h-4 w-4" />
+                      View Athlete's Info <ChevronRight className="h-4 w-4" />
                     </Link>
                   </div>
                 </div>
