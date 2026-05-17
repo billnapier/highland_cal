@@ -259,7 +259,7 @@ export default async function Home() {
                         links.customLinks.map((link: CustomLink, idx: number) => (
                           <a key={idx} href={link.url} target="_blank" rel="noopener noreferrer" className={buttonVariants({ variant: "secondary", size: "sm", className: "h-8" })} title={link.title}>
                             <ExternalLink className="mr-2 h-3 w-3" />
-                            {link.title.length > 10 ? link.title.substring(0, 10) + '...' : link.title}
+                            {link.title}
                           </a>
                         ))
                       )}
