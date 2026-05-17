@@ -60,145 +60,161 @@ export default async function DashboardPage() {
   }
 
   return (
-    <main className="flex flex-1 flex-col p-8">
-      <div className="mx-auto w-full max-w-4xl space-y-8">
+    <main className="flex flex-1 flex-col p-4 md:p-8">
+      <div className="mx-auto w-full max-w-6xl space-y-8">
         <h1 className="text-3xl font-bold tracking-tight">Dashboard</h1>
         
-        <div className="rounded-lg border bg-card text-card-foreground shadow-sm p-6">
-          <div className="space-y-4">
-            <div>
-              <div className="flex items-center justify-between">
-                <div>
-                  <h2 className="text-xl font-semibold">Welcome, {profileData?.display_name || user.email}</h2>
-                  <p className="text-sm text-muted-foreground">{user.email}</p>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-8 items-start">
+          
+          {/* Main Content Column (Events) */}
+          <div className="md:col-span-2 space-y-8 order-2 md:order-1">
+            
+            {role === 'PENDING' && !hasSubmittedApplication && (
+              <ApplicationForm />
+            )}
+
+            <div className="space-y-4">
+              <div className="flex justify-between items-center border-b pb-2">
+                <h2 className="text-2xl font-bold">Upcoming Events</h2>
+                {(role === 'ADMIN' || role === 'APPROVED') && (
+                  <CreateEventModal />
+                )}
+              </div>
+              
+              {gamesError && (
+                <p className="text-red-500">Error loading events. Please try again later.</p>
+              )}
+
+              {!gamesError && games?.length === 0 && (
+                <p className="text-gray-500 italic">No upcoming events scheduled at this time.</p>
+              )}
+
+              {!gamesError && games && games.length > 0 && (
+                <div className="grid gap-4">
+                  {games.map((game) => {
+                    const startDate = new Date(game.start_date + 'T00:00:00');
+                    const isTwoDay = game.is_two_day;
+                    const isSameDay = !isTwoDay;
+                    const endDate = new Date(startDate);
+                    if (isTwoDay) endDate.setDate(endDate.getDate() + 1);
+                    
+                    const gameAttendance = attendanceData?.filter(a => a.game_id === game.id) || [];
+                    
+                    return (
+                      <div key={game.id} className="p-6 border rounded-lg shadow-sm bg-card text-card-foreground">
+                        <div className="flex flex-col md:flex-row md:justify-between md:items-start gap-4">
+                          <div className="w-full">
+                            <div className="flex items-center gap-2 mb-2">
+                              <h3 className="text-xl font-bold">{game.name}</h3>
+                              {game.type === 'PRACTICE' && (
+                                <span className="inline-flex items-center rounded-md bg-purple-50 px-2 py-1 text-xs font-medium text-purple-700 ring-1 ring-inset ring-purple-700/10 dark:bg-purple-900 dark:text-purple-200 dark:ring-purple-500/20">
+                                  Practice
+                                </span>
+                              )}
+                            </div>
+                            <div className="space-y-1 text-sm text-muted-foreground">
+                              <div className="flex items-center text-muted-foreground text-sm">
+                                <EventDateTime 
+                                  startDateStr={game.start_date}
+                                  isTwoDay={game.is_two_day}
+                                  type={game.type}
+                                  startTime={game.start_time}
+                                  endTime={game.end_time}
+                                />
+                              </div>
+                              {game.location && (
+                                <div className="flex items-center">
+                                  <MapPin className="mr-2 h-4 w-4" />
+                                  <span>{game.location}</span>
+                                </div>
+                              )}
+                            </div>
+                            
+                            <AttendanceManager 
+                              gameId={game.id} 
+                              currentUserId={user.id} 
+                              role={role} 
+                              attendanceRecords={gameAttendance} 
+                              isTwoDay={!isSameDay}
+                            />
+                          </div>
+                          <div className="flex gap-2 items-start shrink-0 mt-4 md:mt-0">
+                            {(role === 'ADMIN' || (role === 'APPROVED' && game.created_by === user.id)) && (
+                              <EditEventModal game={game} />
+                            )}
+                            {role === 'ADMIN' && (
+                              <DeleteEventButton eventId={game.id} />
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
                 </div>
-                <div className="flex gap-2">
+              )}
+            </div>
+          </div>
+
+          {/* Sidebar Column (Status & Profile) */}
+          <div className="md:col-span-1 space-y-6 order-1 md:order-2 sticky top-6">
+            <div className="rounded-2xl border bg-card text-card-foreground shadow-lg overflow-hidden">
+              <div className="h-20 w-full bg-gradient-to-r from-primary/20 to-primary/5"></div>
+              <div className="p-6 pt-0 space-y-6">
+                <div className="-mt-10 mb-2">
+                  <div className="h-20 w-20 rounded-full border-4 border-background bg-muted flex items-center justify-center text-3xl font-bold text-muted-foreground shadow-sm">
+                     {profileData?.display_name ? profileData.display_name[0] : user.email?.[0]?.toUpperCase()}
+                  </div>
+                </div>
+                
+                <div>
+                  <h2 className="text-xl font-bold truncate">{profileData?.display_name || user.email}</h2>
+                  <p className="text-sm text-muted-foreground truncate">{user.email}</p>
+                </div>
+                
+                <div className="pt-4 border-t">
+                  <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-3">Account Status</h3>
+                  <div className="flex flex-col space-y-3">
+                    <div>
+                      <span className={`inline-flex items-center rounded-full px-3 py-1 text-xs font-bold shadow-sm border
+                        ${role === 'ADMIN' ? 'bg-purple-100 text-purple-800 border-purple-200 dark:bg-purple-900 dark:text-purple-300 dark:border-purple-800' : ''}
+                        ${role === 'APPROVED' ? 'bg-green-100 text-green-800 border-green-200 dark:bg-green-900 dark:text-green-300 dark:border-green-800' : ''}
+                        ${role === 'PENDING' ? 'bg-yellow-100 text-yellow-800 border-yellow-200 dark:bg-yellow-900 dark:text-yellow-300 dark:border-yellow-800' : ''}
+                        ${role === 'UNKNOWN' ? 'bg-gray-100 text-gray-800 border-gray-200 dark:bg-gray-800 dark:text-gray-300 dark:border-gray-700' : ''}
+                      `}>
+                        {role}
+                      </span>
+                    </div>
+                    {role === 'PENDING' && !hasSubmittedApplication && (
+                      <p className="text-sm text-muted-foreground leading-relaxed">
+                        Please fill out the application form below to request approval.
+                      </p>
+                    )}
+                    {role === 'PENDING' && hasSubmittedApplication && (
+                      <p className="text-sm text-muted-foreground leading-relaxed">
+                        Your application is under review by an administrator.
+                      </p>
+                    )}
+                  </div>
+                </div>
+
+                <div className="pt-4 border-t flex flex-col gap-2">
+                  <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-1">Quick Links</h3>
                   {role === 'ADMIN' && (
-                    <Link href="/dashboard/admin" className={buttonVariants({ variant: 'default', size: 'sm' })}>
+                    <Link href="/dashboard/admin" className={buttonVariants({ variant: 'default', className: 'w-full justify-start' })}>
                       Admin Dashboard
                     </Link>
                   )}
-                  <Link href={`/roster/${user.id}`} className={buttonVariants({ variant: 'outline', size: 'sm' })}>
+                  <Link href={`/roster/${user.id}`} className={buttonVariants({ variant: 'outline', className: 'w-full justify-start' })}>
                     View Public Profile
                   </Link>
-                  <Link href="/dashboard/profile" className={buttonVariants({ variant: 'outline', size: 'sm' })}>
+                  <Link href="/dashboard/profile" className={buttonVariants({ variant: 'outline', className: 'w-full justify-start' })}>
                     Edit Profile
                   </Link>
                 </div>
               </div>
             </div>
-            
-            <div className="pt-4 border-t">
-              <h3 className="text-sm font-medium text-muted-foreground">Account Status</h3>
-              <div className="mt-2 flex items-center space-x-2">
-                <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold
-                  ${role === 'ADMIN' ? 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-300' : ''}
-                  ${role === 'APPROVED' ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300' : ''}
-                  ${role === 'PENDING' ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-300' : ''}
-                  ${role === 'UNKNOWN' ? 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300' : ''}
-                `}>
-                  {role}
-                </span>
-                {role === 'PENDING' && !hasSubmittedApplication && (
-                  <p className="text-sm text-muted-foreground">
-                    Please fill out the application form below to request approval.
-                  </p>
-                )}
-                {role === 'PENDING' && hasSubmittedApplication && (
-                  <p className="text-sm text-muted-foreground">
-                    Your application is under review by an administrator.
-                  </p>
-                )}
-              </div>
-            </div>
           </div>
         </div>
-
-        {role === 'PENDING' && !hasSubmittedApplication && (
-          <ApplicationForm />
-        )}
-
-        <div className="space-y-4">
-          <div className="flex justify-between items-center border-b pb-2">
-            <h2 className="text-2xl font-bold">Upcoming Events</h2>
-            {(role === 'ADMIN' || role === 'APPROVED') && (
-              <CreateEventModal />
-            )}
-          </div>
-          
-          {gamesError && (
-            <p className="text-red-500">Error loading events. Please try again later.</p>
-          )}
-
-          {!gamesError && games?.length === 0 && (
-            <p className="text-gray-500 italic">No upcoming events scheduled at this time.</p>
-          )}
-
-          {!gamesError && games && games.length > 0 && (
-            <div className="grid gap-4">
-              {games.map((game) => {
-                const startDate = new Date(game.start_date + 'T00:00:00');
-                const isTwoDay = game.is_two_day;
-                const isSameDay = !isTwoDay;
-                const endDate = new Date(startDate);
-                if (isTwoDay) endDate.setDate(endDate.getDate() + 1);
-                
-                const gameAttendance = attendanceData?.filter(a => a.game_id === game.id) || [];
-                
-                return (
-                  <div key={game.id} className="p-6 border rounded-lg shadow-sm bg-card text-card-foreground">
-                    <div className="flex flex-col md:flex-row md:justify-between md:items-start gap-4">
-                      <div className="w-full">
-                        <div className="flex items-center gap-2 mb-2">
-                          <h3 className="text-xl font-bold">{game.name}</h3>
-                          {game.type === 'PRACTICE' && (
-                            <span className="inline-flex items-center rounded-md bg-purple-50 px-2 py-1 text-xs font-medium text-purple-700 ring-1 ring-inset ring-purple-700/10 dark:bg-purple-900 dark:text-purple-200 dark:ring-purple-500/20">
-                              Practice
-                            </span>
-                          )}
-                        </div>
-                        <div className="space-y-1 text-sm text-muted-foreground">
-                          <div className="flex items-center text-muted-foreground text-sm">
-                            <EventDateTime 
-                              startDateStr={game.start_date}
-                              isTwoDay={game.is_two_day}
-                              type={game.type}
-                              startTime={game.start_time}
-                              endTime={game.end_time}
-                            />
-                          </div>
-                          {game.location && (
-                            <div className="flex items-center">
-                              <MapPin className="mr-2 h-4 w-4" />
-                              <span>{game.location}</span>
-                            </div>
-                          )}
-                        </div>
-                        
-                        <AttendanceManager 
-                          gameId={game.id} 
-                          currentUserId={user.id} 
-                          role={role} 
-                          attendanceRecords={gameAttendance} 
-                          isTwoDay={!isSameDay}
-                        />
-                      </div>
-                      <div className="flex gap-2 items-start shrink-0 mt-4 md:mt-0">
-                        {(role === 'ADMIN' || (role === 'APPROVED' && game.created_by === user.id)) && (
-                          <EditEventModal game={game} />
-                        )}
-                        {role === 'ADMIN' && (
-                          <DeleteEventButton eventId={game.id} />
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          )}
-        </div>
-
       </div>
     </main>
   )

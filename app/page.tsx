@@ -53,39 +53,44 @@ export default async function Home() {
     .order('display_name', { ascending: true });
 
   return (
-    <main className="flex flex-1 flex-col items-center p-8 max-w-5xl mx-auto w-full space-y-24">
-      <section id="about" className="flex flex-col items-center space-y-8 text-center w-full pt-12">
-        <div className="space-y-4">
-          <h1 className="text-4xl font-extrabold tracking-tighter sm:text-5xl md:text-6xl lg:text-7xl">
-            {clubName}
-          </h1>
-          <p className="mx-auto max-w-[700px] text-gray-500 md:text-xl dark:text-gray-400">
-            The official schedule and roster for the {clubName} throwing community.
-          </p>
-        </div>
-
-        {heroImage && (
-          <div className="w-full max-w-5xl rounded-3xl shadow-2xl border overflow-hidden bg-muted/20 flex items-center justify-center">
-            <Image src={heroImage} alt={`${clubName} Hero`} width={1200} height={500} className="w-full h-auto max-h-[80vh] object-contain" />
-          </div>
+    <main className="flex flex-1 flex-col items-center p-4 md:p-8 max-w-6xl mx-auto w-full space-y-16 md:space-y-24">
+      <section id="about" className="relative flex flex-col items-center justify-center w-full min-h-[60vh] rounded-3xl overflow-hidden mb-12 border shadow-2xl">
+        {heroImage ? (
+          <>
+            <Image src={heroImage} alt={`${clubName} Hero`} fill className="object-cover absolute inset-0 z-0" priority />
+            <div className="absolute inset-0 z-10 bg-gradient-to-t from-black/80 via-black/50 to-black/30 backdrop-blur-[2px]" />
+          </>
+        ) : (
+          <div className="absolute inset-0 z-0 bg-gradient-to-br from-green-900 via-emerald-800 to-teal-900" />
         )}
         
-        <div className="max-w-[800px] text-left md:text-center text-muted-foreground bg-secondary/10 p-6 rounded-2xl border shadow-sm">
-          <p className="leading-relaxed">
-            {clubBlurb}
-          </p>
-        </div>
-
-        <div className="flex flex-col space-y-4 items-center justify-center mt-4 w-full">
-          <div className="flex flex-col sm:flex-row gap-4 items-center">
-            <LoginButton text="Apply to Join" variant="default" />
-            <Link href="/api/calendar.ics" prefetch={false} className={buttonVariants({ variant: 'outline', size: 'lg' })}>
-              <Calendar className="mr-2 h-4 w-4" /> Subscribe to Calendar
-            </Link>
+        <div className="relative z-20 flex flex-col items-center space-y-8 text-center p-6 sm:p-12 w-full max-w-4xl mx-auto my-12">
+          <div className="space-y-4">
+            <h1 className="text-5xl font-extrabold tracking-tighter sm:text-6xl md:text-7xl lg:text-8xl text-white drop-shadow-lg">
+              {clubName}
+            </h1>
+            <p className="mx-auto max-w-[700px] text-gray-200 md:text-2xl font-medium drop-shadow text-lg">
+              The official schedule and roster for the {clubName} throwing community.
+            </p>
           </div>
-          <div className="mt-4 text-sm text-muted-foreground flex items-center gap-2">
-            Already a member? 
-            <LoginButton text="Log in" variant="link" className="px-0 font-semibold text-primary" />
+          
+          <div className="backdrop-blur-md bg-black/40 border border-white/20 p-6 sm:p-8 rounded-2xl text-gray-100 shadow-xl max-w-[800px] text-left md:text-center w-full">
+            <p className="leading-relaxed md:text-lg">
+              {clubBlurb}
+            </p>
+          </div>
+
+          <div className="flex flex-col space-y-4 items-center justify-center pt-4 w-full">
+            <div className="flex flex-col sm:flex-row gap-4 items-center w-full sm:w-auto">
+              <LoginButton text="Apply to Join" variant="default" className="text-lg px-8 py-6 rounded-full shadow-lg hover:scale-105 transition-transform w-full sm:w-auto" />
+              <Link href="/api/calendar.ics" prefetch={false} className={buttonVariants({ variant: 'outline', size: 'lg', className: 'text-lg px-8 py-6 rounded-full bg-white/10 text-white hover:bg-white/20 border-white/30 backdrop-blur-sm hover:scale-105 transition-transform w-full sm:w-auto' })}>
+                <Calendar className="mr-2 h-5 w-5" /> Subscribe to Calendar
+              </Link>
+            </div>
+            <div className="mt-4 text-sm text-gray-300 flex items-center gap-2 bg-black/40 px-5 py-2 rounded-full border border-white/10 backdrop-blur-md">
+              Already a member? 
+              <LoginButton text="Log in" variant="link" className="px-0 font-bold text-white hover:text-gray-200" />
+            </div>
           </div>
         </div>
       </section>
@@ -211,23 +216,28 @@ export default async function Home() {
             const hasSocials = links.instagram || links.facebook || (links.customLinks && links.customLinks.length > 0)
             
             return (
-              <div key={profile.id} className="bg-card text-card-foreground rounded-xl border shadow-sm flex flex-col transition-all hover:shadow-md">
-                <div className="p-5 flex-1">
-                  <div className="flex justify-between items-start mb-3 gap-3">
-                    <div className="flex items-center gap-3">
-                      {profile.avatar_url && (
-                        <div className="relative h-10 w-10 shrink-0 overflow-hidden rounded-full border">
-                          <Image src={profile.avatar_url} alt={profile.display_name || 'Profile'} fill className="object-cover" sizes="40px" />
+              <div key={profile.id} className="group relative bg-card text-card-foreground rounded-2xl border shadow-sm flex flex-col transition-all duration-300 hover:-translate-y-1 hover:shadow-xl overflow-hidden">
+                <div className="h-20 w-full bg-gradient-to-r from-muted to-secondary/50 border-b relative"></div>
+                <div className="p-5 pt-0 flex-1 flex flex-col">
+                  <div className="flex justify-between items-start gap-3 -mt-10 mb-3 relative z-10">
+                    <div className="flex flex-col items-start gap-2">
+                      {profile.avatar_url ? (
+                        <div className="relative h-20 w-20 shrink-0 overflow-hidden rounded-full border-4 border-background shadow-sm bg-background">
+                          <Image src={profile.avatar_url} alt={profile.display_name || 'Profile'} fill className="object-cover" sizes="80px" />
+                        </div>
+                      ) : (
+                        <div className="relative h-20 w-20 shrink-0 rounded-full border-4 border-background shadow-sm bg-muted flex items-center justify-center text-2xl font-bold text-muted-foreground">
+                          {(profile.display_name || 'A')[0]}
                         </div>
                       )}
-                      <h3 className="text-xl font-bold line-clamp-1">
-                        <Link href={`/roster/${profile.id}`} className="hover:underline">
+                      <h3 className="text-xl font-bold line-clamp-1 mt-1">
+                        <Link href={`/roster/${profile.id}`} className="hover:underline hover:text-primary transition-colors">
                           {profile.display_name || 'Anonymous Athlete'}
                         </Link>
                       </h3>
                     </div>
                     {profile.class && (
-                      <span className="inline-flex items-center rounded-full bg-blue-100 px-2.5 py-0.5 text-xs font-semibold text-blue-800 dark:bg-blue-900 dark:text-blue-300 whitespace-nowrap shrink-0">
+                      <span className="inline-flex items-center rounded-full bg-primary/10 px-3 py-1 text-xs font-semibold text-primary border border-primary/20 whitespace-nowrap shrink-0 mt-12 shadow-sm">
                         {profile.class}
                       </span>
                     )}
