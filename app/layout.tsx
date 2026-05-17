@@ -33,17 +33,6 @@ export default function RootLayout({
           <Link href="/" className="font-semibold text-lg tracking-tight">
             Highland Cal
           </Link>
-          <nav className="ml-auto flex gap-4 sm:gap-6">
-            <Link href="/#about" className="text-sm font-medium hover:underline underline-offset-4">
-              About
-            </Link>
-            <Link href="/#schedule" className="text-sm font-medium hover:underline underline-offset-4">
-              Schedule
-            </Link>
-            <Link href="/#roster" className="text-sm font-medium hover:underline underline-offset-4">
-              Roster
-            </Link>
-          </nav>
         </header>
         {children}
       </body>
