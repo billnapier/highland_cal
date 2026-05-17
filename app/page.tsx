@@ -53,39 +53,41 @@ export default async function Home() {
     .order('display_name', { ascending: true });
 
   return (
-    <main className="flex flex-1 flex-col items-center p-8 max-w-5xl mx-auto w-full space-y-24">
-      <section id="about" className="flex flex-col items-center space-y-8 text-center w-full pt-12">
-        <div className="space-y-4">
-          <h1 className="text-4xl font-extrabold tracking-tighter sm:text-5xl md:text-6xl lg:text-7xl">
-            {clubName}
-          </h1>
-          <p className="mx-auto max-w-[700px] text-gray-500 md:text-xl dark:text-gray-400">
-            The official schedule and roster for the {clubName} throwing community.
-          </p>
-        </div>
-
-        {heroImage && (
-          <div className="w-full max-w-5xl rounded-3xl shadow-2xl border overflow-hidden bg-muted/20 flex items-center justify-center">
-            <Image src={heroImage} alt={`${clubName} Hero`} width={1200} height={500} className="w-full h-auto max-h-[80vh] object-contain" />
-          </div>
+    <main className="flex flex-1 flex-col items-center p-4 md:p-8 max-w-6xl mx-auto w-full space-y-16 md:space-y-24">
+      <section id="about" className="relative flex flex-col items-center justify-center w-full min-h-[60vh] rounded-3xl overflow-hidden mb-12 border shadow-2xl">
+        {heroImage ? (
+          <>
+            <Image src={heroImage} alt={`${clubName} Hero`} fill className="object-cover absolute inset-0 z-0" priority />
+            <div className="absolute inset-0 z-10 bg-gradient-to-t from-black/80 via-black/50 to-black/30 backdrop-blur-[2px]" />
+          </>
+        ) : (
+          <div className="absolute inset-0 z-0 bg-gradient-to-br from-green-900 via-emerald-800 to-teal-900" />
         )}
         
-        <div className="max-w-[800px] text-left md:text-center text-muted-foreground bg-secondary/10 p-6 rounded-2xl border shadow-sm">
-          <p className="leading-relaxed">
-            {clubBlurb}
-          </p>
-        </div>
-
-        <div className="flex flex-col space-y-4 items-center justify-center mt-4 w-full">
-          <div className="flex flex-col sm:flex-row gap-4 items-center">
-            <LoginButton text="Apply to Join" variant="default" />
-            <Link href="/api/calendar.ics" prefetch={false} className={buttonVariants({ variant: 'outline', size: 'lg' })}>
-              <Calendar className="mr-2 h-4 w-4" /> Subscribe to Calendar
-            </Link>
+        <div className="relative z-20 flex flex-col items-center space-y-8 text-center p-6 sm:p-12 w-full max-w-4xl mx-auto my-12">
+          <div className="space-y-4">
+            <h1 className="text-5xl font-extrabold tracking-tighter sm:text-6xl md:text-7xl lg:text-8xl text-white drop-shadow-lg">
+              {clubName}
+            </h1>
           </div>
-          <div className="mt-4 text-sm text-muted-foreground flex items-center gap-2">
-            Already a member? 
-            <LoginButton text="Log in" variant="link" className="px-0 font-semibold text-primary" />
+          
+          <div className="backdrop-blur-md bg-black/40 border border-white/20 p-6 sm:p-8 rounded-2xl text-gray-100 shadow-xl max-w-[800px] text-left md:text-center w-full">
+            <p className="leading-relaxed md:text-lg">
+              {clubBlurb}
+            </p>
+          </div>
+
+          <div className="flex flex-col space-y-4 items-center justify-center pt-4 w-full">
+            <div className="flex flex-col sm:flex-row gap-4 items-center w-full sm:w-auto">
+              <LoginButton text="Apply to Join" variant="default" className="text-lg px-8 py-6 rounded-full shadow-lg hover:scale-105 transition-transform w-full sm:w-auto" />
+              <Link href="/api/calendar.ics" prefetch={false} className={buttonVariants({ variant: 'outline', size: 'lg', className: 'text-lg px-8 py-6 rounded-full bg-white/10 text-white hover:bg-white/20 border-white/30 backdrop-blur-sm hover:scale-105 transition-transform w-full sm:w-auto' })}>
+                <Calendar className="mr-2 h-5 w-5" /> Subscribe to Calendar
+              </Link>
+            </div>
+            <div className="mt-4 text-sm text-gray-300 flex items-center gap-2 bg-black/40 px-5 py-2 rounded-full border border-white/10 backdrop-blur-md">
+              Already a member? 
+              <LoginButton text="Log in" variant="link" className="px-0 font-bold text-white hover:text-gray-200" />
+            </div>
           </div>
         </div>
       </section>
@@ -192,7 +194,7 @@ export default async function Home() {
       <section id="roster" className="w-full space-y-6 scroll-m-20 pb-12">
         <div className="border-b pb-4">
           <h2 className="text-3xl font-bold tracking-tight">Club Roster</h2>
-          <p className="text-muted-foreground mt-1">Meet the athletes of Highland Cal.</p>
+          <p className="text-muted-foreground mt-1">Meet the athletes of {clubName}.</p>
         </div>
 
         {profilesError && (
@@ -211,58 +213,66 @@ export default async function Home() {
             const hasSocials = links.instagram || links.facebook || (links.customLinks && links.customLinks.length > 0)
             
             return (
-              <div key={profile.id} className="bg-card text-card-foreground rounded-xl border shadow-sm flex flex-col transition-all hover:shadow-md">
-                <div className="p-5 flex-1">
-                  <div className="flex justify-between items-start mb-3 gap-3">
-                    <div className="flex items-center gap-3">
-                      {profile.avatar_url && (
-                        <div className="relative h-10 w-10 shrink-0 overflow-hidden rounded-full border">
-                          <Image src={profile.avatar_url} alt={profile.display_name || 'Profile'} fill className="object-cover" sizes="40px" />
-                        </div>
-                      )}
-                      <h3 className="text-xl font-bold line-clamp-1">
-                        <Link href={`/roster/${profile.id}`} className="hover:underline">
-                          {profile.display_name || 'Anonymous Athlete'}
-                        </Link>
-                      </h3>
+              <div key={profile.id} className="group relative bg-card text-card-foreground rounded-2xl border shadow-sm flex flex-col transition-all duration-300 hover:-translate-y-1 hover:shadow-xl overflow-hidden">
+                <div className="relative w-full aspect-[4/5] bg-muted overflow-hidden">
+                  {profile.avatar_url ? (
+                    <Image src={profile.avatar_url} alt={profile.display_name || 'Profile'} fill className="object-cover group-hover:scale-105 transition-transform duration-500" sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw" />
+                  ) : (
+                    <div className="absolute inset-0 flex items-center justify-center text-6xl font-bold text-muted-foreground/30 bg-secondary/20">
+                      {(profile.display_name?.[0] || 'A').toUpperCase()}
                     </div>
-                    {profile.class && (
-                      <span className="inline-flex items-center rounded-full bg-blue-100 px-2.5 py-0.5 text-xs font-semibold text-blue-800 dark:bg-blue-900 dark:text-blue-300 whitespace-nowrap shrink-0">
+                  )}
+                  
+                  {profile.class && (
+                    <div className="absolute top-3 right-3 z-10">
+                      <span className="inline-flex items-center rounded-full bg-primary text-primary-foreground px-3 py-1 text-xs font-black shadow-md border-2 border-background/50">
                         {profile.class}
                       </span>
-                    )}
-                  </div>
+                    </div>
+                  )}
                   
+                  <div className="absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t from-black/80 via-black/40 to-transparent"></div>
+                  
+                  <div className="absolute bottom-0 inset-x-0 p-5">
+                    <h3 className="text-2xl font-extrabold text-white drop-shadow-md line-clamp-1">
+                      <Link href={`/roster/${profile.id}`} className="hover:text-primary transition-colors">
+                        {profile.display_name || 'Anonymous Athlete'}
+                      </Link>
+                    </h3>
+                  </div>
+                </div>
+
+                <div className="p-5 flex-1 flex flex-col justify-between">
                   {hasSocials ? (
-                    <div className="flex flex-wrap gap-2 mt-3">
+                    <div className="flex flex-wrap gap-2">
                       {links.instagram && (
-                        <a href={links.instagram} target="_blank" rel="noopener noreferrer" className={buttonVariants({ variant: "outline", size: "icon" })} title="Instagram" aria-label="Instagram">
-                          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="20" height="20" x="2" y="2" rx="5" ry="5"/><path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"/><line x1="17.5" x2="17.51" y1="6.5" y2="6.5"/></svg>
+                        <a href={links.instagram} target="_blank" rel="noopener noreferrer" className={buttonVariants({ variant: "secondary", size: "icon", className: "h-8 w-8" })} title="Instagram" aria-label="Instagram">
+                          <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="20" height="20" x="2" y="2" rx="5" ry="5"/><path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"/><line x1="17.5" x2="17.51" y1="6.5" y2="6.5"/></svg>
                         </a>
                       )}
                       {links.facebook && (
-                        <a href={links.facebook} target="_blank" rel="noopener noreferrer" className={buttonVariants({ variant: "outline", size: "icon" })} title="Facebook" aria-label="Facebook">
-                          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z"/></svg>
+                        <a href={links.facebook} target="_blank" rel="noopener noreferrer" className={buttonVariants({ variant: "secondary", size: "icon", className: "h-8 w-8" })} title="Facebook" aria-label="Facebook">
+                          <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z"/></svg>
                         </a>
                       )}
                       {links.customLinks && links.customLinks.length > 0 && (
                         links.customLinks.map((link: CustomLink, idx: number) => (
-                          <a key={idx} href={link.url} target="_blank" rel="noopener noreferrer" className={buttonVariants({ variant: "outline", size: "sm" })} title={link.title}>
+                          <a key={idx} href={link.url} target="_blank" rel="noopener noreferrer" className={buttonVariants({ variant: "secondary", size: "sm", className: "h-8" })} title={link.title}>
                             <ExternalLink className="mr-2 h-3 w-3" />
-                            {link.title.length > 10 ? link.title.substring(0, 10) + '...' : link.title}
+                            {link.title}
                           </a>
                         ))
                       )}
                     </div>
                   ) : (
-                    <div className="mt-3 text-xs text-muted-foreground italic">
+                    <div className="text-xs text-muted-foreground italic">
                       No public links
                     </div>
                   )}
 
-                  <div className="mt-4 pt-3 border-t">
-                    <Link href={`/roster/${profile.id}`} className="text-sm font-medium text-primary hover:underline inline-flex items-center">
-                      View full profile <ChevronRight className="ml-1 h-3 w-3" />
+                  <div className="mt-4 pt-4 border-t w-full">
+                    <Link href={`/roster/${profile.id}`} className="text-sm font-black text-primary hover:text-primary/80 inline-flex items-center w-full justify-between uppercase tracking-wider">
+                      View Athlete&apos;s Info <ChevronRight className="h-4 w-4" />
                     </Link>
                   </div>
                 </div>
