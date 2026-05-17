@@ -30,8 +30,9 @@ Avoid long, single-column walls of text on desktop viewports.
 * **Sticky Sidebars**: On larger screens, pin secondary but important actions (like a user profile summary or navigation links) to the side using `sticky top-6`. This prevents unnecessary scrolling and utilizes horizontal space efficiently.
 * **Mobile-First Stacking**: Ensure that multi-column CSS grids collapse elegantly into a single column on mobile devices. Prioritize the order of stacked elements (e.g., show the "Account Status" card before the long list of "Upcoming Events").
 
-## 5. Typography & Badges
+## 5. Typography & Text Content
 * **Premium Fonts**: Favor modern, geometric sans-serif fonts (like *Geist*, *Inter*, or *Outfit*) over system defaults.
+* **Avoid Truncation**: Allow user-generated content (like custom link titles) to display fully whenever possible. Avoid aggressive text truncation on interactive elements to ensure clarity.
 * **Status Indicators**: Use vibrant, color-coded badges to indicate state. Avoid plain text for statuses.
   * `APPROVED` → Green (`bg-green-100 text-green-800`)
   * `PENDING` → Yellow/Amber (`bg-yellow-100 text-yellow-800`)
