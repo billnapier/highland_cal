@@ -28,7 +28,7 @@ export default async function DashboardPage() {
   // Fetch the user's profile
   const { data: profileData } = await supabase
     .from('profiles')
-    .select('display_name, email, throwing_experience, attended_practice')
+    .select('display_name, email, throwing_experience, attended_practice, avatar_url')
     .eq('id', user.id)
     .single()
 
@@ -74,8 +74,8 @@ export default async function DashboardPage() {
             )}
 
             <div className="space-y-4">
-              <div className="flex justify-between items-center border-b pb-2">
-                <h2 className="text-2xl font-bold">Upcoming Events</h2>
+              <div className="flex justify-between items-center border-b border-slate-200 dark:border-slate-800 pb-2">
+                <h2 className="text-2xl font-extrabold tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-blue-600 to-indigo-600 dark:from-blue-400 dark:to-indigo-400 drop-shadow-sm">Upcoming Events</h2>
                 {(role === 'ADMIN' || role === 'APPROVED') && (
                   <CreateEventModal />
                 )}
@@ -163,8 +163,12 @@ export default async function DashboardPage() {
               </div>
               <div className="p-6 pt-0 space-y-6">
                 <div className="-mt-12 mb-2 relative">
-                  <div className="h-24 w-24 rounded-full border-4 border-white dark:border-slate-950 bg-gradient-to-br from-indigo-100 to-purple-100 dark:from-indigo-900 dark:to-purple-900 flex items-center justify-center text-4xl font-extrabold text-indigo-700 dark:text-indigo-300 shadow-lg ring-2 ring-indigo-500/20">
-                     {(profileData?.display_name?.[0] || user.email?.[0] || '?').toUpperCase()}
+                  <div className="h-24 w-24 rounded-full border-4 border-white dark:border-slate-950 bg-gradient-to-br from-indigo-100 to-purple-100 dark:from-indigo-900 dark:to-purple-900 flex items-center justify-center text-4xl font-extrabold text-indigo-700 dark:text-indigo-300 shadow-lg ring-2 ring-indigo-500/20 overflow-hidden">
+                    {profileData?.avatar_url ? (
+                      <img src={profileData.avatar_url} alt="Profile" className="h-full w-full object-cover" />
+                    ) : (
+                      <>{(profileData?.display_name?.[0] || user.email?.[0] || '?').toUpperCase()}</>
+                    )}
                   </div>
                 </div>
                 

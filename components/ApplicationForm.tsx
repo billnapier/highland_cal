@@ -37,8 +37,8 @@ export default function ApplicationForm() {
   }
 
   return (
-    <div className="bg-card text-card-foreground border rounded-lg shadow-sm p-6 mt-6">
-      <h2 className="text-xl font-semibold mb-4">Application for Membership</h2>
+    <div className="rounded-2xl border border-slate-200/60 dark:border-slate-800/60 bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl text-card-foreground shadow-xl p-6 mt-6">
+      <h2 className="text-2xl font-extrabold tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-blue-600 to-indigo-600 dark:from-blue-400 dark:to-indigo-400 drop-shadow-sm mb-4">Application for Membership</h2>
       <p className="text-muted-foreground text-sm mb-6">
         Please fill out this short questionnaire so we can get to know you better.
       </p>

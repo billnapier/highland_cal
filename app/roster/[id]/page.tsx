@@ -60,60 +60,61 @@ export default async function AthleteProfilePage({ params }: { params: Promise<{
     <main className="flex flex-1 flex-col p-8 min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/50 to-indigo-50/80 dark:from-slate-950 dark:via-blue-950/20 dark:to-indigo-950/30">
       <div className="mx-auto w-full max-w-4xl space-y-8">
         
-        {/* Profile Header */}
-        <div className="bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl text-card-foreground rounded-3xl border border-slate-200/60 dark:border-slate-800/60 shadow-xl p-8 relative overflow-hidden transition-all hover:shadow-2xl">
-          <div className="absolute inset-0 bg-gradient-to-r from-blue-500/5 via-indigo-500/5 to-purple-500/5" />
-          <div className="flex flex-col md:flex-row justify-between items-start gap-6 relative z-10">
-            <div className="flex items-center gap-6">
-              {profile.avatar_url && (
-                <div className="relative h-24 w-24 overflow-hidden rounded-full border-4 border-white dark:border-slate-950 shadow-lg ring-2 ring-indigo-500/20">
-                  <Image src={profile.avatar_url} alt={profile.display_name || 'Profile Photo'} fill className="object-cover" sizes="96px" />
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+          {/* Athlete Card (Left Column) */}
+          <div className="md:col-span-1">
+            <div className="relative w-full aspect-[4/5] bg-muted overflow-hidden rounded-3xl border border-slate-200/60 dark:border-slate-800/60 shadow-xl">
+              {profile.avatar_url ? (
+                <Image src={profile.avatar_url} alt={profile.display_name || 'Profile'} fill className="object-cover" sizes="(max-width: 768px) 100vw, 33vw" priority />
+              ) : (
+                <div className="absolute inset-0 flex items-center justify-center text-8xl font-bold text-muted-foreground/30 bg-secondary/20">
+                  {(profile.display_name?.[0] || 'A').toUpperCase()}
                 </div>
               )}
-              <div>
-                <h1 className="text-4xl font-extrabold tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-blue-600 to-indigo-600 dark:from-blue-400 dark:to-indigo-400 drop-shadow-sm">{profile.display_name || 'Anonymous Athlete'}</h1>
-                {profile.class && (
-                  <div className="mt-2">
-                    <span className="inline-flex items-center rounded-full bg-gradient-to-r from-blue-500 to-indigo-500 px-4 py-1 text-sm font-bold text-white shadow-sm ring-1 ring-inset ring-white/20">
-                      Class: {profile.class}
-                    </span>
-                  </div>
-                )}
+              {profile.class && (
+                <div className="absolute top-4 right-4 z-10">
+                  <span className="inline-flex items-center rounded-full bg-primary text-primary-foreground px-4 py-1 text-sm font-black shadow-md border-2 border-background/50">
+                    {profile.class}
+                  </span>
+                </div>
+              )}
+              <div className="absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t from-black/80 via-black/40 to-transparent"></div>
+              <div className="absolute bottom-0 inset-x-0 p-6">
+                <h1 className="text-3xl font-extrabold text-white drop-shadow-md">
+                  {profile.display_name || 'Anonymous Athlete'}
+                </h1>
               </div>
             </div>
             
             {hasSocials && (
-              <div className="flex flex-col items-end space-y-3">
-                <h3 className="text-sm font-medium text-muted-foreground uppercase tracking-wider">Links</h3>
-                <div className="flex flex-wrap gap-2 justify-end">
+              <div className="mt-6 bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl text-card-foreground rounded-2xl border border-slate-200/60 dark:border-slate-800/60 shadow-md p-6">
+                <h3 className="text-sm font-medium text-muted-foreground uppercase tracking-wider mb-4 border-b border-slate-200 dark:border-slate-800 pb-2">Athlete Links</h3>
+                <div className="flex flex-col gap-3">
                   {links.instagram && (
-                    <a href={links.instagram} target="_blank" rel="noopener noreferrer" className={buttonVariants({ variant: "outline", size: "sm" })}>
-                      <ExternalLink className="mr-2 h-4 w-4" /> Insta
+                    <a href={links.instagram} target="_blank" rel="noopener noreferrer" className={buttonVariants({ variant: "outline", className: "w-full justify-start" })}>
+                      <ExternalLink className="mr-2 h-4 w-4" /> Instagram
                     </a>
                   )}
                   {links.facebook && (
-                    <a href={links.facebook} target="_blank" rel="noopener noreferrer" className={buttonVariants({ variant: "outline", size: "sm" })}>
-                      <ExternalLink className="mr-2 h-4 w-4" /> FB
+                    <a href={links.facebook} target="_blank" rel="noopener noreferrer" className={buttonVariants({ variant: "outline", className: "w-full justify-start" })}>
+                      <ExternalLink className="mr-2 h-4 w-4" /> Facebook
                     </a>
                   )}
+                  {links.customLinks?.map((link: CustomLink, idx: number) => (
+                    <a key={idx} href={link.url} target="_blank" rel="noopener noreferrer" className="flex items-center text-sm font-medium text-blue-600 dark:text-blue-400 hover:underline p-2 rounded-md hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors">
+                      <ExternalLink className="mr-2 h-4 w-4 shrink-0" /> <span className="truncate">{link.title}</span>
+                    </a>
+                  ))}
                 </div>
-                {links.customLinks && links.customLinks.length > 0 && (
-                  <div className="flex flex-col items-end gap-2 mt-2">
-                    {links.customLinks.map((link: CustomLink, idx: number) => (
-                      <a key={idx} href={link.url} target="_blank" rel="noopener noreferrer" className="flex items-center text-sm text-blue-600 dark:text-blue-400 hover:underline">
-                        <ExternalLink className="mr-2 h-3 w-3" /> {link.title}
-                      </a>
-                    ))}
-                  </div>
-                )}
               </div>
             )}
           </div>
-        </div>
 
-        {/* Schedule / Events Section */}
-        <div className="space-y-4">
-          <h2 className="text-3xl font-extrabold border-b border-slate-200 dark:border-slate-800 pb-2 bg-clip-text text-transparent bg-gradient-to-r from-blue-600 to-indigo-600 dark:from-blue-400 dark:to-indigo-400 drop-shadow-sm">Athlete Schedule</h2>
+          {/* Details & Schedule (Right Column) */}
+          <div className="md:col-span-2 space-y-8">
+            {/* Schedule / Events Section */}
+            <div className="space-y-4">
+              <h2 className="text-3xl font-extrabold border-b border-slate-200 dark:border-slate-800 pb-2 bg-clip-text text-transparent bg-gradient-to-r from-blue-600 to-indigo-600 dark:from-blue-400 dark:to-indigo-400 drop-shadow-sm">Athlete Schedule</h2>
           
           {attendanceError && (
             <p className="text-red-500">Failed to load schedule.</p>
@@ -183,10 +184,12 @@ export default async function AthleteProfilePage({ params }: { params: Promise<{
             </div>
           )}
         </div>
+        </div>
+        </div>
         
-        <div className="flex justify-center pt-8 border-t">
-          <Link href="/#roster" className={buttonVariants({ variant: 'ghost' })}>
-            &larr; Back to Full Roster
+        <div className="flex justify-center pt-8 border-t border-slate-200/60 dark:border-slate-800/60">
+          <Link href="/#roster" className="group inline-flex items-center justify-center rounded-full bg-white/80 dark:bg-slate-900/80 px-6 py-3 text-sm font-bold text-slate-700 dark:text-slate-300 shadow-sm ring-1 ring-inset ring-slate-200/60 dark:ring-slate-800/60 backdrop-blur-xl transition-all hover:bg-slate-50 dark:hover:bg-slate-800 hover:text-indigo-600 dark:hover:text-indigo-400 hover:shadow-md">
+            <span className="mr-2 transition-transform group-hover:-translate-x-1">&larr;</span> Back to Full Roster
           </Link>
         </div>
       </div>
