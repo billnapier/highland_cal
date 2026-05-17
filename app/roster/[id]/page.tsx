@@ -180,7 +180,7 @@ export default async function AthleteProfilePage({ params }: { params: Promise<{
         </div>
         
         <div className="flex justify-center pt-8 border-t">
-          <Link href="/roster" className={buttonVariants({ variant: 'ghost' })}>
+          <Link href="/#roster" className={buttonVariants({ variant: 'ghost' })}>
             &larr; Back to Full Roster
           </Link>
         </div>

@@ -40,6 +40,6 @@ export async function updateProfile(data: ProfileFormData) {
   }
 
   revalidatePath('/dashboard/profile')
-  revalidatePath('/roster')
+  revalidatePath('/')
   return { success: true }
 }
