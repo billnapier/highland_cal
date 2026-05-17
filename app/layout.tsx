@@ -27,6 +27,8 @@ export default async function RootLayout({
 }>) {
   const supabase = await createClient();
 
+  const { data: { user } } = await supabase.auth.getUser();
+
   // Fetch settings
   const { data: settingsData } = await supabase
     .from('settings')
@@ -45,12 +47,20 @@ export default async function RootLayout({
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col">
-        <header className="flex h-16 shrink-0 items-center border-b px-4 md:px-6">
+        <header className="flex h-16 shrink-0 items-center justify-between border-b px-4 md:px-6">
           <Link href="/" className="font-semibold text-lg tracking-tight">
             {clubName}
           </Link>
+          {user && (
+            <nav className="flex items-center gap-4">
+              <Link href="/dashboard" className="text-sm font-medium hover:underline text-muted-foreground hover:text-foreground">
+                Dashboard
+              </Link>
+            </nav>
+          )}
         </header>
         {children}
+
         <footer className="border-t py-6 md:py-0 mt-auto">
           <div className="container flex flex-col items-center justify-center gap-4 md:h-16 md:flex-row">
             <p className="text-sm text-muted-foreground">
