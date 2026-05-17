@@ -15,7 +15,8 @@ export function EventDateTime({ startDateStr, isTwoDay, type, startTime, endTime
   const [mounted, setMounted] = useState(false)
 
   useEffect(() => {
-    setMounted(true)
+    const timer = setTimeout(() => setMounted(true), 0)
+    return () => clearTimeout(timer)
   }, [])
 
   const startDate = new Date(startDateStr + 'T00:00:00')

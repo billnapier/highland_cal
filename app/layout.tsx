@@ -34,10 +34,10 @@ export default async function RootLayout({
     .from('settings')
     .select('key, value')
 
-  const settingsMap = settingsData?.reduce((acc: any, setting: any) => {
+  const settingsMap = settingsData?.reduce((acc: Record<string, string>, setting: { key: string, value: string }) => {
     acc[setting.key] = setting.value
     return acc
-  }, {}) || {}
+  }, {} as Record<string, string>) || {}
 
   const clubName = settingsMap['club_name'] || 'Highland Cal'
 

@@ -1,6 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
-import { Calendar, MapPin } from 'lucide-react'
+import { MapPin } from 'lucide-react'
 import DeleteEventButton from '@/components/DeleteEventButton'
 import { CreateEventModal, EditEventModal } from '@/components/EventModals'
 import AttendanceManager from '@/components/AttendanceManager'

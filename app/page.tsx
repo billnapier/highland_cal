@@ -4,16 +4,12 @@ import { Calendar, MapPin, ExternalLink, ChevronRight } from 'lucide-react';
 import { buttonVariants } from '@/components/ui/button';
 import Link from 'next/link';
 import { EventDateTime } from '@/components/EventDateTime';
+import { CustomLink } from '@/lib/schemas';
 
 interface AttendanceRecord {
   interest_level: string;
   attend_day: string | null;
   profiles: { display_name: string | null } | null;
-}
-
-interface CustomLink {
-  title: string;
-  url: string;
 }
 
 export default async function Home() {
@@ -24,10 +20,10 @@ export default async function Home() {
     .from('settings')
     .select('key, value')
 
-  const settingsMap = settingsData?.reduce((acc: any, setting: any) => {
+  const settingsMap = settingsData?.reduce((acc: Record<string, string>, setting: { key: string, value: string }) => {
     acc[setting.key] = setting.value
     return acc
-  }, {}) || {}
+  }, {} as Record<string, string>) || {}
 
   const clubName = settingsMap['club_name'] || 'Highland Cal'
   const clubBlurb = settingsMap['club_blurb'] || 'We are a community of athletes dedicated to the traditional Scottish Highland Games. Whether you are a seasoned A-class thrower or looking to try the caber toss for the very first time, Highland Cal is where we organize practices, coordinate game attendance, and support each other on the field.'
@@ -107,7 +103,6 @@ export default async function Home() {
             {games.map((game) => {
               const startDate = new Date(game.start_date + 'T00:00:00');
               const isTwoDay = game.is_two_day;
-              const isSameDay = !isTwoDay;
               const endDate = new Date(startDate);
               if (isTwoDay) endDate.setDate(endDate.getDate() + 1);
               
@@ -227,12 +222,12 @@ export default async function Home() {
                   {hasSocials ? (
                     <div className="flex flex-wrap gap-2 mt-3">
                       {links.instagram && (
-                        <a href={links.instagram} target="_blank" rel="noopener noreferrer" className={buttonVariants({ variant: "outline", size: "icon" })} title="Instagram">
+                        <a href={links.instagram} target="_blank" rel="noopener noreferrer" className={buttonVariants({ variant: "outline", size: "icon" })} title="Instagram" aria-label="Instagram">
                           <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="20" height="20" x="2" y="2" rx="5" ry="5"/><path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"/><line x1="17.5" x2="17.51" y1="6.5" y2="6.5"/></svg>
                         </a>
                       )}
                       {links.facebook && (
-                        <a href={links.facebook} target="_blank" rel="noopener noreferrer" className={buttonVariants({ variant: "outline", size: "icon" })} title="Facebook">
+                        <a href={links.facebook} target="_blank" rel="noopener noreferrer" className={buttonVariants({ variant: "outline", size: "icon" })} title="Facebook" aria-label="Facebook">
                           <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z"/></svg>
                         </a>
                       )}

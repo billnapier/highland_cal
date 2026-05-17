@@ -49,10 +49,10 @@ export default async function AdminDashboardPage() {
     .from('settings')
     .select('key, value')
 
-  const settingsMap = settingsData?.reduce((acc: any, setting: any) => {
+  const settingsMap = settingsData?.reduce((acc: Record<string, string>, setting: { key: string, value: string }) => {
     acc[setting.key] = setting.value
     return acc
-  }, {}) || {}
+  }, {} as Record<string, string>) || {}
 
   const clubName = settingsMap['club_name'] || 'Highland Cal'
   const clubBlurb = settingsMap['club_blurb'] || 'We are a community of athletes dedicated to the traditional Scottish Highland Games. Whether you are a seasoned A-class thrower or looking to try the caber toss for the very first time, Highland Cal is where we organize practices, coordinate game attendance, and support each other on the field.'

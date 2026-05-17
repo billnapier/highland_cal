@@ -3,11 +3,7 @@ import { ExternalLink, Calendar, MapPin } from 'lucide-react'
 import { buttonVariants } from '@/components/ui/button'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
-
-interface CustomLink {
-  title: string;
-  url: string;
-}
+import { CustomLink } from '@/lib/schemas'
 
 export default async function AthleteProfilePage({ params }: { params: Promise<{ id: string }> }) {
   const resolvedParams = await params
