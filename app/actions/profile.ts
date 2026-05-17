@@ -40,6 +40,7 @@ export async function updateProfile(data: ProfileFormData) {
   }
 
   revalidatePath('/dashboard/profile')
-  revalidatePath('/roster')
+  revalidatePath('/')
+  revalidatePath(`/roster/${user.id}`)
   return { success: true }
 }

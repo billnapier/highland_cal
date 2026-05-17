@@ -143,3 +143,28 @@ CREATE POLICY "Users can update their own attendance if approved" ON public.Atte
 
 CREATE POLICY "Users can delete their own attendance if approved" ON public.Attendance
   FOR DELETE USING (auth.uid() = user_id AND public.is_approved_or_admin());
+
+-- Settings Table
+CREATE TABLE public.Settings (
+  key text PRIMARY KEY,
+  value text NOT NULL,
+  updated_at timestamptz DEFAULT now()
+);
+
+-- Trigger for Settings updated_at
+CREATE TRIGGER update_settings_updated_at
+  BEFORE UPDATE ON public.Settings
+  FOR EACH ROW EXECUTE PROCEDURE public.update_updated_at_column();
+
+-- Enable RLS
+ALTER TABLE public.Settings ENABLE ROW LEVEL SECURITY;
+
+-- Settings RLS
+CREATE POLICY "Settings are viewable by everyone" ON public.Settings
+  FOR SELECT USING (true);
+
+CREATE POLICY "Only admins can manage settings" ON public.Settings
+  USING (public.is_admin());
+
+-- Insert default club name
+INSERT INTO public.Settings (key, value) VALUES ('club_name', 'Highland Cal');

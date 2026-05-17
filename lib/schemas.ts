@@ -51,3 +51,8 @@ export const applicationSchema = z.object({
 })
 
 export type ApplicationFormData = z.infer<typeof applicationSchema>
+
+export interface CustomLink {
+  title: string;
+  url: string;
+}

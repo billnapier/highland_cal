@@ -3,11 +3,7 @@ import { ExternalLink, Calendar, MapPin } from 'lucide-react'
 import { buttonVariants } from '@/components/ui/button'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
-
-interface CustomLink {
-  title: string;
-  url: string;
-}
+import { CustomLink } from '@/lib/schemas'
 
 export default async function AthleteProfilePage({ params }: { params: Promise<{ id: string }> }) {
   const resolvedParams = await params
@@ -180,7 +176,7 @@ export default async function AthleteProfilePage({ params }: { params: Promise<{
         </div>
         
         <div className="flex justify-center pt-8 border-t">
-          <Link href="/roster" className={buttonVariants({ variant: 'ghost' })}>
+          <Link href="/#roster" className={buttonVariants({ variant: 'ghost' })}>
             &larr; Back to Full Roster
           </Link>
         </div>

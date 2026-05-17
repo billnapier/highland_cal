@@ -82,3 +82,12 @@ The journeys are broken down by the two main personas: **Athletes (End Users)** 
 3. **Action:** They locate an existing `APPROVED` user and click "Promote to Admin".
 4. **System:** A Next.js Server Action updates the user's role in the `User_Roles` table to "ADMIN".
 5. **System Action:** The Server Action dispatches an email via Resend to the user notifying them of their new administrative privileges.
+
+### Journey 10: Configuring Site Content
+**Goal:** Update the club's public-facing text.
+1. **Trigger:** The club decides to change its name or update its mission statement on the home page.
+2. **Action:** The Admin navigates to the "Admin Dashboard".
+3. **Action:** They update the "Club Name" or "Home Page Blurb" in the Site Settings section and click "Save Settings".
+4. **System:** A Next.js Server Action updates the `settings` table in the database and revalidates the cache for the home page.
+5. **Result:** The new club name and blurb are immediately visible on the public landing page.
+

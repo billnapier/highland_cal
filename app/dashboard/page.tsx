@@ -1,12 +1,13 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
-import { Calendar, MapPin } from 'lucide-react'
+import { MapPin } from 'lucide-react'
 import DeleteEventButton from '@/components/DeleteEventButton'
 import { CreateEventModal, EditEventModal } from '@/components/EventModals'
 import AttendanceManager from '@/components/AttendanceManager'
 import Link from 'next/link'
 import { buttonVariants } from '@/components/ui/button'
 import ApplicationForm from '@/components/ApplicationForm'
+import { EventDateTime } from '@/components/EventDateTime'
 
 export default async function DashboardPage() {
   const supabase = await createClient()
@@ -157,14 +158,14 @@ export default async function DashboardPage() {
                           )}
                         </div>
                         <div className="space-y-1 text-sm text-muted-foreground">
-                          <div className="flex items-center">
-                            <Calendar className="mr-2 h-4 w-4" />
-                            <span>
-                              {startDate.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' })}
-                              {game.type === 'PRACTICE' && game.start_time ? ` from ${game.start_time}` : ''}
-                              {game.type === 'PRACTICE' && game.end_time ? ` to ${game.end_time}` : ''}
-                              {game.type !== 'PRACTICE' && !isSameDay && ` - ${endDate.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' })}`}
-                            </span>
+                          <div className="flex items-center text-muted-foreground text-sm">
+                            <EventDateTime 
+                              startDateStr={game.start_date}
+                              isTwoDay={game.is_two_day}
+                              type={game.type}
+                              startTime={game.start_time}
+                              endTime={game.end_time}
+                            />
                           </div>
                           {game.location && (
                             <div className="flex items-center">
