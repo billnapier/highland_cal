@@ -4,7 +4,7 @@ import { useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { Loader2, Upload, X } from 'lucide-react'
+import { Loader2, X } from 'lucide-react'
 import Image from 'next/image'
 
 interface ImageUploadProps {
@@ -27,7 +27,7 @@ export function ImageUpload({ value, onChange, bucket = 'public_images', pathPre
       if (!file) return
 
       const fileExt = file.name.split('.').pop()
-      const fileName = `${pathPrefix}/${Math.random().toString(36).substring(2)}.${fileExt}`
+      const fileName = `${pathPrefix}/${crypto.randomUUID()}.${fileExt}`
 
       const { error: uploadError } = await supabase.storage
         .from(bucket)
@@ -41,11 +41,27 @@ export function ImageUpload({ value, onChange, bucket = 'public_images', pathPre
         .from(bucket)
         .getPublicUrl(fileName)
 
+      if (value) {
+        await deleteOldFile(value)
+      }
+
       onChange(publicUrl)
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Error uploading image')
     } finally {
       setIsUploading(false)
+    }
+  }
+
+  const deleteOldFile = async (url: string) => {
+    try {
+      const parts = url.split(`/public/${bucket}/`)
+      if (parts.length === 2) {
+        const filePath = parts[1]
+        await supabase.storage.from(bucket).remove([filePath])
+      }
+    } catch (err) {
+      console.error('Failed to delete old image', err)
     }
   }
 
@@ -61,7 +77,12 @@ export function ImageUpload({ value, onChange, bucket = 'public_images', pathPre
             variant="destructive"
             size="icon"
             className="absolute -top-2 -right-2 h-6 w-6 rounded-full"
-            onClick={() => onChange('')}
+            onClick={async () => {
+              if (value) {
+                await deleteOldFile(value)
+              }
+              onChange('')
+            }}
           >
             <X className="h-4 w-4" />
           </Button>
