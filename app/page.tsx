@@ -3,6 +3,7 @@ import LoginButton from '@/components/LoginButton';
 import { Calendar, MapPin, ExternalLink, ChevronRight } from 'lucide-react';
 import { buttonVariants } from '@/components/ui/button';
 import Link from 'next/link';
+import { EventDateTime } from '@/components/EventDateTime';
 
 interface AttendanceRecord {
   interest_level: string;
@@ -127,14 +128,14 @@ export default async function Home() {
                         )}
                       </div>
                       <div className="space-y-1 text-sm text-muted-foreground">
-                        <div className="flex items-center">
-                          <Calendar className="mr-2 h-4 w-4" />
-                          <span>
-                            {startDate.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' })}
-                            {game.type === 'PRACTICE' && game.start_time ? ` from ${game.start_time}` : ''}
-                            {game.type === 'PRACTICE' && game.end_time ? ` to ${game.end_time}` : ''}
-                            {game.type !== 'PRACTICE' && !isSameDay && ` - ${endDate.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' })}`}
-                          </span>
+                        <div className="flex items-center text-muted-foreground text-sm">
+                          <EventDateTime 
+                            startDateStr={game.start_date}
+                            isTwoDay={game.is_two_day}
+                            type={game.type}
+                            startTime={game.start_time}
+                            endTime={game.end_time}
+                          />
                         </div>
                         {game.location && (
                           <div className="flex items-center">
