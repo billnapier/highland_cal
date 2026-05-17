@@ -53,16 +53,8 @@ export default async function Home() {
 
   return (
     <main className="flex flex-1 flex-col items-center p-8 max-w-5xl mx-auto w-full space-y-24">
-      {/* Hero Section */}
-      <section id="about" className="relative flex flex-col items-center space-y-8 text-center w-full pt-12 overflow-hidden rounded-3xl">
-        {heroImage && (
-          <div className="absolute inset-0 z-0">
-            <img src={heroImage} alt={`${clubName} Hero`} className="object-cover w-full h-full opacity-20" />
-            <div className="absolute inset-0 bg-gradient-to-b from-transparent to-background" />
-          </div>
-        )}
-        
-        <div className="relative z-10 space-y-4">
+      <section id="about" className="flex flex-col items-center space-y-8 text-center w-full pt-12">
+        <div className="space-y-4">
           <h1 className="text-4xl font-extrabold tracking-tighter sm:text-5xl md:text-6xl lg:text-7xl">
             {clubName}
           </h1>
@@ -70,8 +62,14 @@ export default async function Home() {
             The official schedule and roster for the {clubName} throwing community.
           </p>
         </div>
+
+        {heroImage && (
+          <div className="w-full max-w-5xl aspect-[21/9] overflow-hidden rounded-3xl shadow-2xl border">
+            <img src={heroImage} alt={`${clubName} Hero`} className="object-cover w-full h-full" />
+          </div>
+        )}
         
-        <div className="relative z-10 max-w-[800px] text-left md:text-center text-muted-foreground bg-secondary/20 backdrop-blur-sm p-6 rounded-2xl">
+        <div className="max-w-[800px] text-left md:text-center text-muted-foreground bg-secondary/10 p-6 rounded-2xl border shadow-sm">
           <p className="leading-relaxed">
             {clubBlurb}
           </p>
