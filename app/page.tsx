@@ -53,8 +53,9 @@ export default async function Home() {
     .order('display_name', { ascending: true });
 
   return (
-    <main className="flex flex-1 flex-col items-center p-4 md:p-8 max-w-6xl mx-auto w-full space-y-16 md:space-y-24">
-      <section id="about" className="relative flex flex-col items-center justify-center w-full min-h-[60vh] rounded-3xl overflow-hidden mb-12 border shadow-2xl">
+    <main className="flex flex-1 flex-col items-center p-4 md:p-8 bg-gradient-to-br from-slate-50 via-blue-50/50 to-indigo-50/80 dark:from-slate-950 dark:via-blue-950/20 dark:to-indigo-950/30 w-full min-h-[calc(100vh-4rem)]">
+      <div className="w-full max-w-6xl mx-auto space-y-16 md:space-y-24">
+        <section id="about" className="relative flex flex-col items-center justify-center w-full min-h-[60vh] rounded-3xl overflow-hidden mb-12 border shadow-2xl">
         {heroImage ? (
           <>
             <Image src={heroImage} alt={`${clubName} Hero`} fill className="object-cover absolute inset-0 z-0" priority />
@@ -94,8 +95,8 @@ export default async function Home() {
 
       {/* Schedule Section */}
       <section id="schedule" className="w-full space-y-6 scroll-m-20">
-        <div className="border-b pb-4">
-          <h2 className="text-3xl font-bold tracking-tight">Upcoming Events</h2>
+        <div className="border-b border-slate-200 dark:border-slate-800 pb-4">
+          <h2 className="text-4xl font-extrabold tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-blue-600 to-indigo-600 dark:from-blue-400 dark:to-indigo-400 drop-shadow-sm">Upcoming Events</h2>
           <p className="text-muted-foreground mt-1">Practices and official games on our radar.</p>
         </div>
         
@@ -120,13 +121,13 @@ export default async function Home() {
               const interestedAthletes = attendees.filter((a: AttendanceRecord) => a.interest_level === 'INTERESTED');
               
               return (
-                <div key={game.id} className="p-6 border rounded-lg shadow-sm bg-card text-card-foreground">
+                <div key={game.id} className="p-6 border border-slate-200/60 dark:border-slate-800/60 rounded-2xl shadow-sm hover:shadow-md hover:border-blue-300 dark:hover:border-blue-700 transition-all duration-300 bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl text-card-foreground">
                   <div className="flex flex-col md:flex-row md:justify-between md:items-start gap-4">
                     <div>
                       <div className="flex items-center gap-2 mb-2">
                         <h3 className="text-xl font-bold">{game.name}</h3>
                         {game.type === 'PRACTICE' && (
-                          <span className="inline-flex items-center rounded-md bg-purple-50 px-2 py-1 text-xs font-medium text-purple-700 ring-1 ring-inset ring-purple-700/10 dark:bg-purple-900 dark:text-purple-200 dark:ring-purple-500/20">
+                          <span className="inline-flex items-center rounded-full bg-gradient-to-r from-purple-500 to-fuchsia-500 px-3 py-1 text-xs font-bold text-white shadow-sm ring-1 ring-inset ring-white/20">
                             Practice
                           </span>
                         )}
@@ -167,7 +168,7 @@ export default async function Home() {
                             daySuffix = a.attend_day === 'DAY_1' ? ' (Day 1)' : ' (Day 2)';
                           }
                           return (
-                            <span key={`reg-${idx}`} className="inline-flex items-center rounded-md bg-blue-50 px-2 py-1 text-xs font-medium text-blue-700 ring-1 ring-inset ring-blue-700/10 dark:bg-blue-900 dark:text-blue-200 dark:ring-blue-500/20">
+                            <span key={`reg-${idx}`} className="inline-flex items-center rounded-full bg-gradient-to-r from-blue-500 to-indigo-500 px-3 py-1 text-xs font-bold text-white shadow-sm ring-1 ring-inset ring-white/20">
                               {name}{daySuffix}
                             </span>
                           );
@@ -175,7 +176,7 @@ export default async function Home() {
                         {interestedAthletes.map((a: AttendanceRecord, idx: number) => {
                           const name = a.profiles?.display_name || 'Anonymous';
                           return (
-                            <span key={`int-${idx}`} className="inline-flex items-center rounded-md bg-gray-50 px-2 py-1 text-xs font-medium text-gray-600 ring-1 ring-inset ring-gray-500/10 dark:bg-gray-800 dark:text-gray-300 dark:ring-gray-600/20">
+                            <span key={`int-${idx}`} className="inline-flex items-center rounded-full bg-gradient-to-r from-slate-400 to-slate-500 px-3 py-1 text-xs font-bold text-white shadow-sm ring-1 ring-inset ring-white/20">
                               {name} (Interested)
                             </span>
                           );
@@ -192,8 +193,8 @@ export default async function Home() {
 
       {/* Roster Section */}
       <section id="roster" className="w-full space-y-6 scroll-m-20 pb-12">
-        <div className="border-b pb-4">
-          <h2 className="text-3xl font-bold tracking-tight">Club Roster</h2>
+        <div className="border-b border-slate-200 dark:border-slate-800 pb-4">
+          <h2 className="text-4xl font-extrabold tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-blue-600 to-indigo-600 dark:from-blue-400 dark:to-indigo-400 drop-shadow-sm">Club Roster</h2>
           <p className="text-muted-foreground mt-1">Meet the athletes of {clubName}.</p>
         </div>
 
@@ -281,6 +282,7 @@ export default async function Home() {
           })}
         </div>
       </section>
+      </div>
     </main>
   );
 }

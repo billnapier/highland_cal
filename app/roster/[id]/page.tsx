@@ -57,23 +57,24 @@ export default async function AthleteProfilePage({ params }: { params: Promise<{
   })
 
   return (
-    <main className="flex flex-1 flex-col p-8 min-h-screen bg-gray-50 dark:bg-gray-900">
+    <main className="flex flex-1 flex-col p-8 min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/50 to-indigo-50/80 dark:from-slate-950 dark:via-blue-950/20 dark:to-indigo-950/30">
       <div className="mx-auto w-full max-w-4xl space-y-8">
         
         {/* Profile Header */}
-        <div className="bg-card text-card-foreground rounded-xl border shadow-sm p-8">
-          <div className="flex flex-col md:flex-row justify-between items-start gap-6">
+        <div className="bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl text-card-foreground rounded-3xl border border-slate-200/60 dark:border-slate-800/60 shadow-xl p-8 relative overflow-hidden transition-all hover:shadow-2xl">
+          <div className="absolute inset-0 bg-gradient-to-r from-blue-500/5 via-indigo-500/5 to-purple-500/5" />
+          <div className="flex flex-col md:flex-row justify-between items-start gap-6 relative z-10">
             <div className="flex items-center gap-6">
               {profile.avatar_url && (
-                <div className="relative h-24 w-24 overflow-hidden rounded-full border-4 border-background shadow-lg">
+                <div className="relative h-24 w-24 overflow-hidden rounded-full border-4 border-white dark:border-slate-950 shadow-lg ring-2 ring-indigo-500/20">
                   <Image src={profile.avatar_url} alt={profile.display_name || 'Profile Photo'} fill className="object-cover" sizes="96px" />
                 </div>
               )}
               <div>
-                <h1 className="text-4xl font-extrabold tracking-tight">{profile.display_name || 'Anonymous Athlete'}</h1>
+                <h1 className="text-4xl font-extrabold tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-blue-600 to-indigo-600 dark:from-blue-400 dark:to-indigo-400 drop-shadow-sm">{profile.display_name || 'Anonymous Athlete'}</h1>
                 {profile.class && (
                   <div className="mt-2">
-                    <span className="inline-flex items-center rounded-full bg-blue-100 px-3 py-1 text-sm font-semibold text-blue-800 dark:bg-blue-900 dark:text-blue-300">
+                    <span className="inline-flex items-center rounded-full bg-gradient-to-r from-blue-500 to-indigo-500 px-4 py-1 text-sm font-bold text-white shadow-sm ring-1 ring-inset ring-white/20">
                       Class: {profile.class}
                     </span>
                   </div>
@@ -112,7 +113,7 @@ export default async function AthleteProfilePage({ params }: { params: Promise<{
 
         {/* Schedule / Events Section */}
         <div className="space-y-4">
-          <h2 className="text-2xl font-bold border-b pb-2">Athlete Schedule</h2>
+          <h2 className="text-3xl font-extrabold border-b border-slate-200 dark:border-slate-800 pb-2 bg-clip-text text-transparent bg-gradient-to-r from-blue-600 to-indigo-600 dark:from-blue-400 dark:to-indigo-400 drop-shadow-sm">Athlete Schedule</h2>
           
           {attendanceError && (
             <p className="text-red-500">Failed to load schedule.</p>
@@ -140,13 +141,13 @@ export default async function AthleteProfilePage({ params }: { params: Promise<{
                 }
 
                 return (
-                  <div key={`${game.id}-${idx}`} className="p-6 border rounded-lg shadow-sm bg-card text-card-foreground">
+                  <div key={`${game.id}-${idx}`} className="p-6 border border-slate-200/60 dark:border-slate-800/60 rounded-2xl shadow-sm hover:shadow-md hover:border-blue-300 dark:hover:border-blue-700 transition-all duration-300 bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl text-card-foreground">
                     <div className="flex flex-col md:flex-row md:justify-between md:items-start gap-4">
                       <div>
                         <div className="flex items-center gap-2 mb-2">
                           <h3 className="text-xl font-bold">{game.name}</h3>
-                          <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-semibold
-                            ${record.interest_level === 'REGISTERED' ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300' : 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300'}
+                          <span className={`inline-flex items-center rounded-full px-3 py-1 text-xs font-bold text-white shadow-sm ring-1 ring-inset ring-white/20
+                            ${record.interest_level === 'REGISTERED' ? 'bg-gradient-to-r from-emerald-400 to-teal-500' : 'bg-gradient-to-r from-slate-400 to-slate-500'}
                           `}>
                             {record.interest_level === 'REGISTERED' ? 'Registered' : 'Interested'}
                             {dayText && ` - ${dayText}`}
