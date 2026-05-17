@@ -17,6 +17,20 @@ interface CustomLink {
 
 export default async function Home() {
   const supabase = await createClient();
+
+  // Fetch settings
+  const { data: settingsData } = await supabase
+    .from('settings')
+    .select('key, value')
+
+  const settingsMap = settingsData?.reduce((acc: any, setting: any) => {
+    acc[setting.key] = setting.value
+    return acc
+  }, {}) || {}
+
+  const clubName = settingsMap['club_name'] || 'Highland Cal'
+  const clubBlurb = settingsMap['club_blurb'] || 'We are a community of athletes dedicated to the traditional Scottish Highland Games. Whether you are a seasoned A-class thrower or looking to try the caber toss for the very first time, Highland Cal is where we organize practices, coordinate game attendance, and support each other on the field.'
+
   const { data: games, error } = await supabase
     .from('games')
     .select(`
@@ -45,18 +59,16 @@ export default async function Home() {
       <section id="about" className="flex flex-col items-center space-y-8 text-center w-full pt-12">
         <div className="space-y-4">
           <h1 className="text-4xl font-extrabold tracking-tighter sm:text-5xl md:text-6xl lg:text-7xl">
-            Highland Cal
+            {clubName}
           </h1>
           <p className="mx-auto max-w-[700px] text-gray-500 md:text-xl dark:text-gray-400">
-            The official schedule and roster for the Highland Cal throwing community.
+            The official schedule and roster for the {clubName} throwing community.
           </p>
         </div>
         
         <div className="max-w-[800px] text-left md:text-center text-muted-foreground bg-secondary/20 p-6 rounded-2xl">
           <p className="leading-relaxed">
-            We are a community of athletes dedicated to the traditional Scottish Highland Games. 
-            Whether you are a seasoned A-class thrower or looking to try the caber toss for the very first time, 
-            Highland Cal is where we organize practices, coordinate game attendance, and support each other on the field.
+            {clubBlurb}
           </p>
         </div>
 
