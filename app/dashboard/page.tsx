@@ -162,12 +162,12 @@ export default async function DashboardPage() {
               <div className="p-6 pt-0 space-y-6">
                 <div className="-mt-10 mb-2">
                   <div className="h-20 w-20 rounded-full border-4 border-background bg-muted flex items-center justify-center text-3xl font-bold text-muted-foreground shadow-sm">
-                     {profileData?.display_name ? profileData.display_name[0] : user.email?.[0]?.toUpperCase()}
+                     {(profileData?.display_name?.[0] || user.email?.[0] || '?').toUpperCase()}
                   </div>
                 </div>
                 
                 <div>
-                  <h2 className="text-xl font-bold truncate">{profileData?.display_name || user.email}</h2>
+                  <h2 className="text-xl font-bold truncate">{profileData?.display_name || user.email || 'User'}</h2>
                   <p className="text-sm text-muted-foreground truncate">{user.email}</p>
                 </div>
                 

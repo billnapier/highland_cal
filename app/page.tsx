@@ -219,7 +219,7 @@ export default async function Home() {
                     <Image src={profile.avatar_url} alt={profile.display_name || 'Profile'} fill className="object-cover group-hover:scale-105 transition-transform duration-500" sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw" />
                   ) : (
                     <div className="absolute inset-0 flex items-center justify-center text-6xl font-bold text-muted-foreground/30 bg-secondary/20">
-                      {(profile.display_name || 'A')[0]}
+                      {(profile.display_name?.[0] || 'A').toUpperCase()}
                     </div>
                   )}
                   
