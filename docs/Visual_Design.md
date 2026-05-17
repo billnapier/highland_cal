@@ -21,7 +21,7 @@ Interactive elements should reward the user for interacting with them.
 
 * **Depth over Borders**: Use soft drop shadows (`shadow-sm` resting, `shadow-xl` hovered) instead of harsh, high-contrast borders.
 * **Hover States**: Apply subtle scale and translation transformations to cards and primary buttons (e.g., `transition-all duration-300 hover:-translate-y-1 hover:shadow-xl`). It makes the interface feel tactile.
-* **Profile "Player" Cards**: For athlete rosters or user profiles, mimic a trading card or social media profile. Include a gradient banner at the top, an overlapping rounded avatar, and prominent class badges.
+* **Baseball "Player" Cards**: For athlete rosters, double down on the collectible feel. Use a full, rectangular action shot spanning the majority of the card (e.g., `aspect-[4/5]`), rather than small circular avatars. Overlay names on a soft bottom gradient over the photo, position class badges as premium stickers in the top corner, and format the bottom nameplate with stats/social links.
 
 ## 4. Layouts & Information Architecture
 Avoid long, single-column walls of text on desktop viewports.

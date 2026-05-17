@@ -214,47 +214,50 @@ export default async function Home() {
             
             return (
               <div key={profile.id} className="group relative bg-card text-card-foreground rounded-2xl border shadow-sm flex flex-col transition-all duration-300 hover:-translate-y-1 hover:shadow-xl overflow-hidden">
-                <div className="h-20 w-full bg-gradient-to-r from-muted to-secondary/50 border-b relative"></div>
-                <div className="p-5 pt-0 flex-1 flex flex-col">
-                  <div className="flex justify-between items-start gap-3 -mt-10 mb-3 relative z-10">
-                    <div className="flex flex-col items-start gap-2">
-                      {profile.avatar_url ? (
-                        <div className="relative h-20 w-20 shrink-0 overflow-hidden rounded-full border-4 border-background shadow-sm bg-background">
-                          <Image src={profile.avatar_url} alt={profile.display_name || 'Profile'} fill className="object-cover" sizes="80px" />
-                        </div>
-                      ) : (
-                        <div className="relative h-20 w-20 shrink-0 rounded-full border-4 border-background shadow-sm bg-muted flex items-center justify-center text-2xl font-bold text-muted-foreground">
-                          {(profile.display_name || 'A')[0]}
-                        </div>
-                      )}
-                      <h3 className="text-xl font-bold line-clamp-1 mt-1">
-                        <Link href={`/roster/${profile.id}`} className="hover:underline hover:text-primary transition-colors">
-                          {profile.display_name || 'Anonymous Athlete'}
-                        </Link>
-                      </h3>
+                <div className="relative w-full aspect-[4/5] bg-muted overflow-hidden">
+                  {profile.avatar_url ? (
+                    <Image src={profile.avatar_url} alt={profile.display_name || 'Profile'} fill className="object-cover group-hover:scale-105 transition-transform duration-500" sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw" />
+                  ) : (
+                    <div className="absolute inset-0 flex items-center justify-center text-6xl font-bold text-muted-foreground/30 bg-secondary/20">
+                      {(profile.display_name || 'A')[0]}
                     </div>
-                    {profile.class && (
-                      <span className="inline-flex items-center rounded-full bg-primary/10 px-3 py-1 text-xs font-semibold text-primary border border-primary/20 whitespace-nowrap shrink-0 mt-12 shadow-sm">
+                  )}
+                  
+                  {profile.class && (
+                    <div className="absolute top-3 right-3 z-10">
+                      <span className="inline-flex items-center rounded-full bg-primary text-primary-foreground px-3 py-1 text-xs font-black shadow-md border-2 border-background/50">
                         {profile.class}
                       </span>
-                    )}
-                  </div>
+                    </div>
+                  )}
                   
+                  <div className="absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t from-black/80 via-black/40 to-transparent"></div>
+                  
+                  <div className="absolute bottom-0 inset-x-0 p-5">
+                    <h3 className="text-2xl font-extrabold text-white drop-shadow-md line-clamp-1">
+                      <Link href={`/roster/${profile.id}`} className="hover:text-primary transition-colors">
+                        {profile.display_name || 'Anonymous Athlete'}
+                      </Link>
+                    </h3>
+                  </div>
+                </div>
+
+                <div className="p-5 flex-1 flex flex-col justify-between">
                   {hasSocials ? (
-                    <div className="flex flex-wrap gap-2 mt-3">
+                    <div className="flex flex-wrap gap-2">
                       {links.instagram && (
-                        <a href={links.instagram} target="_blank" rel="noopener noreferrer" className={buttonVariants({ variant: "outline", size: "icon" })} title="Instagram" aria-label="Instagram">
-                          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="20" height="20" x="2" y="2" rx="5" ry="5"/><path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"/><line x1="17.5" x2="17.51" y1="6.5" y2="6.5"/></svg>
+                        <a href={links.instagram} target="_blank" rel="noopener noreferrer" className={buttonVariants({ variant: "secondary", size: "icon", className: "h-8 w-8" })} title="Instagram" aria-label="Instagram">
+                          <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="20" height="20" x="2" y="2" rx="5" ry="5"/><path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"/><line x1="17.5" x2="17.51" y1="6.5" y2="6.5"/></svg>
                         </a>
                       )}
                       {links.facebook && (
-                        <a href={links.facebook} target="_blank" rel="noopener noreferrer" className={buttonVariants({ variant: "outline", size: "icon" })} title="Facebook" aria-label="Facebook">
-                          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z"/></svg>
+                        <a href={links.facebook} target="_blank" rel="noopener noreferrer" className={buttonVariants({ variant: "secondary", size: "icon", className: "h-8 w-8" })} title="Facebook" aria-label="Facebook">
+                          <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z"/></svg>
                         </a>
                       )}
                       {links.customLinks && links.customLinks.length > 0 && (
                         links.customLinks.map((link: CustomLink, idx: number) => (
-                          <a key={idx} href={link.url} target="_blank" rel="noopener noreferrer" className={buttonVariants({ variant: "outline", size: "sm" })} title={link.title}>
+                          <a key={idx} href={link.url} target="_blank" rel="noopener noreferrer" className={buttonVariants({ variant: "secondary", size: "sm", className: "h-8" })} title={link.title}>
                             <ExternalLink className="mr-2 h-3 w-3" />
                             {link.title.length > 10 ? link.title.substring(0, 10) + '...' : link.title}
                           </a>
@@ -262,14 +265,14 @@ export default async function Home() {
                       )}
                     </div>
                   ) : (
-                    <div className="mt-3 text-xs text-muted-foreground italic">
+                    <div className="text-xs text-muted-foreground italic">
                       No public links
                     </div>
                   )}
 
-                  <div className="mt-4 pt-3 border-t">
-                    <Link href={`/roster/${profile.id}`} className="text-sm font-medium text-primary hover:underline inline-flex items-center">
-                      View full profile <ChevronRight className="ml-1 h-3 w-3" />
+                  <div className="mt-4 pt-4 border-t w-full">
+                    <Link href={`/roster/${profile.id}`} className="text-sm font-black text-primary hover:text-primary/80 inline-flex items-center w-full justify-between uppercase tracking-wider">
+                      View Player Stats <ChevronRight className="h-4 w-4" />
                     </Link>
                   </div>
                 </div>
