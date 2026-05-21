@@ -101,10 +101,24 @@ As Highland Cal improves, you will want to get the latest features and bug fixes
 
 If you want your site to live at a professional domain (e.g., `myclub.com`) and send real email notifications (RSVPs, Event Updates), follow these steps:
 
-1. **Custom Domain:** In Vercel, go to Settings > Domains. Add your domain and follow the instructions to update your DNS records (A and CNAME) at your domain registrar.
-2. **Email Setup:** 
+1. **Custom Domain on Vercel:** In Vercel, go to Settings > Domains. Add your domain and follow the instructions to update your DNS records (A and CNAME) at your domain registrar.
+2. **Update Supabase URL Configuration (CRITICAL for Custom Domain):**
+   When using a custom domain, you must tell Supabase where to redirect users after they log in, otherwise it will fall back to your old `.vercel.app` URL.
+   - Go to your [Supabase Dashboard](https://supabase.com/dashboard) > **Authentication** > **URL Configuration**.
+   - Change the **Site URL** from your `.vercel.app` address to your new custom domain (e.g., `https://myclub.com`).
+   - In the **Redirect URLs** list, add your custom callback URL: `https://myclub.com/auth/callback` (or use the wildcard: `https://myclub.com/**`).
+   - Click **Save**.
+3. **Update Google OAuth Client Credentials:**
+   Google also needs to know about your custom domain.
+   - Go to the [Google Cloud Console](https://console.cloud.google.com/).
+   - Go to **APIs & Services > Credentials** and edit your Web application OAuth client ID.
+   - Under **Authorized JavaScript origins**, add your new custom domain (e.g., `https://myclub.com`).
+   - Leave the **Authorized redirect URIs** pointing to your Supabase callback (e.g., `https://[project-id].supabase.co/auth/v1/callback`).
+   - Click **Save**.
+4. **Email Setup:** 
    - Create an account at [Resend](https://resend.com).
    - Verify your custom domain in Resend by adding their TXT/MX records to your DNS settings.
    - Generate a Resend API Key.
    - In Vercel, go to Settings > Environment Variables, and add `RESEND_API_KEY` with your new key, and `RESEND_FROM_EMAIL` (e.g., `notifications@myclub.com`).
-3. Redeploy your app in Vercel to apply the new environment variables.
+5. Redeploy your app in Vercel to apply the new environment variables.
+
