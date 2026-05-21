@@ -1,100 +1,110 @@
 # Deployment Guide for Other Clubs
 
-Welcome! Highland Cal is designed so that any Highland Games club or athletic team can launch their own version of this app with a single click.
+Welcome! Highland Cal is designed so that any Highland Games club or athletic team can launch their own version of this app in minutes without needing to understand code or the command line.
 
-This document outlines the manual steps you (the Site Operator/Admin) must take to configure external services before your custom instance can function securely. The goal is to provide these steps to a non-technical club organizer.
+This guide walks you through deploying your own instance using free-tier services. 
 
-## 1. Google Cloud Console (OAuth 2.0 Setup)
-*Requirement: A Google account to create the OAuth credentials.*
+---
+
+## Step 1: The One-Click Deploy
+
+We use Vercel to host the application. Vercel provides a magical "Deploy" button that clones our code into your own account and sets up the server automatically.
+
+1. **Click the Deploy Button** located in our main [README.md](../README.md).
+2. **Connect to GitHub:** Vercel will ask you to log in with GitHub. It will then fork (copy) the Highland Cal repository to your own GitHub account.
+3. **Configure Environment Variables:** Vercel will prompt you for two pieces of information:
+   - `NEXT_PUBLIC_APP_NAME`: Your club's name (e.g., "Denver Thistle").
+   - `INITIAL_ADMIN_EMAIL`: Your personal Google email address (e.g., `you@gmail.com`). *This exact email will be granted Admin powers upon first login.*
+4. **Add the Supabase Integration:** 
+   - During the checkout flow, Vercel will allow you to add **Supabase**. Click this to add the integration.
+   - It will prompt you to create a new Supabase account/project. 
+   - *Why do this?* Supabase is our database. By adding the integration here, Vercel will automatically configure the database connection passwords and URLs for you!
+5. **Click Deploy** and wait for Vercel to finish building your site. Your site is now live on the internet, but the database is empty and logins won't work yet.
+
+---
+
+## Step 2: Initialize Your Database (Automated)
+
+Your app is deployed, but the database doesn't have the tables (Games, Profiles, Attendance) it needs to function. We will use Supabase's GitHub integration to build your database automatically.
+
+1. Log into your [Supabase Dashboard](https://supabase.com/dashboard).
+2. Select the project you just created via Vercel.
+3. Navigate to **Project Settings** (the gear icon) > **Integrations**.
+4. Find the **GitHub** integration and click **Install** or **Connect**.
+5. Follow the prompts to authorize Supabase and select your newly forked `highland_cal` repository.
+6. **That's it.** Supabase will automatically scan the repository, find our setup file in `supabase/migrations/`, and initialize your database tables instantly. You never have to touch SQL!
+   *(Bonus: If we release new features later, you just click "Sync Fork" in GitHub, and Supabase will automatically upgrade your database to match).*
+
+---
+
+## Step 3: Enable Google Login
+
+Highland Cal uses Google to securely log people in without requiring them to remember passwords.
+
+### A. Create Google Credentials
 1. Go to the [Google Cloud Console](https://console.cloud.google.com/).
 2. Create a new Project (e.g., "Highland Cal - [Club Name]").
 3. Navigate to **APIs & Services > OAuth consent screen**.
    - Choose **External** and click Create.
-   - Fill in the required App information (App name, User support email, Developer contact information).
-   - Add the domain of your Vercel deployment to **Authorized domains** (once known, see Step 7).
+   - Fill in the required App info.
    - Save and Continue through the Scopes and Test Users screens (defaults are fine).
-4. Navigate to **Credentials**.
-   - Click **Create Credentials > OAuth client ID**.
+4. Navigate to **Credentials > Create Credentials > OAuth client ID**.
    - Application type: **Web application**.
    - Name: "Highland Cal Web Auth".
-   - **Authorized JavaScript origins**: Add `http://localhost:3000` for local development. (You will add your Vercel URL here later).
-   - **Authorized redirect URIs**: Leave blank for now (we get these from Supabase in Step 3).
-   - Click Create.
-5. Save the **Client ID** and **Client Secret**. You will need these for Supabase.
+   - **Authorized JavaScript origins**: Paste your exact live Vercel URL (e.g., `https://your-club.vercel.app`).
+   - **Authorized redirect URIs**: We will add this in the next step.
+   - Click Create. Save the **Client ID** and **Client Secret**.
 
-## 2. Supabase Setup (Production & Staging)
-*Requirement: A Supabase account. We create two databases to keep your real data safe while testing new features.*
-1. Log into your [Supabase Dashboard](https://supabase.com/dashboard).
-2. **Create the Production Database:** Click "New Project" and name it `Highland Cal - PROD`. Wait for it to provision.
-3. **Create the Staging Database:** Go back to the dashboard, click "New Project", and name it `Highland Cal - STAGING`. Wait for it to provision.
-4. **Run the Schema (Do this on BOTH projects):**
-   - On the left sidebar, click on the **SQL Editor**.
-   - Open the `database/schema.sql` file from your local codebase, copy all of the text, and paste it into the Supabase SQL editor.
-   - Click **Run**. You should see a "Success" message.
+### B. Add to Supabase
+1. Return to your [Supabase Dashboard](https://supabase.com/dashboard) and go to **Authentication** > **Providers**.
+2. Find **Google**, enable it, and paste in the **Client ID** and **Client Secret** you just got from Google Cloud.
+3. Click **Save**.
+4. Copy the **Callback URL (for OAuth)** provided on that screen (e.g., `https://[project-id].supabase.co/auth/v1/callback`).
 
-## 3. Supabase Authentication Configuration
-1. **Enable Google Login (Do this on BOTH projects):**
-   - In your Supabase project, navigate to **Authentication** (the two people icon).
-   - *Note: If the menu changes, use `Cmd+K` (Mac) or `Ctrl+K` (Windows) to search for "Providers".*
-   - In the secondary menu, under **Configuration**, click **Providers**.
-   - Find **Google**, enable it, and paste in the **Client ID** and **Client Secret** obtained from Google Cloud.
-   - Click **Save**.
-   - Copy the **Callback URL (for OAuth)** (e.g., `https://[project-id].supabase.co/auth/v1/callback`).
-2. **Update Google Cloud:**
-   - Return to the **Google Cloud Console > Credentials**.
-   - Edit your OAuth client ID.
-   - Add the copied Supabase Callback URLs for **BOTH** your PROD and STAGING projects to the **Authorized redirect URIs**.
-   - Click Save.
+### C. Finish Google Setup
+1. Go back to your Google Cloud Console's OAuth client you just created.
+2. Under **Authorized redirect URIs**, paste the Supabase Callback URL you copied. 
+3. Click Save.
 
-## 4. Vercel Deployment & Environment Variables
-*Requirement: A Vercel account linked to your GitHub account.*
-1. Log into [Vercel](https://vercel.com/) and click **Add New > Project**. Import your `highland_cal` GitHub repository.
-2. Open the **Environment Variables** section before deploying.
-3. **How to find your Supabase URL:**
-   - Go to your Supabase dashboard. Look at your browser's address bar. It will look like `https://supabase.com/dashboard/project/abcdefghijklmnopqr`.
-   - Your `NEXT_PUBLIC_SUPABASE_URL` is simply `https://abcdefghijklmnopqr.supabase.co`.
-   - Your keys are found under **Project Settings (Gear Icon) > API**.
-4. **Map the Variables:**
-   - **Production (Check "Production" ONLY):**
-     - `NEXT_PUBLIC_SUPABASE_URL`: (Your PROD URL)
-     - `NEXT_PUBLIC_SUPABASE_ANON_KEY`: (Your PROD `anon` `public` key)
-     - `SUPABASE_SERVICE_ROLE_KEY`: (Your PROD `service_role` `secret` key)
-   - **Staging (Check "Preview" and "Development" ONLY):**
-     - `NEXT_PUBLIC_SUPABASE_URL`: (Your STAGING URL)
-     - `NEXT_PUBLIC_SUPABASE_ANON_KEY`: (Your STAGING `anon` `public` key)
-     - `SUPABASE_SERVICE_ROLE_KEY`: (Your STAGING `service_role` `secret` key)
-   - **Global (Check ALL environments):**
-     - `INITIAL_ADMIN_EMAIL`: The Google email address of the first admin.
-     - `RESEND_API_KEY`: Leave blank or placeholder if not set up yet.
-     - `RESEND_FROM_EMAIL`: The verified email address to send from (e.g., `My Club <notifications@myclub.com>`). Defaults to `${NEXT_PUBLIC_APP_NAME} <onboarding@resend.dev>` for testing.
-     - `NEXT_PUBLIC_APP_NAME`: The display name of the club (e.g., `My Club`). Defaults to `Highland Cal`.
-     - `NEXT_PUBLIC_APP_URL`: The production URL of the app (once known).
-5. Click **Deploy**.
+---
 
-## 5. Resend Configuration (Email Setup)
-1. Go to [Resend](https://resend.com/) and create an account.
-2. Generate an API Key: Click on **API Keys**, click **Create API Key**, give it "Full access", and copy the `re_...` key.
-3. Add the key to Vercel: Go to your Vercel project > Settings > Environment Variables, and add `RESEND_API_KEY` with the copied key (select all environments).
+## Step 4: Finalizing the App
 
-## 6. Post-Deployment Verification
-1. Once Vercel finishes deploying, note your live production URL (e.g., `https://highland-cal.vercel.app`).
-2. Go back to the **Google Cloud Console > Credentials** screen and add that exact Vercel URL to the **Authorized JavaScript origins**.
-3. Go back to your **Supabase PROD Project > Authentication > URL Configuration**:
-   - Set the **Site URL** to your new Vercel URL.
-   - Under **Redirect URLs**, add `https://your-vercel-url.vercel.app/auth/callback` (or simply `https://*` if you want to support Vercel preview branches). *If you miss this step, Supabase will redirect successful logins to `localhost`!*
-4. Navigate to your Vercel URL. Click "Login with Google" and authenticate using the exact email you set as `INITIAL_ADMIN_EMAIL`.
-5. The system will elevate your account to Admin.
+Almost done! We just need to tell Supabase where your app lives so it knows where to send users after they log in.
 
-## 7. Custom Domain Setup & Verification (Milestone 11)
-To make your site look professional and ensure your emails aren't marked as spam, you need a custom domain (e.g., `myclub.com`).
-1. **Link Domain to Vercel:**
-   - In Vercel, go to **Settings > Domains**.
-   - Add your custom domain. Vercel will provide DNS records (A and CNAME records).
-   - Log into your domain registrar (GoDaddy, Namecheap, etc.) and add these records.
-   - Once verified in Vercel, update your `NEXT_PUBLIC_APP_URL` environment variable to match the new domain.
-2. **Verify Domain in Resend (Crucial for Emails):**
-   - By default, Resend only lets you send test emails to yourself.
-   - In Resend, go to **Domains** and click **Add Domain**.
-   - Enter your custom domain.
-   - Resend will provide TXT and MX records. Add these to your domain registrar's DNS settings.
-   - Once verified, note the email address you want to send *from* (e.g., `notifications@myclub.com`), as this will be required in the application code.
+1. **Configure Supabase Redirects:**
+   - In Supabase, go to **Authentication > URL Configuration**.
+   - Set the **Site URL** to your exact Vercel URL (e.g., `https://your-club.vercel.app`).
+   - Under **Redirect URLs**, add `https://your-club.vercel.app/auth/callback`. *(If you skip this, users will be redirected into the void after logging in!)*
+2. **Log In:**
+   - Go to your live Vercel URL.
+   - Click "Login with Google".
+   - **CRITICAL:** Make sure you use the exact Google Account email that you set as the `INITIAL_ADMIN_EMAIL` back in Step 1.
+3. Welcome to your new Admin Dashboard! The app will automatically detect you are the first user and elevate your account.
+
+---
+
+## Step 5: Updating Your Site (Future Releases)
+
+As Highland Cal improves, you will want to get the latest features and bug fixes. Because of the automation we set up, updating is incredibly easy.
+
+1. Log into GitHub and go to your forked `highland_cal` repository.
+2. Near the top of the code section, look for a button that says **"Sync fork"**.
+3. Click it, and then click **"Update branch"**.
+4. **That's it.** 
+   - Vercel will automatically detect the update, build the new code, and deploy it to your live site within a few minutes.
+   - Supabase will automatically detect any new database changes and safely apply them. 
+
+---
+
+## Optional: Custom Domain & Email Notifications
+
+If you want your site to live at a professional domain (e.g., `myclub.com`) and send real email notifications (RSVPs, Event Updates), follow these steps:
+
+1. **Custom Domain:** In Vercel, go to Settings > Domains. Add your domain and follow the instructions to update your DNS records (A and CNAME) at your domain registrar.
+2. **Email Setup:** 
+   - Create an account at [Resend](https://resend.com).
+   - Verify your custom domain in Resend by adding their TXT/MX records to your DNS settings.
+   - Generate a Resend API Key.
+   - In Vercel, go to Settings > Environment Variables, and add `RESEND_API_KEY` with your new key, and `RESEND_FROM_EMAIL` (e.g., `notifications@myclub.com`).
+3. Redeploy your app in Vercel to apply the new environment variables.

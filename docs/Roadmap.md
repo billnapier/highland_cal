@@ -28,13 +28,13 @@ This document serves as the guide for the LLM developer. The LLM should implemen
 **References:** 
 - `Detailed_Design.md` > 3. Database Schema & RLS Policies
 **Tasks:**
-- [x] Create a `database/schema.sql` file containing all table definitions (`Profiles`, `User_Roles`, `Games`, `Attendance`), custom ENUMs, the `is_admin()` security definer function, Row Level Security policies, and the `AFTER INSERT` trigger (with its associated function) on `auth.users`.
+- [x] Create a `supabase/migrations/20260520000000_initial_schema.sql` file containing all table definitions (`Profiles`, `User_Roles`, `Games`, `Attendance`), custom ENUMs, the `is_admin()` security definer function, Row Level Security policies, and the `AFTER INSERT` trigger (with its associated function) on `auth.users`.
 - [x] Set up the Supabase client utilities in the Next.js app (e.g., `/lib/supabase/server.ts`, `/lib/supabase/client.ts`).
 - [x] Configure local environment variables (`NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`). Note: Ensure the Service Role Key is never prefixed with `NEXT_PUBLIC_`.
 - [x] Create a simple database health check component or route to confirm the application can successfully query Supabase.
 **Runnable State:** 
 - The application successfully connects to a provisioned Supabase instance. 
-- The `schema.sql` can be successfully executed in the Supabase SQL Editor without errors.
+- The migration file can be successfully applied to the database via Supabase GitHub integration or CLI.
 
 ---
 
@@ -186,7 +186,7 @@ This document serves as the guide for the LLM developer. The LLM should implemen
 ## Milestone 12: Image Uploads & Visual Enhancements
 **Goal:** Allow users to personalize their profiles and allow admins to customize the public homepage with imagery.
 **Tasks:**
-- [x] Create a `public_images` bucket in Supabase and add the `avatar_url` column to the `Profiles` table in `schema.sql`.
+- [x] Create a `public_images` bucket in Supabase and add the `avatar_url` column to the `Profiles` table in the initial migration.
 - [x] Build an `ImageUpload` React component using `@supabase/supabase-js` storage API.
 - [x] Update the athlete `ProfileForm` to include a profile photo upload.
 - [x] Update the `AdminSettings` page to allow admins to upload a custom `hero_image_url`.

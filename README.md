@@ -12,7 +12,9 @@ Throwing heavy things in kilts has never been so flawlessly organized! 🪵💪
 
 We built Highland Cal so that **any** Highland Games club can launch their own instance of this app for free! 
 
-Check out our [Deployment Guide for Clubs](./docs/Deployment.md) for step-by-step instructions on how to set up your own calendar and athlete roster.
+[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2Fbillnapier%2Fhighland_cal&env=NEXT_PUBLIC_APP_NAME,INITIAL_ADMIN_EMAIL&envDescription=Provide%20your%20Club%20Name%20and%20the%20Google%20email%20address%20for%20the%20first%20Admin%20account.)
+
+Check out our [Deployment Guide for Clubs](./docs/Deployment.md) for step-by-step instructions on setting up your database and Google login after you click deploy.
 
 ## Local Development
 
