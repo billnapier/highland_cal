@@ -171,7 +171,7 @@ This document serves as the guide for the LLM developer. The LLM should implemen
 ## Milestone 11: Custom Domain & Production Launch
 **Goal:** Configure a custom domain in Vercel and verify the domain in Resend for professional email delivery.
 **References:** 
-- `Human_Configuration.md` > 7. Custom Domain Setup & Verification
+- `Deployment.md` > 7. Custom Domain Setup & Verification
 **Tasks:**
 - [x] Add the custom domain to the Vercel project settings and configure the necessary DNS records (A/CNAME) at the domain registrar.
 - [x] Add the custom domain to the Resend project settings and configure the necessary DNS records (TXT/MX) to verify the domain for sending emails.
@@ -195,3 +195,18 @@ This document serves as the guide for the LLM developer. The LLM should implemen
 **Runnable State:** 
 - Admins can customize the main landing page with a hero image.
 - Athletes can upload their own profile photos, which are visible to the public.
+
+---
+
+## Milestone 13: One-Click Deployment for Other Clubs
+**Goal:** Document the deployment process so other clubs can launch their own instance of Highland Cal.
+**References:**
+- `Deployment.md`
+- `User_Journeys.md` > Journey 6: Instance Deployment & Setup
+**Tasks:**
+- [x] Migrate `Human_Configuration.md` to `Deployment.md` and rebrand as a deployment guide for other clubs.
+- [x] Update `README.md` to link to the new `Deployment.md` guide.
+- [x] Ensure the use case of other clubs deploying the app is captured in `User_Journeys.md` (Journey 6).
+- [x] Verify if any design docs need updates related to this deployment feature.
+**Runnable State:**
+- The documentation is complete and accessible for any club looking to reuse the codebase.

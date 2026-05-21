@@ -1,6 +1,8 @@
-# Human Configuration Steps
+# Deployment Guide for Other Clubs
 
-This document outlines the manual steps a human (the Site Operator/Admin) must take to configure external services before the application can function securely. The goal is to provide these steps to a non-technical club organizer.
+Welcome! Highland Cal is designed so that any Highland Games club or athletic team can launch their own version of this app with a single click.
+
+This document outlines the manual steps you (the Site Operator/Admin) must take to configure external services before your custom instance can function securely. The goal is to provide these steps to a non-technical club organizer.
 
 ## 1. Google Cloud Console (OAuth 2.0 Setup)
 *Requirement: A Google account to create the OAuth credentials.*
