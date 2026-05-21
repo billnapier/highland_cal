@@ -88,6 +88,11 @@ Each club maintains its own Vercel and Supabase accounts. This ensures that each
 - **Continuous Deployment (CD):** Merges to the `main` branch are automatically deployed to production via Vercel's native GitHub integration.
 - **Preview Deployments (PR Testing):** Vercel automatically generates ephemeral environments for every PR. To make these work with Google OAuth without tedious manual configuration, Supabase handles the OAuth flow (Google only needs the Supabase callback URL). Supabase is then configured to allow wildcard redirect URIs (e.g., `https://*-clubname.vercel.app/**`) so it can redirect back to any dynamic Vercel PR URL.
 
+### 5.4. Database Initialization & Migrations (Supabase GitHub Integration)
+To maintain the "zero-code" deployment philosophy, this project explicitly avoids requiring users to copy and paste raw SQL. 
+- **Initialization:** We utilize the **Supabase GitHub Integration**. When a club forks this repository and links it to their Supabase project, Supabase automatically detects the `supabase/migrations/` directory and executes the initial schema.
+- **Future Milestones (Upgrades):** Any future changes to the database schema MUST be written as a new timestamped migration file in `supabase/migrations/` (e.g., `20260601000000_new_feature.sql`). This ensures that when other clubs click "Sync Fork" in GitHub to update their application, their Supabase database automatically applies the new migrations without human intervention.
+
 ---
 
 ## 6. Cost Analysis (Per Club)

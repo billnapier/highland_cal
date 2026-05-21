@@ -52,13 +52,13 @@ The journeys are broken down by the two main personas: **Athletes (End Users)** 
 
 ## 2. Admin Users (Site Operators)
 
-### Journey 6: Instance Deployment & Setup
-**Goal:** Stand up a private instance for the club.
-1. **Trigger:** A club organizer wants to use Highland Cal.
-2. **Action:** The organizer clicks the **"Deploy to Vercel"** button on the project's GitHub repository.
-3. **Action:** During the Vercel setup flow, the organizer enters their email address into the `INITIAL_ADMIN_EMAIL` environment variable.
+### Journey 6: New Club Instance Deployment & Setup
+**Goal:** Stand up a private instance of Highland Cal for a different club.
+1. **Trigger:** An organizer from another Highland Games club discovers Highland Cal and wants to use it for their own team.
+2. **Action:** The organizer clicks the **"Deploy to Vercel"** button on the project's GitHub repository (or follows the link in the README).
+3. **Action:** During the Vercel setup flow, the organizer enters their own email address into the `INITIAL_ADMIN_EMAIL` environment variable.
 4. **System:** Vercel provisions the hosting and handles the Supabase database integration.
-5. **Action:** The organizer follows documented steps to link their Google Cloud Console OAuth credentials and Resend API key to their instance.
+5. **Action:** The organizer follows the steps in `Deployment.md` to link their Google Cloud Console OAuth credentials and Resend API key to their new instance.
 
 ### Journey 7: Managing User Access (Proactive Security)
 **Goal:** Ensure only authorized club members can write to the database.

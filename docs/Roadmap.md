@@ -28,13 +28,13 @@ This document serves as the guide for the LLM developer. The LLM should implemen
 **References:** 
 - `Detailed_Design.md` > 3. Database Schema & RLS Policies
 **Tasks:**
-- [x] Create a `database/schema.sql` file containing all table definitions (`Profiles`, `User_Roles`, `Games`, `Attendance`), custom ENUMs, the `is_admin()` security definer function, Row Level Security policies, and the `AFTER INSERT` trigger (with its associated function) on `auth.users`.
+- [x] Create a `supabase/migrations/20260520000000_initial_schema.sql` file containing all table definitions (`Profiles`, `User_Roles`, `Games`, `Attendance`), custom ENUMs, the `is_admin()` security definer function, Row Level Security policies, and the `AFTER INSERT` trigger (with its associated function) on `auth.users`.
 - [x] Set up the Supabase client utilities in the Next.js app (e.g., `/lib/supabase/server.ts`, `/lib/supabase/client.ts`).
 - [x] Configure local environment variables (`NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`). Note: Ensure the Service Role Key is never prefixed with `NEXT_PUBLIC_`.
 - [x] Create a simple database health check component or route to confirm the application can successfully query Supabase.
 **Runnable State:** 
 - The application successfully connects to a provisioned Supabase instance. 
-- The `schema.sql` can be successfully executed in the Supabase SQL Editor without errors.
+- The migration file can be successfully applied to the database via Supabase GitHub integration or CLI.
 
 ---
 
@@ -171,7 +171,7 @@ This document serves as the guide for the LLM developer. The LLM should implemen
 ## Milestone 11: Custom Domain & Production Launch
 **Goal:** Configure a custom domain in Vercel and verify the domain in Resend for professional email delivery.
 **References:** 
-- `Human_Configuration.md` > 7. Custom Domain Setup & Verification
+- `Deployment.md` > 7. Custom Domain Setup & Verification
 **Tasks:**
 - [x] Add the custom domain to the Vercel project settings and configure the necessary DNS records (A/CNAME) at the domain registrar.
 - [x] Add the custom domain to the Resend project settings and configure the necessary DNS records (TXT/MX) to verify the domain for sending emails.
@@ -186,7 +186,7 @@ This document serves as the guide for the LLM developer. The LLM should implemen
 ## Milestone 12: Image Uploads & Visual Enhancements
 **Goal:** Allow users to personalize their profiles and allow admins to customize the public homepage with imagery.
 **Tasks:**
-- [x] Create a `public_images` bucket in Supabase and add the `avatar_url` column to the `Profiles` table in `schema.sql`.
+- [x] Create a `public_images` bucket in Supabase and add the `avatar_url` column to the `Profiles` table in the initial migration.
 - [x] Build an `ImageUpload` React component using `@supabase/supabase-js` storage API.
 - [x] Update the athlete `ProfileForm` to include a profile photo upload.
 - [x] Update the `AdminSettings` page to allow admins to upload a custom `hero_image_url`.
@@ -195,3 +195,18 @@ This document serves as the guide for the LLM developer. The LLM should implemen
 **Runnable State:** 
 - Admins can customize the main landing page with a hero image.
 - Athletes can upload their own profile photos, which are visible to the public.
+
+---
+
+## Milestone 13: One-Click Deployment for Other Clubs
+**Goal:** Document the deployment process so other clubs can launch their own instance of Highland Cal.
+**References:**
+- `Deployment.md`
+- `User_Journeys.md` > Journey 6: Instance Deployment & Setup
+**Tasks:**
+- [x] Migrate `Human_Configuration.md` to `Deployment.md` and rebrand as a deployment guide for other clubs.
+- [x] Update `README.md` to link to the new `Deployment.md` guide.
+- [x] Ensure the use case of other clubs deploying the app is captured in `User_Journeys.md` (Journey 6).
+- [x] Verify if any design docs need updates related to this deployment feature.
+**Runnable State:**
+- The documentation is complete and accessible for any club looking to reuse the codebase.
