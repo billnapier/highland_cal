@@ -20,7 +20,7 @@ export default async function AdminDashboardPage() {
     .eq('id', user.id)
     .single()
 
-  const roleRecord = (profileWithRole as any)?.user_roles
+  const roleRecord = (profileWithRole as unknown as { user_roles: { role: string } | { role: string }[] | null })?.user_roles
   const role = (Array.isArray(roleRecord) ? roleRecord[0]?.role : roleRecord?.role) || 'UNKNOWN'
 
   if (role !== 'ADMIN') {

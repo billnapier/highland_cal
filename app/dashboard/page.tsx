@@ -36,7 +36,7 @@ export default async function DashboardPage() {
     .eq('id', user.id)
     .single()
 
-  const roleRecord = (profileData as any)?.user_roles
+  const roleRecord = (profileData as unknown as { user_roles: { role: string } | { role: string }[] | null })?.user_roles
   const role = (Array.isArray(roleRecord) ? roleRecord[0]?.role : roleRecord?.role) || 'UNKNOWN'
   
   const hasSubmittedApplication = !!profileData?.throwing_experience || typeof profileData?.attended_practice === 'boolean'

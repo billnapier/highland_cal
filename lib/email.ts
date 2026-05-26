@@ -6,7 +6,6 @@ import EventNotificationEmail from '@/emails/EventNotificationEmail'
 
 const resend = new Resend(process.env.RESEND_API_KEY)
 
-const APP_NAME = process.env.NEXT_PUBLIC_APP_NAME || 'Highland Cal'
 const FROM_EMAIL = process.env.RESEND_FROM_EMAIL || 'onboarding@resend.dev'
 
 // Fetch emails for users with specific roles
