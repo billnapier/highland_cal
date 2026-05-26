@@ -66,7 +66,7 @@ export default async function Home() {
               </span>
               <h2 className="text-3xl sm:text-4xl font-extrabold tracking-tight text-slate-900 dark:text-white leading-tight">
                 Discover the Strength & Tradition of{" "}
-                <span className="bg-clip-text text-transparent bg-gradient-to-r from-emerald-600 to-teal-650 dark:from-emerald-400 dark:to-teal-300">
+                <span className="bg-clip-text text-transparent bg-gradient-to-r from-emerald-700 to-emerald-900 dark:from-emerald-400 dark:to-emerald-200">
                   Highland Athletics
                 </span>
               </h2>
