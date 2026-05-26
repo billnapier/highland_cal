@@ -220,7 +220,7 @@ export default async function Home() {
                                   daySuffix = a.attend_day === 'DAY_1' ? ' (Day 1)' : ' (Day 2)';
                                 }
                                 return (
-                                  <span key={`reg-${idx}`} className="inline-flex items-center rounded-full bg-gradient-to-r from-emerald-600 to-teal-650 dark:from-emerald-500 dark:to-teal-500 px-3 py-1 text-xs font-bold text-white shadow-sm">
+                                  <span key={`reg-${idx}`} className="inline-flex items-center rounded-full bg-gradient-to-r from-emerald-600 to-emerald-800 dark:from-emerald-500 dark:to-emerald-700 px-3 py-1 text-xs font-bold text-white shadow-sm">
                                     {name}{daySuffix}
                                   </span>
                                 );
