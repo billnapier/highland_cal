@@ -220,7 +220,7 @@ export default async function Home() {
                                   daySuffix = a.attend_day === 'DAY_1' ? ' (Day 1)' : ' (Day 2)';
                                 }
                                 return (
-                                  <span key={`reg-${idx}`} className="inline-flex items-center rounded-full bg-gradient-to-r from-emerald-600 to-emerald-800 dark:from-emerald-500 dark:to-emerald-700 px-3 py-1 text-xs font-bold text-white shadow-sm">
+                                  <span key={`reg-${idx}`} className="inline-flex items-center rounded-full bg-emerald-600 dark:bg-emerald-800 px-3 py-1 text-xs font-bold text-white dark:text-emerald-100 shadow-sm">
                                     {name}{daySuffix}
                                   </span>
                                 );
@@ -228,7 +228,7 @@ export default async function Home() {
                               {interestedAthletes.map((a: AttendanceRecord, idx: number) => {
                                 const name = a.profiles?.display_name || 'Anonymous';
                                 return (
-                                  <span key={`int-${idx}`} className="inline-flex items-center rounded-full bg-gradient-to-r from-slate-400/80 to-slate-500/80 dark:from-slate-700/80 dark:to-slate-800/80 px-3 py-1 text-xs font-bold text-slate-100 dark:text-slate-300 shadow-sm">
+                                  <span key={`int-${idx}`} className="inline-flex items-center rounded-full bg-slate-200 dark:bg-slate-800/90 px-3 py-1 text-xs font-bold text-slate-800 dark:text-slate-200 shadow-sm border border-slate-300/40 dark:border-slate-700/40">
                                     {name} (Interested)
                                   </span>
                                 );
@@ -335,7 +335,7 @@ export default async function Home() {
         {/* Roster Section */}
         <section id="roster" className="w-full space-y-6 scroll-m-20 pb-12">
           <div className="border-b border-slate-200 dark:border-slate-800 pb-4">
-            <h2 className="text-4xl font-extrabold tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-emerald-700 to-teal-650 dark:from-emerald-400 dark:to-teal-300 drop-shadow-sm">Club Roster</h2>
+            <h2 className="text-4xl font-extrabold tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-emerald-700 to-teal-600 dark:from-emerald-400 dark:to-teal-300 drop-shadow-sm">Club Roster</h2>
             <p className="text-muted-foreground mt-1">Meet the athletes of {clubName}.</p>
           </div>
 
