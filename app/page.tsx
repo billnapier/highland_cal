@@ -314,22 +314,6 @@ export default async function Home() {
                 })()}
               </div>
 
-              {/* Sidebar Widget 2: Training Hub Info */}
-              <div className="p-6 border border-slate-200/50 dark:border-slate-800/40 rounded-3xl bg-white/70 dark:bg-slate-900/60 backdrop-blur-xl shadow-sm space-y-4">
-                <h3 className="text-lg font-extrabold text-slate-900 dark:text-white flex items-center gap-2">
-                  <span className="inline-flex h-6 w-6 items-center justify-center rounded-md bg-amber-500/15 text-amber-600 text-xs">💪</span>
-                  Weekly Training Hub
-                </h3>
-                <p className="text-xs text-slate-650 dark:text-slate-350 leading-relaxed">
-                  Our heavy events practices occur weekly. We cover the caber toss, open stone, heavy/light weight for distance, and weight over bar.
-                </p>
-                <div className="text-2xs space-y-1.5 pt-2 text-slate-500 dark:text-slate-400 border-t border-slate-100 dark:border-slate-800/80">
-                  <div className="flex justify-between"><span className="font-bold">Next Practice:</span> <span>Check events list</span></div>
-                  <div className="flex justify-between"><span className="font-bold">Location:</span> <span>Club Training Field</span></div>
-                  <div className="flex justify-between"><span className="font-bold">Equipment:</span> <span>Provided by Club</span></div>
-                </div>
-              </div>
-
               {/* Sidebar Widget 3: Club Quick Stats */}
               <div className="p-6 border border-slate-200/50 dark:border-slate-800/40 rounded-3xl bg-white/70 dark:bg-slate-900/60 backdrop-blur-xl shadow-sm space-y-4">
                 <h3 className="text-lg font-extrabold text-slate-900 dark:text-white">Club Stats</h3>
