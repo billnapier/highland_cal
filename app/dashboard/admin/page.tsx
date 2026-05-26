@@ -6,20 +6,24 @@ import { AdminSettings } from '@/components/AdminSettings'
 export default async function AdminDashboardPage() {
   const supabase = await createClient()
 
-  const { data: { user } } = await supabase.auth.getUser()
+  const { data, error: authError } = await supabase.auth.getUser()
+  const user = data?.user
 
-  if (!user) {
+  if (authError || !user) {
     redirect('/')
   }
 
-  // Ensure only ADMINs can view this page
-  const { data: currentRoleData } = await supabase
-    .from('user_roles')
-    .select('role')
-    .eq('user_id', user.id)
+  // Ensure only ADMINs can view this page (joined query to reduce latency)
+  const { data: profileWithRole } = await supabase
+    .from('profiles')
+    .select('user_roles(role)')
+    .eq('id', user.id)
     .single()
 
-  if (currentRoleData?.role !== 'ADMIN') {
+  const roleRecord = (profileWithRole as unknown as { user_roles: { role: string } | { role: string }[] | null })?.user_roles
+  const role = (Array.isArray(roleRecord) ? roleRecord[0]?.role : roleRecord?.role) || 'UNKNOWN'
+
+  if (role !== 'ADMIN') {
     redirect('/dashboard')
   }
 

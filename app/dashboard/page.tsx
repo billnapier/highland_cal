@@ -22,27 +22,22 @@ const ROLE_BADGE_CLASSES: Record<string, string> = {
 export default async function DashboardPage() {
   const supabase = await createClient()
 
-  const { data: { user } } = await supabase.auth.getUser()
+  const { data, error } = await supabase.auth.getUser()
+  const user = data?.user
 
-  if (!user) {
+  if (error || !user) {
     redirect('/')
   }
 
-  // Fetch the user's role
-  const { data: roleData } = await supabase
-    .from('user_roles')
-    .select('role')
-    .eq('user_id', user.id)
-    .single()
-
-  // Fetch the user's profile
+  // Fetch the user's profile and role in a single joined query to reduce latency
   const { data: profileData } = await supabase
     .from('profiles')
-    .select('display_name, email, throwing_experience, attended_practice, avatar_url')
+    .select('display_name, email, throwing_experience, attended_practice, avatar_url, user_roles(role)')
     .eq('id', user.id)
     .single()
 
-  const role = roleData?.role || 'UNKNOWN'
+  const roleRecord = (profileData as unknown as { user_roles: { role: string } | { role: string }[] | null })?.user_roles
+  const role = (Array.isArray(roleRecord) ? roleRecord[0]?.role : roleRecord?.role) || 'UNKNOWN'
   
   const hasSubmittedApplication = !!profileData?.throwing_experience || typeof profileData?.attended_practice === 'boolean'
 

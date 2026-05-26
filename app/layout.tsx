@@ -3,6 +3,7 @@ import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import Link from "next/link";
 import { createClient } from '@/lib/supabase/server';
+import LoginButton from '@/components/LoginButton';
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -43,25 +44,46 @@ export default async function RootLayout({
   return (
     <html
       lang="en"
-      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
+      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased scroll-smooth`}
     >
       <body className="min-h-full flex flex-col bg-slate-50 dark:bg-slate-950 text-foreground">
-        <header className="sticky top-0 z-50 flex h-16 shrink-0 items-center justify-between border-b border-slate-200/60 dark:border-slate-800/60 bg-white/70 dark:bg-slate-900/70 backdrop-blur-xl px-4 md:px-6 shadow-sm">
-          <Link href="/" className="font-extrabold text-xl tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-blue-600 to-indigo-600 dark:from-blue-400 dark:to-indigo-400">
+        <header className="sticky top-0 z-50 flex h-16 shrink-0 items-center justify-between border-b border-slate-200/50 dark:border-slate-800/40 bg-white/80 dark:bg-slate-950/80 backdrop-blur-xl px-4 md:px-8 shadow-sm">
+          <Link href="/" className="font-extrabold text-xl md:text-2xl tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-emerald-600 to-teal-600 dark:from-emerald-400 dark:to-teal-300 hover:scale-[1.01] transition-transform flex items-center gap-2">
+            <span className="inline-flex h-8 w-8 items-center justify-center rounded-lg bg-emerald-500/10 text-emerald-600 dark:bg-emerald-400/10 dark:text-emerald-400 font-normal">⛰️</span>
             {clubName}
           </Link>
-          {user && (
-            <nav className="flex items-center gap-4">
-              <Link href="/dashboard" className="text-sm font-bold text-slate-600 hover:text-indigo-600 dark:text-slate-300 dark:hover:text-indigo-400 transition-colors">
-                Dashboard
+          
+          <div className="flex items-center gap-6">
+            <nav className="hidden md:flex items-center gap-6">
+              <Link href="/#schedule" className="text-sm font-semibold text-slate-600 dark:text-slate-300 hover:text-emerald-600 dark:hover:text-emerald-400 transition-colors">
+                Upcoming Events
+              </Link>
+              <Link href="/#roster" className="text-sm font-semibold text-slate-600 dark:text-slate-300 hover:text-emerald-600 dark:hover:text-emerald-400 transition-colors">
+                Club Roster
+              </Link>
+              <Link href="/#about" className="text-sm font-semibold text-slate-600 dark:text-slate-300 hover:text-emerald-600 dark:hover:text-emerald-400 transition-colors">
+                About Us
               </Link>
             </nav>
-          )}
+            
+            <div className="flex items-center gap-3">
+              {user ? (
+                <Link href="/dashboard" className="inline-flex items-center gap-1.5 text-sm font-bold bg-emerald-600 hover:bg-emerald-700 dark:bg-emerald-500 dark:hover:bg-emerald-600 text-white px-4 py-2 rounded-xl transition-all shadow-md shadow-emerald-600/10">
+                  Dashboard
+                </Link>
+              ) : (
+                <div className="flex items-center gap-2">
+                  <LoginButton text="Log In" variant="ghost" className="text-sm font-bold text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-900 px-3 py-2 rounded-xl transition-all" />
+                  <LoginButton text="Join Club" variant="default" className="text-sm font-bold bg-emerald-600 hover:bg-emerald-700 dark:bg-emerald-500 dark:hover:bg-emerald-600 text-white px-4 py-2 rounded-xl transition-all shadow-md shadow-emerald-600/10" />
+                </div>
+              )}
+            </div>
+          </div>
         </header>
         
         {children}
 
-        <footer className="border-t border-slate-200/60 dark:border-slate-800/60 py-6 md:py-8 mt-auto bg-white/50 dark:bg-slate-900/50 backdrop-blur-md">
+        <footer className="border-t border-slate-200/50 dark:border-slate-800/40 py-8 mt-auto bg-white/50 dark:bg-slate-950/50 backdrop-blur-md">
           <div className="container mx-auto flex flex-col items-center justify-center gap-2 px-4 text-center">
             <p className="text-sm font-medium text-slate-500 dark:text-slate-400">
               © {new Date().getFullYear()} {clubName}. All rights reserved.
@@ -70,7 +92,7 @@ export default async function RootLayout({
               Hey, want your own copy of this site for your club?{" "}
               <a 
                 href="https://github.com/billnapier/highland_cal" 
-                className="text-indigo-600 hover:text-indigo-700 dark:text-indigo-400 dark:hover:text-indigo-300 underline underline-offset-4 transition-colors"
+                className="text-emerald-600 hover:text-emerald-700 dark:text-emerald-400 dark:hover:text-emerald-300 underline underline-offset-4 transition-colors font-bold"
                 target="_blank"
                 rel="noopener noreferrer"
               >

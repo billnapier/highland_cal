@@ -1,50 +1,73 @@
 # Highland Cal Visual Design Guide
 
 ## Core Philosophy
-The Highland Cal platform aims to merge the rugged, traditional spirit of the Scottish Highland Games with a highly premium, modern digital experience. The interface should feel **dynamic, inviting, and professional**, favoring immersive visual hierarchies over plain, utilitarian layouts.
+The Highland Cal platform merges the rugged, traditional spirit of the Scottish Highland Games with a highly premium, modern digital experience. The interface feels **dynamic, warm, and extremely premium**, favoring immersive visual hierarchies, natural forest and gold themes, and smooth micro-animations over generic tech-SaaS blue styles.
+
+---
 
 ## 1. Color Palette & Theming
-Avoid relying solely on default black, white, and grays. The application should feel alive.
+Instead of flat gray seas or generic blues, Highland Cal leverages a cohesive, vibrant palette inspired by the Scottish Highlands:
 
-* **Primary Brand Colors**: Draw inspiration from Highland environments—deep forest greens, rich tartans, and vibrant gold/amber for accents and calls to action.
-* **Page Backgrounds**: Use screen-wide subtle gradient backgrounds (e.g., `bg-gradient-to-br from-slate-50 via-blue-50/50 to-indigo-50/80` and corresponding dark mode variants) to give the page depth and a premium feel, avoiding flat white or black backgrounds.
-* **Dark Mode Compatibility**: All colors must gracefully transition to dark mode. Ensure contrast ratios remain accessible. Use deeper muted tones for backgrounds (e.g., `bg-background` and `bg-card`) to let images and badges pop.
+* **Primary Brand Colors**: Draw inspiration from misty highland hills and traditional events:
+  - **Forest & Emerald Greens**: `emerald-600`, `emerald-700`, and `emerald-850`/`from-emerald-950` for premium accents, borders, and main theme actions.
+  - **Gold & Warm Amber**: `amber-500`, `amber-450`, and `text-amber-500` for highlights, warning/pending states, calendar icons, and CTA badges.
+* **Page Backgrounds**: Subtle, screen-wide natural gradients that transition gracefully:
+  - **Light Mode**: `bg-gradient-to-br from-emerald-50/40 via-stone-50/30 to-amber-50/20` to give depth without distracting from content.
+  - **Dark Mode**: `bg-gradient-to-br from-emerald-950/25 via-slate-950 to-slate-950`.
+* **Dark Mode Compatibility**: All custom components must support native dark mode classes (`dark:...`). Ensure soft background cards utilize `bg-slate-900/60` or `bg-slate-950/80` with semi-transparent emerald borders to pop beautifully on dark screens.
 
-## 2. Immersive Headers & Hero Sections
-Do not stack text and images vertically if they can be combined for emotional impact.
+---
 
-* **Full-bleed Images**: Use `object-cover` and absolute positioning to make hero images span the full width and height of their container.
-* **Glassmorphism Overlay**: Ensure text remains legible over varied images by using "glassmorphism" cards (`backdrop-blur-md bg-black/40 border border-white/20`). This provides a sleek, frosted-glass effect that feels incredibly premium.
-* **Text Shadows**: Use `drop-shadow-lg` on large header text positioned directly over images to guarantee readability.
+## 2. Immersive Two-Column Hero Sections
+The landing page hero is designed for instant emotional impact and instant clarity:
+
+* **Two-Column Desktop Hero**:
+  - **Left Column (Welcome & Purpose)**: Bold, premium gradient headers introducing the club, paired with clean checkmarks highlighting core club utilities ("Find Local Events", "Meet Our Competitors", "Track Who is Throwing").
+  - **Right Column (Dynamic Club Card)**: Houses the uploaded hero banner image with a high-contrast glassmorphism card (`backdrop-blur-xl bg-white/70 dark:bg-slate-900/70 border border-white/20`) that hosts the club name, local details, subscription links, and sign-in controls.
+* **Text Readability**: Use text drop shadows (`drop-shadow-sm` or `drop-shadow-md`) on dynamic text blocks overlaying rich background images.
+
+---
 
 ## 3. Card Design & Micro-Animations
-Interactive elements should reward the user for interacting with them.
+Cards are designed to reward interaction and look tactile:
 
-* **Glassmorphism**: Enhance standard cards using `backdrop-blur-xl` combined with semi-transparent backgrounds (e.g., `bg-white/80 dark:bg-slate-900/80`). This allows the underlying page gradients to subtly shine through, increasing the sense of depth.
-* **Depth over Borders**: Use soft drop shadows (`shadow-sm` resting, `shadow-xl` hovered) instead of harsh, high-contrast borders. Combine with translucent borders (e.g., `border-slate-200/60`).
-* **Hover States**: Apply subtle scale and translation transformations to cards and primary buttons (e.g., `transition-all duration-300 hover:-translate-y-1 hover:shadow-xl hover:border-blue-300`). It makes the interface feel tactile.
-* **Baseball "Player" Cards**: For athlete rosters, double down on the collectible feel. Use a full, rectangular action shot spanning the majority of the card (e.g., `aspect-[4/5]`), rather than small circular avatars. Overlay names on a soft bottom gradient over the photo, position class badges as premium stickers in the top corner, and format the bottom nameplate with stats/social links.
+* **Glassmorphism**: Combine `backdrop-blur-xl bg-white/70 dark:bg-slate-900/60` with soft borders like `border-slate-200/50 dark:border-slate-800/40` so gradient background colors subtly gleam through.
+* **Depth over Borders**: Favor soft drop shadows (`shadow-md` resting, `shadow-xl` hovered) over harsh borders. 
+* **Interactive Hover States**: Apply scale and offset transitions to cards and main buttons (`transition-all duration-300 hover:-translate-y-1 hover:shadow-lg`).
+* **100% Clickable Roster & Profile Cards**:
+  - Double down on the collectible baseball card feel: standard card layout shows an athlete action photo with an aspect ratio of `aspect-[4/5]`.
+  - **Fully Clickable**: Use an absolute link overlay (`absolute inset-0 z-10`) wrapping the entire profile card so the user can click anywhere to view details.
+  - **Interactive Links**: Social icons (like Instagram/Facebook) must be elevated using `relative z-20 pointer-events-auto` so they remain directly clickable independently of the main card click.
+
+---
 
 ## 4. Layouts & Information Architecture
-Avoid long, single-column walls of text on desktop viewports.
+Avoid long, flat vertical stacks. Use dynamic sidebars on desktop:
 
-* **Bento Box Grids**: Group distinct types of information (e.g., Account Status, Quick Links, Upcoming Events) into separate cards arranged in a grid (`grid-cols-1 md:grid-cols-3`). 
-* **Sticky Sidebars**: On larger screens, pin secondary but important actions (like a user profile summary or navigation links) to the side using `sticky top-6`. This prevents unnecessary scrolling and utilizes horizontal space efficiently.
-* **Mobile-First Stacking**: Ensure that multi-column CSS grids collapse elegantly into a single column on mobile devices. Prioritize the order of stacked elements (e.g., show the "Account Status" card before the long list of "Upcoming Events").
+* **Double-Column Page Layout**:
+  - **Main Column (width 8/12)**: Lists upcoming games and practices using spacious cards with color-coded event type badges.
+  - **Sidebar Column (width 4/12)**: A sticky panel (`sticky top-6`) housing auxiliary widgets:
+    - **Who's Throwing Next?**: Programmatic widget looking up the nearest upcoming event and showing the profile avatars of registered athletes.
+    - **Club Stats**: Grid displays showing numeric tallies of approved roster athletes and scheduled games with bold forest green and gold typography.
+* **Mobile Responsiveness**: All double-column grids must use tailwind responsiveness (`grid grid-cols-1 lg:grid-cols-12` or `flex-col lg:flex-row`) to stack cleanly into a single column on mobile viewports.
+
+---
 
 ## 5. Typography & Text Content
-* **Premium Fonts**: Favor modern, geometric sans-serif fonts (like *Geist*, *Inter*, or *Outfit*) over system defaults.
-* **Gradient Headers**: Use gradient text clipping (e.g., `bg-clip-text text-transparent bg-gradient-to-r from-blue-600 to-indigo-600`) for primary page headers (`<h1>`, `<h2>`) to draw the eye and elevate the design.
-* **Avoid Truncation**: Allow user-generated content (like custom link titles) to display fully whenever possible. Avoid aggressive text truncation on interactive elements to ensure clarity.
-* **Status Indicators**: Use vibrant, color-coded gradient badges with bold white text and a subtle translucent ring to indicate state. Avoid plain text or pale muted colors for statuses.
-  * `APPROVED` → Emerald/Teal Gradient (`bg-gradient-to-r from-emerald-400 to-teal-500 text-white`)
-  * `PENDING` → Amber/Orange Gradient (`bg-gradient-to-r from-amber-400 to-orange-500 text-white`)
-  * `ADMIN` → Fuchsia/Purple Gradient (`bg-gradient-to-r from-fuchsia-500 to-purple-600 text-white`)
-  * `PRACTICE` vs `GAME` events should be visually distinct at a glance (e.g., Purple/Fuchsia gradient for Practice).
+* **Premium Fonts**: Utilize modern geometric sans-serif fonts (*Geist* or *Inter*) mapped to the body layout.
+* **Gradient Headers**: Use gradient clipping for major titles:
+  - `bg-clip-text text-transparent bg-gradient-to-r from-emerald-600 via-emerald-700 to-amber-600`
+* **Status Badges**:
+  - `APPROVED` / `GAME` / `PRACTICE` should feel vibrant, utilizing translucent backgrounds and bold, matching text colors:
+    - **GAME State**: `bg-amber-500/10 text-amber-700 dark:text-amber-400 border border-amber-500/20`
+    - **PRACTICE State**: `bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border border-emerald-500/20`
+    - **ADMIN State**: `bg-fuchsia-500/10 text-fuchsia-700 dark:text-fuchsia-400 border border-fuchsia-500/20`
+
+---
 
 ## Checklist for New Components
-- [ ] Does this component look good on a 320px wide mobile screen?
+- [ ] Does this component look beautiful on mobile screen sizes down to 320px?
 - [ ] Have I used grid/flexbox to maximize space on desktop?
-- [ ] Are there hover states for interactive elements (shadows, subtle scaling)?
-- [ ] Is the primary call-to-action visually distinct?
-- [ ] Does it use soft shadows and depth rather than just flat borders?
+- [ ] Are all interactive hover states implemented (scaling, shadows)?
+- [ ] Is the primary CTA highlighted with the emerald green or gold amber color palette?
+- [ ] Does it use soft shadows and depth rather than flat grays?
