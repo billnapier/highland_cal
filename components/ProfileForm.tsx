@@ -29,7 +29,7 @@ export default function ProfileForm({ initialData }: ProfileFormProps) {
   const [success, setSuccess] = useState(false)
 
   const { register, control, handleSubmit, setValue, watch, formState: { errors } } = useForm<ProfileFormData>({
-    resolver: zodResolver(profileSchema),
+    resolver: zodResolver(profileSchema) as any,
     defaultValues: {
       class: initialData.class || '',
       avatar_url: initialData.avatar_url || '',
@@ -57,8 +57,13 @@ export default function ProfileForm({ initialData }: ProfileFormProps) {
         } else {
           setError(result.message || 'Failed to update profile')
         }
-      } catch {
-        setError('An unexpected error occurred')
+      } catch (err: unknown) {
+        console.error("Unexpected error in ProfileForm submission:", err)
+        if (err instanceof Error) {
+          setError(err.message || 'An unexpected error occurred')
+        } else {
+          setError('An unexpected error occurred')
+        }
       }
     })
   }
