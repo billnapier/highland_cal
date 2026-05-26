@@ -29,6 +29,7 @@ export default function ProfileForm({ initialData }: ProfileFormProps) {
   const [success, setSuccess] = useState(false)
 
   const { register, control, handleSubmit, setValue, watch, formState: { errors } } = useForm<ProfileFormData>({
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     resolver: zodResolver(profileSchema) as any,
     defaultValues: {
       class: initialData.class || '',
