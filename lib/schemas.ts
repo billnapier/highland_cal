@@ -31,18 +31,36 @@ export const eventSchema = z.object({
 
 export type EventFormData = z.infer<typeof eventSchema>
 
+export interface ProfileFormData {
+  class?: string
+  avatar_url?: string
+  instagram?: string
+  facebook?: string
+  customLinks?: {
+    title: string
+    url: string
+  }[]
+}
+
+const preprocessUrl = (val: unknown) => {
+  if (typeof val !== 'string' || val.trim() === '') return val
+  const trimmed = val.trim()
+  if (!/^https?:\/\//i.test(trimmed)) {
+    return `https://${trimmed}`
+  }
+  return trimmed
+}
+
 export const profileSchema = z.object({
   class: z.string().optional(),
-  avatar_url: z.string().url('Must be a valid URL').optional().or(z.literal('')),
-  instagram: z.string().url('Must be a valid URL').optional().or(z.literal('')),
-  facebook: z.string().url('Must be a valid URL').optional().or(z.literal('')),
+  avatar_url: z.preprocess(preprocessUrl, z.string().url('Must be a valid URL').optional().or(z.literal(''))),
+  instagram: z.preprocess(preprocessUrl, z.string().url('Must be a valid URL').optional().or(z.literal(''))),
+  facebook: z.preprocess(preprocessUrl, z.string().url('Must be a valid URL').optional().or(z.literal(''))),
   customLinks: z.array(z.object({
     title: z.string().min(1, 'Title is required'),
-    url: z.string().url('Must be a valid URL')
+    url: z.preprocess(preprocessUrl, z.string().url('Must be a valid URL'))
   })).max(5).optional()
 })
-
-export type ProfileFormData = z.infer<typeof profileSchema>
 
 export const applicationSchema = z.object({
   throwing_experience: z.string().min(1, 'Please tell us about your throwing experience.'),
