@@ -23,17 +23,30 @@ We use Vercel to host the application. Vercel provides a magical "Deploy" button
 
 ---
 
-## Step 2: Initialize Your Database (Automated)
+## Step 2: Initialize Your Database
 
-Your app is deployed, but the database doesn't have the tables (Games, Profiles, Attendance) it needs to function. We will use Supabase's GitHub integration to build your database automatically.
+Your app is deployed, but the database doesn't have the tables (Games, Profiles, Attendance, Settings) and storage buckets it needs to function. 
 
+You can initialize this automatically via GitHub (recommended) or manually via the Supabase SQL Editor.
+
+### Option A: Automated GitHub Integration (Recommended)
 1. Log into your [Supabase Dashboard](https://supabase.com/dashboard).
 2. Select the project you just created via Vercel.
 3. Navigate to **Project Settings** (the gear icon) > **Integrations**.
 4. Find the **GitHub** integration and click **Install** or **Connect**.
 5. Follow the prompts to authorize Supabase and select your newly forked `highland_cal` repository.
-6. **That's it.** Supabase will automatically scan the repository, find our setup file in `supabase/migrations/`, and initialize your database tables instantly. You never have to touch SQL!
+6. **That's it.** Supabase will automatically scan the repository, find our setup file in `supabase/migrations/20260520000000_initial_schema.sql`, and initialize all database tables, default settings, and storage buckets/policies instantly. You never have to touch SQL!
    *(Bonus: If we release new features later, you just click "Sync Fork" in GitHub, and Supabase will automatically upgrade your database to match).*
+
+### Option B: Manual SQL Editor (Fallback)
+If you prefer not to connect your GitHub account to Supabase, you can run the setup script manually:
+1. Log into your [Supabase Dashboard](https://supabase.com/dashboard) and open your project.
+2. Click on the **SQL Editor** tab in the left sidebar (the `SQL` icon).
+3. Click **New query**.
+4. Copy the entire contents of the setup file located at `supabase/migrations/20260520000000_initial_schema.sql` in your forked repository.
+5. Paste the SQL code into the editor.
+6. Click the **Run** button at the bottom right.
+7. Verify that the query completes successfully. This creates all tables (`Profiles`, `User_Roles`, `Games`, `Attendance`, `Settings`), the `public_images` storage bucket, and all required security policies.
 
 ---
 
