@@ -16,10 +16,41 @@ interface AttendanceRecord {
 export default async function Home() {
   const supabase = await createClient();
 
-  // Fetch settings
-  const { data: settingsData } = await supabase
-    .from('settings')
-    .select('key, value')
+  /*
+    ⚡ Bolt: Batch independent Supabase queries
+    💡 What: Use Promise.all to fetch settings, games, and profiles concurrently instead of sequentially.
+    🎯 Why: These three queries do not depend on each other. Running them sequentially causes a waterfall effect, delaying TTFB.
+    📊 Impact: Reduces time spent waiting for the database by up to ~66% (from T1+T2+T3 to Max(T1, T2, T3)).
+    🔬 Measurement: Verify faster page load times for the Home page.
+  */
+  const [
+    { data: settingsData },
+    { data: games, error },
+    { data: profiles, error: profilesError }
+  ] = await Promise.all([
+    supabase
+      .from('settings')
+      .select('key, value'),
+    supabase
+      .from('games')
+      .select(`
+        *,
+        attendance (
+          interest_level,
+          attend_day,
+          profiles (
+            display_name
+          )
+        )
+      `)
+      .order('start_date', { ascending: true })
+      .gte('start_date', new Date(new Date().getTime() - 86400000).toISOString().split('T')[0]),
+    supabase
+      .from('profiles')
+      .select('id, display_name, class, avatar_url, outward_links, user_roles!inner(role)')
+      .in('user_roles.role', ['APPROVED', 'ADMIN'])
+      .order('display_name', { ascending: true })
+  ]);
 
   const settingsMap = settingsData?.reduce((acc: Record<string, string>, setting: { key: string, value: string }) => {
     acc[setting.key] = setting.value
@@ -29,28 +60,6 @@ export default async function Home() {
   const clubName = settingsMap['club_name'] || 'Highland Cal'
   const clubBlurb = settingsMap['club_blurb'] || 'We are a community of athletes dedicated to the traditional Scottish Highland Games. Whether you are a seasoned A-class thrower or looking to try the caber toss for the very first time, Highland Cal is where we organize practices, coordinate game attendance, and support each other on the field.'
   const heroImage = settingsMap['hero_image_url'] || null
-
-  const { data: games, error } = await supabase
-    .from('games')
-    .select(`
-      *,
-      attendance (
-        interest_level,
-        attend_day,
-        profiles (
-          display_name
-        )
-      )
-    `)
-    .order('start_date', { ascending: true })
-    .gte('start_date', new Date(new Date().getTime() - 86400000).toISOString().split('T')[0]);
-
-  // Fetch all profiles for the roster
-  const { data: profiles, error: profilesError } = await supabase
-    .from('profiles')
-    .select('id, display_name, class, avatar_url, outward_links, user_roles!inner(role)')
-    .in('user_roles.role', ['APPROVED', 'ADMIN'])
-    .order('display_name', { ascending: true });
 
   return (
     <main className="flex flex-1 flex-col items-center p-4 md:p-8 bg-gradient-to-br from-emerald-50/20 via-slate-50 to-amber-50/20 dark:from-slate-950 dark:via-emerald-950/5 dark:to-slate-950 w-full min-h-[calc(100vh-4rem)]">
