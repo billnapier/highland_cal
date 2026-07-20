@@ -41,7 +41,6 @@ export default async function AthleteProfilePage({ params }: { params: Promise<{
     .in('interest_level', ['REGISTERED', 'INTERESTED'])
 
   const links = profile.outward_links || {}
-  const hasSocials = links.instagram || links.facebook || (links.customLinks && links.customLinks.length > 0)
 
   // Filter out any attendance records where the game might have been deleted but attendance remains
   const validAttendances = attendanceRecords?.filter(a => a.games) || []
@@ -86,10 +85,12 @@ export default async function AthleteProfilePage({ params }: { params: Promise<{
               </div>
             </div>
             
-            {hasSocials && (
-              <div className="mt-6 bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl text-card-foreground rounded-2xl border border-slate-200/60 dark:border-slate-800/60 shadow-md p-6">
-                <h3 className="text-sm font-medium text-muted-foreground uppercase tracking-wider mb-4 border-b border-slate-200 dark:border-slate-800 pb-2">Athlete Links</h3>
-                <div className="flex flex-col gap-3">
+            <div className="mt-6 bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl text-card-foreground rounded-2xl border border-slate-200/60 dark:border-slate-800/60 shadow-md p-6">
+              <h3 className="text-sm font-medium text-muted-foreground uppercase tracking-wider mb-4 border-b border-slate-200 dark:border-slate-800 pb-2">Athlete Links</h3>
+              <div className="flex flex-col gap-3">
+                <a href={`/api/calendar.ics?user_id=${id}`} className={buttonVariants({ variant: "outline", className: "w-full justify-start" })}>
+                  <Calendar className="mr-2 h-4 w-4" /> Subscribe to Schedule
+                </a>
                   {links.instagram && (
                     <a href={links.instagram} target="_blank" rel="noopener noreferrer" className={buttonVariants({ variant: "outline", className: "w-full justify-start" })}>
                       <ExternalLink className="mr-2 h-4 w-4" /> Instagram
@@ -100,14 +101,13 @@ export default async function AthleteProfilePage({ params }: { params: Promise<{
                       <ExternalLink className="mr-2 h-4 w-4" /> Facebook
                     </a>
                   )}
-                  {links.customLinks?.map((link: CustomLink, idx: number) => (
-                    <a key={idx} href={link.url} target="_blank" rel="noopener noreferrer" className="flex items-center text-sm font-medium text-blue-600 dark:text-blue-400 hover:underline p-2 rounded-md hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors">
-                      <ExternalLink className="mr-2 h-4 w-4 shrink-0" /> <span className="truncate">{link.title}</span>
-                    </a>
-                  ))}
-                </div>
+                {links.customLinks?.map((link: CustomLink, idx: number) => (
+                  <a key={idx} href={link.url} target="_blank" rel="noopener noreferrer" className="flex items-center text-sm font-medium text-blue-600 dark:text-blue-400 hover:underline p-2 rounded-md hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors">
+                    <ExternalLink className="mr-2 h-4 w-4 shrink-0" /> <span className="truncate">{link.title}</span>
+                  </a>
+                ))}
               </div>
-            )}
+            </div>
           </div>
 
           {/* Details & Schedule (Right Column) */}

@@ -15,6 +15,8 @@ The journeys are broken down by the two main personas: **Athletes (End Users)** 
 3. **System:** The system displays a chronologically sorted list of upcoming games and practices, showing the date, name, and location. This data is publicly accessible to act as a club marketing tool.
 4. **Action:** They click the "Subscribe to Calendar" button to get a global iCal feed link.
 5. **System:** The system provides a public `.ics` URL that the user can add to Google Calendar, Apple Calendar, or Outlook to sync all configured events.
+6. **Action:** They visit an athlete's profile page (`/roster/[id]`).
+7. **System:** The system displays the athlete's details, schedule, and an athlete-specific "Subscribe to Schedule" iCal link.
 
 ### Journey 2: Frictionless Onboarding & Pending Approval
 **Goal:** Access the site, set up a profile, and request write-access to the club.
