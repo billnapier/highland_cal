@@ -111,6 +111,7 @@ Tracks RSVPs.
 
 ### 4.4 iCal Feed Generation
 - A Next.js API Route (e.g., `/api/calendar.ics`) generates an iCal feed dynamically from the `Games` table.
+- If an optional `user_id` query parameter is provided, it filters the games to only those where the given user has an interest level of `REGISTERED` or `INTERESTED`.
 - Since `Games` is public, this endpoint requires no authentication.
 
 ## 5. Next.js Application Structure

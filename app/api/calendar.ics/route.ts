@@ -2,20 +2,32 @@ import { createClient } from '@/lib/supabase/server';
 import { createEvents, EventAttributes } from 'ics';
 import { NextResponse } from 'next/server';
 
-export async function GET() {
+export async function GET(request: Request) {
+  const url = new URL(request.url);
+  const userId = url.searchParams.get('user_id');
+
   const supabase = await createClient();
-  const { data: games, error } = await supabase
+  let query = supabase
     .from('games')
-    .select('id, name, location, registration_url, start_date, is_two_day')
+    .select(userId ? 'id, name, location, registration_url, start_date, is_two_day, attendance!inner(user_id, interest_level)' : 'id, name, location, registration_url, start_date, is_two_day')
     .gte('start_date', new Date(new Date().getTime() - 86400000).toISOString().split('T')[0])
     .order('start_date', { ascending: true });
+
+  if (userId) {
+    query = query
+      .eq('attendance.user_id', userId)
+      .in('attendance.interest_level', ['REGISTERED', 'INTERESTED']);
+  }
+
+  const { data: games, error } = await query;
 
   if (error) {
     console.error('Error fetching games for iCal feed:', error);
     return new NextResponse('Internal Server Error', { status: 500 });
   }
 
-  const events: EventAttributes[] = (games || []).map((game) => {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const events: EventAttributes[] = ((games as any) || []).map((game: any) => {
     const start = new Date(game.start_date + 'T00:00:00');
     // For all-day events, `ics` uses start: [year, month, day]
     // And if duration is passed, it specifies how many days it spans.
