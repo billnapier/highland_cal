@@ -32,7 +32,7 @@ To separate public user data from secure authorization data, the system uses two
 - **Profiles**:
   - **id** (uuid, primary key): Linked to `auth.users` via a Postgres trigger on sign-up.
   - **display_name** (text): Athlete's name.
-  - **class** (text): Competition class (e.g., A-Class, Masters, Women).
+  - **competition_class** (text): Competition class (e.g., A-Class, Masters, Women).
 - **User_Roles**:
   - **user_id** (uuid, primary key): Linked to `Profiles`.
   - **role** (enum): `[PENDING, APPROVED, ADMIN]`. Kept in a separate table so standard RLS policies can prevent users from updating their own roles.
@@ -51,6 +51,7 @@ To separate public user data from secure authorization data, the system uses two
 - **user_id** (uuid, foreign key)
 - **game_id** (uuid, foreign key)
 - **interest_level** (enum): `['WATCHING', 'INTERESTED', 'REGISTERED', 'NOT_GOING']`
+- **Constraint**: Unique index on (user_id, game_id) to prevent duplicate entries.
 
 ---
 
@@ -66,7 +67,7 @@ To eliminate the security overhead and user friction of local credential managem
 While identity is handled externally, **Authorization is managed internally via Row Level Security (RLS) and Application Logic.**
 - **Public Reads:** The calendar, practice schedule, and profiles are public. Unauthenticated users can view this data, allowing the application to serve as a marketing/recruiting tool for the club.
 - **RLS Gatekeeper:** Write operations (RSVPing, adding events) require the user to be authenticated and have an "APPROVED" or "ADMIN" role in the `User_Roles` table.
-- **High-Trust Writes:** Any approved member can add or edit games/practices. Admins retain the ability to delete events. RLS policies verify `auth.uid()` against records where users modify their own attendance.
+- **High-Trust Writes:** Any approved member can add or edit games/practices. Admins retain the ability to delete events. RLS policies verify `auth.uid()` against records where users modify their own attendance and profile, while allowing visibility of other athletes' profiles within the club instance.
 - **Admin Role:** The initial Admin user is explicitly defined during the instance deployment (e.g., via an environment variable). The Next.js application bootstraps this admin on their first login.
 
 ### 4.3 Notifications (Next.js Server Actions)
