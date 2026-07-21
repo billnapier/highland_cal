@@ -59,6 +59,7 @@ export interface ProfileFormData {
     title: string
     url: string
   }[]
+  vanity_name?: string
 }
 
 export const profileSchema = z.object({
@@ -69,7 +70,23 @@ export const profileSchema = z.object({
   customLinks: z.array(z.object({
     title: z.string().min(1, 'Title is required'),
     url: z.preprocess(preprocessUrl, z.string().url('Must be a valid URL'))
-  })).max(5).optional()
+  })).max(5).optional(),
+  vanity_name: z.string()
+    .transform(val => val.trim().toLowerCase())
+    .refine(val => val === '' || /^[a-z0-9-]+$/.test(val), {
+      message: 'Vanity name can only contain lowercase letters, numbers, and hyphens'
+    })
+    .refine(val => val === '' || !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(val), {
+      message: 'Vanity name cannot be a UUID'
+    })
+    .refine(val => {
+      const reserved = ['admin', 'api', 'edit', 'new', 'settings', 'roster', 'calendar', 'dashboard', 'login', 'auth', 'public', 'feed', 'schedule', 'profile', 'logout'];
+      return val === '' || !reserved.includes(val);
+    }, {
+      message: 'This name is reserved and cannot be used'
+    })
+    .optional()
+    .or(z.literal(''))
 })
 
 export const applicationSchema = z.object({

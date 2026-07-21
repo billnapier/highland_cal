@@ -4,42 +4,85 @@ import { NextResponse } from 'next/server';
 
 export async function GET(request: Request) {
   const url = new URL(request.url);
-  const userId = url.searchParams.get('user_id');
-  const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-  const validUserId = userId && uuidRegex.test(userId) ? userId : null;
+  const idParam = url.searchParams.get('id') || url.searchParams.get('user_id');
 
   const supabase = await createClient();
+  let resolvedUserId: string | null = null;
+  let athleteName = '';
 
-  // Fetch club name and athlete name in parallel
-  const [clubSettingResult, profileResult] = await Promise.all([
+  const [clubSettingResult, profileByVanityResult] = await Promise.all([
     supabase
       .from('settings')
       .select('value')
       .eq('key', 'club_name')
-      .single(),
-    validUserId
+      .maybeSingle(),
+    idParam
       ? supabase
           .from('profiles')
-          .select('display_name')
-          .eq('id', validUserId)
-          .single()
+          .select('id, display_name')
+          .eq('vanity_name', idParam)
+          .maybeSingle()
       : Promise.resolve({ data: null })
   ]);
 
   const clubName = clubSettingResult.data?.value || 'Highland Cal';
-  const athleteName = profileResult.data?.display_name || '';
+  const profileByVanity = profileByVanityResult.data;
+
+  if (profileByVanity) {
+    resolvedUserId = profileByVanity.id;
+    athleteName = profileByVanity.display_name || '';
+  } else if (idParam) {
+    // 2. If no match, check if it's a valid UUID, then query by ID
+    const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(idParam);
+    if (isUuid) {
+      const { data: profileByUuid } = await supabase
+        .from('profiles')
+        .select('id, display_name')
+        .eq('id', idParam)
+        .maybeSingle();
+      
+      if (profileByUuid) {
+        resolvedUserId = profileByUuid.id;
+        athleteName = profileByUuid.display_name || '';
+      }
+    }
+  }
+
+  // If an ID was requested but could not be resolved to a user,
+  // return an empty calendar feed rather than falling back to all games.
+  if (idParam && !resolvedUserId) {
+    const feedTitle = clubName.replace(/[\r\n]/g, ' ');
+    const emptyIcs = [
+      'BEGIN:VCALENDAR',
+      'VERSION:2.0',
+      `X-WR-CALNAME:${feedTitle}`,
+      `NAME:${feedTitle}`,
+      'PRODID:-//Highland Cal//EN',
+      'CALSCALE:GREGORIAN',
+      'END:VCALENDAR'
+    ].join('\r\n');
+    return new NextResponse(emptyIcs, {
+      status: 200,
+      headers: {
+        'Content-Type': 'text/calendar; charset=utf-8',
+        'Content-Disposition': 'attachment; filename="highland-cal.ics"',
+        'Cache-Control': 'public, max-age=3600, s-maxage=3600, stale-while-revalidate=86400',
+      },
+    });
+  }
+
   const rawFeedTitle = athleteName ? `${clubName}: ${athleteName}` : clubName;
   const feedTitle = rawFeedTitle.replace(/[\r\n]/g, ' ');
 
   let query = supabase
     .from('games')
-    .select(validUserId ? 'id, name, location, registration_url, start_date, is_two_day, attendance!inner(user_id, interest_level)' : 'id, name, location, registration_url, start_date, is_two_day')
+    .select(resolvedUserId ? 'id, name, location, registration_url, start_date, is_two_day, attendance!inner(user_id, interest_level)' : 'id, name, location, registration_url, start_date, is_two_day')
     .gte('start_date', new Date(new Date().getTime() - 86400000).toISOString().split('T')[0])
     .order('start_date', { ascending: true });
 
-  if (validUserId) {
+  if (resolvedUserId) {
     query = query
-      .eq('attendance.user_id', validUserId)
+      .eq('attendance.user_id', resolvedUserId)
       .in('attendance.interest_level', ['REGISTERED', 'INTERESTED']);
   }
 

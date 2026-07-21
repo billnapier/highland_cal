@@ -43,7 +43,7 @@ export default async function Home() {
       .gte('start_date', new Date(new Date().getTime() - 86400000).toISOString().split('T')[0]),
     supabase
       .from('profiles')
-      .select('id, display_name, class, avatar_url, outward_links, user_roles!inner(role)')
+      .select('id, display_name, class, avatar_url, outward_links, vanity_name, user_roles!inner(role)')
       .in('user_roles.role', ['APPROVED', 'ADMIN'])
       .order('display_name', { ascending: true })
   ]);
@@ -301,7 +301,7 @@ export default async function Home() {
                                     <span className="text-xs font-bold text-slate-700 dark:text-slate-350">{a.profiles?.display_name || 'Anonymous'}</span>
                                   </div>
                                   {athleteProfile && (
-                                    <Link href={`/roster/${athleteProfile.id}`} className="text-2xs font-extrabold text-emerald-600 dark:text-emerald-400 hover:underline flex items-center gap-0.5">
+                                    <Link href={`/roster/${athleteProfile.vanity_name || athleteProfile.id}`} className="text-2xs font-extrabold text-emerald-600 dark:text-emerald-400 hover:underline flex items-center gap-0.5">
                                       Profile <ChevronRight className="h-3 w-3" />
                                     </Link>
                                   )}
@@ -366,7 +366,7 @@ export default async function Home() {
               return (
                 <div key={profile.id} className="group relative bg-card text-card-foreground rounded-3xl border border-slate-200/50 dark:border-slate-800/40 shadow-sm flex flex-col transition-all duration-300 hover:-translate-y-1.5 hover:shadow-xl overflow-hidden hover:border-emerald-500/50 dark:hover:border-emerald-500/50">
                   {/* Master Clickable Link Overlay */}
-                  <Link href={`/roster/${profile.id}`} className="absolute inset-0 z-10" aria-label={`View ${profile.display_name}'s profile`} />
+                  <Link href={`/roster/${profile.vanity_name || profile.id}`} className="absolute inset-0 z-10" aria-label={`View ${profile.display_name}'s profile`} />
                   
                   <div className="relative w-full aspect-[4/5] bg-slate-100 dark:bg-slate-900 overflow-hidden">
                     {profile.avatar_url ? (

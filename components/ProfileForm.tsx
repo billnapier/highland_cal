@@ -15,15 +15,17 @@ interface ProfileFormProps {
   initialData: {
     class?: string | null;
     avatar_url?: string | null;
+    vanity_name?: string | null;
     outward_links?: {
       instagram?: string | null;
       facebook?: string | null;
       customLinks?: { title: string; url: string }[] | null;
     } | null;
   };
+  canHaveVanity: boolean;
 }
 
-export default function ProfileForm({ initialData }: ProfileFormProps) {
+export default function ProfileForm({ initialData, canHaveVanity }: ProfileFormProps) {
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
@@ -41,6 +43,7 @@ export default function ProfileForm({ initialData }: ProfileFormProps) {
     defaultValues: {
       class: initialData.class || '',
       avatar_url: initialData.avatar_url || '',
+      vanity_name: initialData.vanity_name || '',
       instagram: initialData.outward_links?.instagram || '',
       facebook: initialData.outward_links?.facebook || '',
       customLinks: initialData.outward_links?.customLinks || [],
@@ -53,6 +56,7 @@ export default function ProfileForm({ initialData }: ProfileFormProps) {
   });
 
   const avatarUrl = watch('avatar_url');
+  const watchedVanityName = watch('vanity_name');
 
   const onSubmit = (data: ProfileFormData) => {
     startTransition(async () => {
@@ -95,6 +99,46 @@ export default function ProfileForm({ initialData }: ProfileFormProps) {
           <Label htmlFor="class">Competition Class</Label>
           <Input id="class" placeholder="e.g. A-Class, Masters, Women" {...register('class')} />
           {errors.class && <span className="text-xs text-red-500">{errors.class.message}</span>}
+        </div>
+
+        <div className="grid gap-2">
+          <Label htmlFor="vanity_name">Vanity URL Name (Custom Profile Link)</Label>
+          <div className="flex rounded-md shadow-sm">
+            <span className="inline-flex items-center px-3 rounded-l-md border border-r-0 border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 text-slate-500 text-sm">
+              /roster/
+            </span>
+            <Input 
+              id="vanity_name" 
+              placeholder="your-name" 
+              className="rounded-l-none" 
+              disabled={!canHaveVanity}
+              {...register('vanity_name', {
+                onBlur: (e) => {
+                  const val = e.target.value;
+                  const slugified = val
+                    .toLowerCase()
+                    .replace(/\s+/g, '-')
+                    .replace(/[^a-z0-9-]/g, '');
+                  setValue('vanity_name', slugified, { shouldValidate: true });
+                }
+              })} 
+            />
+          </div>
+          {errors.vanity_name && <span className="text-xs text-red-500">{errors.vanity_name.message}</span>}
+          {initialData.vanity_name && watchedVanityName !== initialData.vanity_name && (
+            <div className="text-sm text-yellow-600 dark:text-yellow-400 font-medium mt-2 bg-yellow-50 dark:bg-yellow-950/20 border border-yellow-200 dark:border-yellow-900/30 p-3 rounded-md">
+              Changing your vanity name will break any profile links and iCal subscription feeds you have previously shared.
+            </div>
+          )}
+          {!canHaveVanity ? (
+            <p className="text-xs text-amber-600 dark:text-amber-400 mt-1">
+              Only approved club members can claim a custom URL vanity name. Apply for membership to enable this.
+            </p>
+          ) : (
+            <p className="text-xs text-muted-foreground mt-1">
+              Enables a public profile at /roster/your-name. Only lowercase letters, numbers, and hyphens allowed.
+            </p>
+          )}
         </div>
 
         <div className="pt-4 border-t">

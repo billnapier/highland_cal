@@ -22,6 +22,7 @@ User data is split into two tables to enable standard Row Level Security without
 - `email` (text): Athlete's email address (synced from auth. Note: this is a point-in-time snapshot unless an `AFTER UPDATE` trigger on `auth.users` is also implemented).
 - `class` (text): Competition class (e.g., A-Class, Masters, Women).
 - `outward_links` (jsonb): Social media and external profile links. The JSON structure should explicitly support `"instagram"` and `"facebook"` keys, and a `"custom_links"` array containing up to 5 objects with `"label"` and `"url"`.
+- `vanity_name` (text, unique, nullable): Unique, custom slug for the athlete profile URL.
 - `created_at` (timestamptz): Default `now()`.
 
 *Crucial Implementation Detail:* A Postgres `AFTER INSERT` trigger on the `auth.users` table must be created to automatically insert a new row into `Profiles` whenever a user signs up. This prevents the "race condition" of relying on the Next.js frontend redirect to create the user profile.
@@ -111,8 +112,27 @@ Tracks RSVPs.
 
 ### 4.4 iCal Feed Generation
 - A Next.js API Route (e.g., `/api/calendar.ics`) generates an iCal feed dynamically from the `Games` table.
-- If an optional `user_id` query parameter is provided, it filters the games to only those where the given user has an interest level of `REGISTERED` or `INTERESTED`.
+- If an optional `id` query parameter (or legacy `user_id` for backward compatibility) is provided (which can be either a profile UUID or a `vanity_name`), it resolves the user and filters the games to only those where the given user has an interest level of `REGISTERED` or `INTERESTED`.
 - Since `Games` is public, this endpoint requires no authentication.
+
+### 4.5 Athlete Vanity URLs (Vanity Names)
+- **Feature Goal:** Allow athletes to choose custom, human-readable identifiers that serve as alternative profile URLs and iCal feed identifiers.
+- **Database Schema Changes:** Add a `vanity_name` column to the `Profiles` table (type `TEXT`, `UNIQUE`, `NULLABLE`). Create a unique index on `vanity_name` to ensure fast lookups and database-level enforcement of uniqueness.
+- **Access Authorization:** Only authenticated users with an `APPROVED` or `ADMIN` role in `User_Roles` can set, update, or clear their `vanity_name`. Users with a `PENDING` role are restricted from claiming a vanity name.
+- **Validation and Slugification:**
+  - Before validation and database insertion/update, the input is auto-slugified (converted to lowercase, and spaces or special characters are replaced with hyphens).
+  - Validation is performed using Zod on both client and server: must match the regex `/^[a-z0-9-]+$/` (only lowercase ASCII alphanumeric characters and hyphens).
+  - Must not match any user's UUID (checked against DB or UUID patterns to prevent collision).
+  - Must not match a reserved routing names blocklist: `['admin', 'api', 'edit', 'new', 'settings', 'roster', 'calendar', 'dashboard', 'login', 'auth', 'public', 'feed', 'schedule', 'profile', 'logout']`.
+  - Must be unique across all profiles.
+- **Dynamic Routing & Resolving:**
+  - The profile page route `/roster/[id]` must handle both UUIDs and vanity names.
+  - Resolving logic: The application first queries `Profiles` where `vanity_name = id`. If no match is found, it checks if `id` is a valid UUID format. If it is a valid UUID, it queries `Profiles` where `id = id`. If either the UUID check fails or the query returns no results, the application renders a 404 page.
+  - The iCal feed API route `/api/calendar.ics` must support `?id=[uuid]` or `?id=[vanity_name]` query parameters (as well as legacy `?user_id=[uuid]`), resolving the user profile identically to the profile page.
+- **Navigation Consistency:**
+  - If a profile has a `vanity_name` configured, the application *must* always use `/roster/[vanity_name]` for all navigation links (such as on the public roster list, dashboard links, and redirects) and *never* link using the profile's UUID.
+- **Warning System for Changes:**
+  - If a user attempts to update an already existing `vanity_name` in the profile settings, the frontend UI must display a prominent warning: *"Changing your vanity name will break any profile links and iCal subscription feeds you have previously shared."*
 
 ## 5. Next.js Application Structure
 - `/app/page.tsx`: Public dashboard showing upcoming games.

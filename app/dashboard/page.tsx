@@ -32,7 +32,7 @@ export default async function DashboardPage() {
   // Fetch the user's profile and role in a single joined query to reduce latency
   const { data: profileData } = await supabase
     .from('profiles')
-    .select('display_name, email, throwing_experience, attended_practice, avatar_url, user_roles(role)')
+    .select('display_name, email, throwing_experience, attended_practice, avatar_url, vanity_name, user_roles(role)')
     .eq('id', user.id)
     .single()
 
@@ -210,7 +210,7 @@ export default async function DashboardPage() {
                       Admin Dashboard
                     </Link>
                   )}
-                  <Link href={`/roster/${user.id}`} className={buttonVariants({ variant: 'outline', className: 'w-full justify-start' })}>
+                  <Link href={`/roster/${profileData?.vanity_name || user.id}`} className={buttonVariants({ variant: 'outline', className: 'w-full justify-start' })}>
                     View Public Profile
                   </Link>
                   <Link href="/dashboard/profile" className={buttonVariants({ variant: 'outline', className: 'w-full justify-start' })}>
