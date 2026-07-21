@@ -8,53 +8,71 @@ export async function GET(request: Request) {
 
   const supabase = await createClient();
   let resolvedUserId: string | null = null;
+  let athleteName = '';
 
-  if (idParam) {
-    // 1. Try to find the profile by vanity_name first
-    const { data: profileByVanity } = await supabase
-      .from('profiles')
-      .select('id')
-      .eq('vanity_name', idParam)
-      .maybeSingle();
-
-    if (profileByVanity) {
-      resolvedUserId = profileByVanity.id;
-    } else {
-      // 2. If no match, check if it's a valid UUID, then query by ID
-      const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(idParam);
-      if (isUuid) {
-        const { data: profileByUuid } = await supabase
+  const [clubSettingResult, profileByVanityResult] = await Promise.all([
+    supabase
+      .from('settings')
+      .select('value')
+      .eq('key', 'club_name')
+      .maybeSingle(),
+    idParam
+      ? supabase
           .from('profiles')
-          .select('id')
-          .eq('id', idParam)
-          .maybeSingle();
-        
-        if (profileByUuid) {
-          resolvedUserId = profileByUuid.id;
-        }
+          .select('id, display_name')
+          .eq('vanity_name', idParam)
+          .maybeSingle()
+      : Promise.resolve({ data: null })
+  ]);
+
+  const clubName = clubSettingResult.data?.value || 'Highland Cal';
+  const profileByVanity = profileByVanityResult.data;
+
+  if (profileByVanity) {
+    resolvedUserId = profileByVanity.id;
+    athleteName = profileByVanity.display_name || '';
+  } else if (idParam) {
+    // 2. If no match, check if it's a valid UUID, then query by ID
+    const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(idParam);
+    if (isUuid) {
+      const { data: profileByUuid } = await supabase
+        .from('profiles')
+        .select('id, display_name')
+        .eq('id', idParam)
+        .maybeSingle();
+      
+      if (profileByUuid) {
+        resolvedUserId = profileByUuid.id;
+        athleteName = profileByUuid.display_name || '';
       }
     }
-
-    // If an ID was requested but could not be resolved to a user,
-    // return an empty calendar feed rather than falling back to all games.
-    if (!resolvedUserId) {
-      const emptyIcs = [
-        'BEGIN:VCALENDAR',
-        'VERSION:2.0',
-        'PRODID:-//Highland Cal//EN',
-        'CALSCALE:GREGORIAN',
-        'END:VCALENDAR'
-      ].join('\r\n');
-      return new NextResponse(emptyIcs, {
-        status: 200,
-        headers: {
-          'Content-Type': 'text/calendar; charset=utf-8',
-          'Content-Disposition': 'attachment; filename="highland-cal.ics"',
-          'Cache-Control': 'public, max-age=3600, s-maxage=3600, stale-while-revalidate=86400',
-        },
-      });
-    }
   }
+
+  // If an ID was requested but could not be resolved to a user,
+  // return an empty calendar feed rather than falling back to all games.
+  if (idParam && !resolvedUserId) {
+    const feedTitle = clubName.replace(/[\r\n]/g, ' ');
+    const emptyIcs = [
+      'BEGIN:VCALENDAR',
+      'VERSION:2.0',
+      `X-WR-CALNAME:${feedTitle}`,
+      `NAME:${feedTitle}`,
+      'PRODID:-//Highland Cal//EN',
+      'CALSCALE:GREGORIAN',
+      'END:VCALENDAR'
+    ].join('\r\n');
+    return new NextResponse(emptyIcs, {
+      status: 200,
+      headers: {
+        'Content-Type': 'text/calendar; charset=utf-8',
+        'Content-Disposition': 'attachment; filename="highland-cal.ics"',
+        'Cache-Control': 'public, max-age=3600, s-maxage=3600, stale-while-revalidate=86400',
+      },
+    });
+  }
+
+  const rawFeedTitle = athleteName ? `${clubName}: ${athleteName}` : clubName;
+  const feedTitle = rawFeedTitle.replace(/[\r\n]/g, ' ');
 
   let query = supabase
     .from('games')
@@ -102,6 +120,8 @@ export async function GET(request: Request) {
     const emptyIcs = [
       'BEGIN:VCALENDAR',
       'VERSION:2.0',
+      `X-WR-CALNAME:${feedTitle}`,
+      `NAME:${feedTitle}`,
       'PRODID:-//Highland Cal//EN',
       'CALSCALE:GREGORIAN',
       'END:VCALENDAR'
@@ -123,7 +143,16 @@ export async function GET(request: Request) {
     return new NextResponse('Internal Server Error', { status: 500 });
   }
 
-  return new NextResponse(value, {
+  // Insert X-WR-CALNAME and NAME properties after VERSION:2.0
+  let valueWithMetadata = value;
+  if (value.includes('VERSION:2.0')) {
+    valueWithMetadata = value.replace(
+      'VERSION:2.0',
+      `VERSION:2.0\r\nX-WR-CALNAME:${feedTitle}\r\nNAME:${feedTitle}`
+    );
+  }
+
+  return new NextResponse(valueWithMetadata, {
     status: 200,
     headers: {
       'Content-Type': 'text/calendar; charset=utf-8',
