@@ -27,31 +27,32 @@ export default async function AdminDashboardPage() {
     redirect('/dashboard')
   }
 
-  // Fetch all users with their roles
-  // Because Profiles and User_Roles are separate tables that share an ID (id and user_id),
-  // we can do a join.
-  const { data: users, error } = await supabase
-    .from('profiles')
-    .select(`
-      id,
-      display_name,
-      email,
-      class,
-      created_at,
-      user_roles (
-        role
-      )
-    `)
-    .order('created_at', { ascending: false })
+  // Fetch all users with their roles (joined query) and settings concurrently
+  const [
+    { data: users, error },
+    { data: settingsData }
+  ] = await Promise.all([
+    supabase
+      .from('profiles')
+      .select(`
+        id,
+        display_name,
+        email,
+        class,
+        created_at,
+        user_roles (
+          role
+        )
+      `)
+      .order('created_at', { ascending: false }),
+    supabase
+      .from('settings')
+      .select('key, value')
+  ])
 
   if (error) {
     console.error('Error fetching users:', error)
   }
-
-  // Fetch settings
-  const { data: settingsData } = await supabase
-    .from('settings')
-    .select('key, value')
 
   const settingsMap = settingsData?.reduce((acc: Record<string, string>, setting: { key: string, value: string }) => {
     acc[setting.key] = setting.value

@@ -29,24 +29,27 @@ export default async function DashboardPage() {
     redirect('/')
   }
 
-  // Fetch the user's profile and role in a single joined query to reduce latency
-  const { data: profileData } = await supabase
-    .from('profiles')
-    .select('display_name, email, throwing_experience, attended_practice, avatar_url, vanity_name, user_roles(role)')
-    .eq('id', user.id)
-    .single()
+  // Fetch the user's profile, role, and upcoming events concurrently to reduce latency
+  const [
+    { data: profileData },
+    { data: games, error: gamesError }
+  ] = await Promise.all([
+    supabase
+      .from('profiles')
+      .select('display_name, email, throwing_experience, attended_practice, avatar_url, vanity_name, user_roles(role)')
+      .eq('id', user.id)
+      .single(),
+    supabase
+      .from('games')
+      .select('*')
+      .order('start_date', { ascending: true })
+      .gte('start_date', new Date(new Date().getTime() - 86400000).toISOString().split('T')[0])
+  ])
 
   const roleRecord = (profileData as unknown as { user_roles: { role: string } | { role: string }[] | null })?.user_roles
   const role = (Array.isArray(roleRecord) ? roleRecord[0]?.role : roleRecord?.role) || 'UNKNOWN'
   
   const hasSubmittedApplication = !!profileData?.throwing_experience || typeof profileData?.attended_practice === 'boolean'
-
-  // Fetch upcoming events
-  const { data: games, error: gamesError } = await supabase
-    .from('games')
-    .select('*')
-    .order('start_date', { ascending: true })
-    .gte('start_date', new Date(new Date().getTime() - 86400000).toISOString().split('T')[0])
 
   const gameIds = games?.map(g => g.id) || []
   

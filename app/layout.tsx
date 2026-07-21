@@ -27,12 +27,13 @@ export default async function RootLayout({
 }>) {
   const supabase = await createClient();
 
-  const { data: { user } } = await supabase.auth.getUser();
-
-  // Fetch settings
-  const { data: settingsData } = await supabase
-    .from('settings')
-    .select('key, value')
+  const [
+    { data: { user } },
+    { data: settingsData }
+  ] = await Promise.all([
+    supabase.auth.getUser(),
+    supabase.from('settings').select('key, value')
+  ]);
 
   const settingsMap = settingsData?.reduce((acc: Record<string, string>, setting: { key: string, value: string }) => {
     acc[setting.key] = setting.value
