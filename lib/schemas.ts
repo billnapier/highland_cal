@@ -1,5 +1,24 @@
 import * as z from 'zod'
 
+const preprocessUrl = (val: unknown) => {
+  if (typeof val !== 'string' || val.trim() === '') return val
+  const trimmed = val.trim()
+
+  // If it already has a protocol, ensure it's http/https
+  if (/^[a-zA-Z][a-zA-Z\d+\-.]*:/.test(trimmed)) {
+    if (!/^https?:\/\//i.test(trimmed)) {
+      return '' // Return empty string to intentionally fail Zod's URL validation
+    }
+    return trimmed
+  }
+
+  if (trimmed.startsWith('//')) {
+    return 'https:' + trimmed
+  }
+
+  return `https://${trimmed}`
+}
+
 export const eventSchema = z.object({
   name: z.string().min(1, 'Name is required'),
   start_date: z.string().min(1, 'Start date is required'),
@@ -8,7 +27,7 @@ export const eventSchema = z.object({
   start_time: z.string().optional(),
   end_time: z.string().optional(),
   location: z.string().optional(),
-  registration_url: z.string().url('Must be a valid URL').optional().or(z.literal('')),
+  registration_url: z.preprocess(preprocessUrl, z.string().url('Must be a valid URL').optional().or(z.literal(''))),
   major_change: z.boolean().optional(),
 }).superRefine((data, ctx) => {
   if (data.type === 'PRACTICE') {
@@ -40,15 +59,6 @@ export interface ProfileFormData {
     title: string
     url: string
   }[]
-}
-
-const preprocessUrl = (val: unknown) => {
-  if (typeof val !== 'string' || val.trim() === '') return val
-  const trimmed = val.trim()
-  if (!/^https?:\/\//i.test(trimmed)) {
-    return `https://${trimmed}`
-  }
-  return trimmed
 }
 
 export const profileSchema = z.object({
