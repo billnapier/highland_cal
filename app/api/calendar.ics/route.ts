@@ -28,7 +28,8 @@ export async function GET(request: Request) {
 
   const clubName = clubSettingResult.data?.value || 'Highland Cal';
   const athleteName = profileResult.data?.display_name || '';
-  const feedTitle = athleteName ? `${clubName}: ${athleteName}` : clubName;
+  const rawFeedTitle = athleteName ? `${clubName}: ${athleteName}` : clubName;
+  const feedTitle = rawFeedTitle.replace(/[\r\n]/g, ' ');
 
   let query = supabase
     .from('games')
