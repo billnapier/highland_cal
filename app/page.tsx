@@ -24,7 +24,7 @@ export default async function Home() {
     🔬 Measurement: Verify faster page load times for the Home page.
   */
   const [
-    { data: settingsData },
+    { data: settingsData, error: settingsError },
     { data: games, error },
     { data: profiles, error: profilesError }
   ] = await Promise.all([
@@ -51,6 +51,10 @@ export default async function Home() {
       .in('user_roles.role', ['APPROVED', 'ADMIN'])
       .order('display_name', { ascending: true })
   ]);
+
+  if (settingsError) {
+    console.error('Error fetching settings:', settingsError);
+  }
 
   const settingsMap = settingsData?.reduce((acc: Record<string, string>, setting: { key: string, value: string }) => {
     acc[setting.key] = setting.value
