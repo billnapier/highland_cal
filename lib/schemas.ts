@@ -12,6 +12,10 @@ const preprocessUrl = (val: unknown) => {
     return trimmed
   }
 
+  if (trimmed.startsWith('//')) {
+    return 'https:' + trimmed
+  }
+
   return `https://${trimmed}`
 }
 
