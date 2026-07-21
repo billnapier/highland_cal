@@ -15,7 +15,7 @@ The journeys are broken down by the two main personas: **Athletes (End Users)** 
 3. **System:** The system displays a chronologically sorted list of upcoming games and practices, showing the date, name, and location. This data is publicly accessible to act as a club marketing tool.
 4. **Action:** They click the "Subscribe to Calendar" button to get a global iCal feed link.
 5. **System:** The system provides a public `.ics` URL that the user can add to Google Calendar, Apple Calendar, or Outlook to sync all configured events.
-6. **Action:** They visit an athlete's profile page (`/roster/[id]`, where `[id]` can be either their profile UUID or their selected vanity name).
+6. **Action:** They visit an athlete's profile page (`/roster/[id]`). If the athlete has configured a vanity name, the system always uses that for navigation and links; otherwise, it falls back to the profile UUID.
 7. **System:** The system resolves the profile (supporting both UUID and vanity name), and displays the athlete's details, schedule, and an athlete-specific "Subscribe to Schedule" iCal link (supporting `/api/calendar.ics?id=[uuid]` or `/api/calendar.ics?id=[vanity_name]`). Both URLs correctly fetch the athlete's dynamic calendar feed.
 
 ### Journey 2: Frictionless Onboarding & Pending Approval
@@ -51,7 +51,7 @@ The journeys are broken down by the two main personas: **Athletes (End Users)** 
 5. **Action:** They select a unique vanity name to customize their profile URL.
 6. **System:** The system checks that the user's role is `APPROVED` or `ADMIN` (users with `PENDING` roles cannot claim a vanity name). The vanity name input is auto-slugified (converted to lowercase, spaces replaced with hyphens) and validated using Zod to ensure it contains only lowercase ASCII alphanumeric characters and hyphens (`[a-z0-9-]`). The system checks that it is unique across all profiles, does not match any user's UUID, and does not match any reserved routing names blocklist (e.g., `admin`, `api`, `edit`, `new`, `settings`, `roster`, `calendar`, `dashboard`, `login`, `auth`, `public`, `feed`, `schedule`, `profile`, `logout`). The system then saves the profile including the `vanity_name`.
 7. **System Warning:** If the user updates an existing vanity name, the UI displays a prominent warning: *"Changing your vanity name will break any profile links and iCal subscription feeds you have previously shared."*
-8. **System:** Profiles are publicly viewable on the main roster page, and athletes have a dedicated public profile page (accessible via either `/roster/[uuid]` or `/roster/[vanity_name]`) that they can share with others, displaying their info and the events they are attending.
+8. **System:** Profiles are publicly viewable on the main roster page. For navigation and links, the system always uses the vanity name (if configured) instead of the UUID; if no vanity name is set, the system falls back to the UUID. Athletes have a dedicated public profile page (accessible via either `/roster/[uuid]` or `/roster/[vanity_name]`) that they can share with others, displaying their info and the events they are attending.
 
 ---
 
