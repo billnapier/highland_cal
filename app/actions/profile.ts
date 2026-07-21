@@ -72,6 +72,9 @@ export async function updateProfile(data: ProfileFormData) {
     if (vanity_name) {
       revalidatePath(`/roster/${vanity_name}`)
     }
+    if (currentProfile?.vanity_name && currentProfile.vanity_name !== vanity_name) {
+      revalidatePath(`/roster/${currentProfile.vanity_name}`)
+    }
     revalidatePath(`/roster/${user.id}`)
     return { success: true }
   } catch (error: unknown) {

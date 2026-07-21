@@ -113,7 +113,7 @@ export default function ProfileForm({ initialData, canHaveVanity }: ProfileFormP
               className="rounded-l-none" 
               disabled={!canHaveVanity}
               {...register('vanity_name', {
-                onChange: (e) => {
+                onBlur: (e) => {
                   const val = e.target.value;
                   const slugified = val
                     .toLowerCase()

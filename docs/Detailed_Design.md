@@ -112,7 +112,7 @@ Tracks RSVPs.
 
 ### 4.4 iCal Feed Generation
 - A Next.js API Route (e.g., `/api/calendar.ics`) generates an iCal feed dynamically from the `Games` table.
-- If an optional `id` query parameter is provided (which can be either a profile UUID or a `vanity_name`), it resolves the user and filters the games to only those where the given user has an interest level of `REGISTERED` or `INTERESTED`.
+- If an optional `id` query parameter (or legacy `user_id` for backward compatibility) is provided (which can be either a profile UUID or a `vanity_name`), it resolves the user and filters the games to only those where the given user has an interest level of `REGISTERED` or `INTERESTED`.
 - Since `Games` is public, this endpoint requires no authentication.
 
 ### 4.5 Athlete Vanity URLs (Vanity Names)
@@ -127,8 +127,8 @@ Tracks RSVPs.
   - Must be unique across all profiles.
 - **Dynamic Routing & Resolving:**
   - The profile page route `/roster/[id]` must handle both UUIDs and vanity names.
-  - Resolving logic: The application first queries `Profiles` where `vanity_name = id`. If no match is found, it queries `Profiles` where `id = id` (checking if `id` is a valid UUID). If both queries fail, the application renders a 404 page.
-  - The iCal feed API route `/api/calendar.ics` must support `?id=[uuid]` or `?id=[vanity_name]` query parameters, resolving the user profile identically to the profile page.
+  - Resolving logic: The application first queries `Profiles` where `vanity_name = id`. If no match is found, it checks if `id` is a valid UUID format. If it is a valid UUID, it queries `Profiles` where `id = id`. If either the UUID check fails or the query returns no results, the application renders a 404 page.
+  - The iCal feed API route `/api/calendar.ics` must support `?id=[uuid]` or `?id=[vanity_name]` query parameters (as well as legacy `?user_id=[uuid]`), resolving the user profile identically to the profile page.
 - **Navigation Consistency:**
   - If a profile has a `vanity_name` configured, the application *must* always use `/roster/[vanity_name]` for all navigation links (such as on the public roster list, dashboard links, and redirects) and *never* link using the profile's UUID.
 - **Warning System for Changes:**

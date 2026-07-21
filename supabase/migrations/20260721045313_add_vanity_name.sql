@@ -18,7 +18,7 @@ ALTER TABLE public.Profiles
 CREATE OR REPLACE FUNCTION public.check_vanity_name()
 RETURNS trigger AS $$
 DECLARE
-  user_role_val public.user_role;
+  user_role_val text;
 BEGIN
   -- If vanity_name is being changed/set/cleared
   IF (TG_OP = 'INSERT' AND NEW.vanity_name IS NOT NULL) OR 
@@ -27,7 +27,7 @@ BEGIN
     -- Check user role
     SELECT role INTO user_role_val FROM public.User_Roles WHERE user_id = NEW.id;
     
-    IF user_role_val IS NULL OR user_role_val = 'PENDING'::public.user_role THEN
+    IF user_role_val IS NULL OR user_role_val = 'PENDING' THEN
       RAISE EXCEPTION 'Only APPROVED or ADMIN users can set, update, or clear a vanity name';
     END IF;
   END IF;

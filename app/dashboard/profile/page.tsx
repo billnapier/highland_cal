@@ -12,21 +12,24 @@ export default async function ProfilePage() {
     redirect('/')
   }
 
-  // Fetch the user's profile
+  // Fetch the user's profile and role in a single joined query to reduce latency
   const { data: profileData } = await supabase
     .from('profiles')
-    .select('class, avatar_url, outward_links, vanity_name')
+    .select('class, avatar_url, outward_links, vanity_name, user_roles(role)')
     .eq('id', user.id)
     .single()
 
-  // Fetch the user's role
-  const { data: roleData } = await supabase
-    .from('user_roles')
-    .select('role')
-    .eq('user_id', user.id)
-    .single()
+  const profileDataCast = profileData as {
+    class: string | null;
+    avatar_url: string | null;
+    outward_links: unknown;
+    vanity_name: string | null;
+    user_roles: { role: string } | { role: string }[] | null;
+  } | null;
 
-  const canHaveVanity = roleData?.role === 'APPROVED' || roleData?.role === 'ADMIN'
+  const roleRecord = profileDataCast?.user_roles;
+  const role = (Array.isArray(roleRecord) ? roleRecord[0]?.role : roleRecord?.role) || 'UNKNOWN';
+  const canHaveVanity = role === 'APPROVED' || role === 'ADMIN';
 
   return (
     <main className="flex flex-1 flex-col p-8 bg-gradient-to-br from-slate-50 via-blue-50/50 to-indigo-50/80 dark:from-slate-950 dark:via-blue-950/20 dark:to-indigo-950/30 min-h-[calc(100vh-4rem)]">
