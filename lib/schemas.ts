@@ -3,10 +3,16 @@ import * as z from 'zod'
 const preprocessUrl = (val: unknown) => {
   if (typeof val !== 'string' || val.trim() === '') return val
   const trimmed = val.trim()
-  if (!/^https?:\/\//i.test(trimmed)) {
-    return `https://${trimmed}`
+
+  // If it already has a protocol, ensure it's http/https
+  if (/^[a-zA-Z][a-zA-Z\d+\-.]*:/.test(trimmed)) {
+    if (!/^https?:\/\//i.test(trimmed)) {
+      return '' // Return empty string to intentionally fail Zod's URL validation
+    }
+    return trimmed
   }
-  return trimmed
+
+  return `https://${trimmed}`
 }
 
 export const eventSchema = z.object({
