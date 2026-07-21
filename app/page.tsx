@@ -349,7 +349,7 @@ export default async function Home() {
           </div>
 
           {profilesError && (
-            <div className="text-red-500">Failed to load roster.</div>
+            <div className="text-red-500">Failed to load roster: {JSON.stringify(profilesError)}</div>
           )}
 
           {!profilesError && profiles && profiles.length === 0 && (
