@@ -5,17 +5,41 @@ import { NextResponse } from 'next/server';
 export async function GET(request: Request) {
   const url = new URL(request.url);
   const userId = url.searchParams.get('user_id');
+  const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+  const validUserId = userId && uuidRegex.test(userId) ? userId : null;
 
   const supabase = await createClient();
+
+  // Fetch club name and athlete name in parallel
+  const [clubSettingResult, profileResult] = await Promise.all([
+    supabase
+      .from('settings')
+      .select('value')
+      .eq('key', 'club_name')
+      .single(),
+    validUserId
+      ? supabase
+          .from('profiles')
+          .select('display_name')
+          .eq('id', validUserId)
+          .single()
+      : Promise.resolve({ data: null })
+  ]);
+
+  const clubName = clubSettingResult.data?.value || 'Highland Cal';
+  const athleteName = profileResult.data?.display_name || '';
+  const rawFeedTitle = athleteName ? `${clubName}: ${athleteName}` : clubName;
+  const feedTitle = rawFeedTitle.replace(/[\r\n]/g, ' ');
+
   let query = supabase
     .from('games')
-    .select(userId ? 'id, name, location, registration_url, start_date, is_two_day, attendance!inner(user_id, interest_level)' : 'id, name, location, registration_url, start_date, is_two_day')
+    .select(validUserId ? 'id, name, location, registration_url, start_date, is_two_day, attendance!inner(user_id, interest_level)' : 'id, name, location, registration_url, start_date, is_two_day')
     .gte('start_date', new Date(new Date().getTime() - 86400000).toISOString().split('T')[0])
     .order('start_date', { ascending: true });
 
-  if (userId) {
+  if (validUserId) {
     query = query
-      .eq('attendance.user_id', userId)
+      .eq('attendance.user_id', validUserId)
       .in('attendance.interest_level', ['REGISTERED', 'INTERESTED']);
   }
 
@@ -53,6 +77,8 @@ export async function GET(request: Request) {
     const emptyIcs = [
       'BEGIN:VCALENDAR',
       'VERSION:2.0',
+      `X-WR-CALNAME:${feedTitle}`,
+      `NAME:${feedTitle}`,
       'PRODID:-//Highland Cal//EN',
       'CALSCALE:GREGORIAN',
       'END:VCALENDAR'
@@ -74,7 +100,16 @@ export async function GET(request: Request) {
     return new NextResponse('Internal Server Error', { status: 500 });
   }
 
-  return new NextResponse(value, {
+  // Insert X-WR-CALNAME and NAME properties after VERSION:2.0
+  let valueWithMetadata = value;
+  if (value.includes('VERSION:2.0')) {
+    valueWithMetadata = value.replace(
+      'VERSION:2.0',
+      `VERSION:2.0\r\nX-WR-CALNAME:${feedTitle}\r\nNAME:${feedTitle}`
+    );
+  }
+
+  return new NextResponse(valueWithMetadata, {
     status: 200,
     headers: {
       'Content-Type': 'text/calendar; charset=utf-8',
