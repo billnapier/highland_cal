@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
+import { Loader2 } from 'lucide-react'
 import { ApplicationFormData, applicationSchema } from '@/lib/schemas'
 import { submitApplication } from '@/app/actions/application'
 import { Button } from '@/components/ui/button'
@@ -84,6 +85,7 @@ export default function ApplicationForm() {
         </div>
 
         <Button type="submit" disabled={isSubmitting} className="w-full">
+          {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
           {isSubmitting ? 'Submitting...' : 'Submit Application'}
         </Button>
       </form>

@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useTransition } from 'react'
-import { Plus, Edit } from 'lucide-react'
+import { Plus, Edit, Loader2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
@@ -146,6 +146,7 @@ export function CreateEventModal() {
           {error && <div className="text-sm text-red-500">{error}</div>}
           <DialogFooter>
             <Button type="submit" disabled={isPending}>
+              {isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               {isPending ? 'Creating...' : 'Create Event'}
             </Button>
           </DialogFooter>
@@ -330,6 +331,7 @@ export function EditEventModal({ game }: EditEventModalProps) {
           {error && <div className="text-sm text-red-500">{error}</div>}
           <DialogFooter>
             <Button type="submit" disabled={isPending}>
+              {isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               {isPending ? 'Updating...' : 'Save Changes'}
             </Button>
           </DialogFooter>
