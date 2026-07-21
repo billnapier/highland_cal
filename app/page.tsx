@@ -23,11 +23,7 @@ export default async function Home() {
     📊 Impact: Reduces time spent waiting for the database by up to ~66% (from T1+T2+T3 to Max(T1, T2, T3)).
     🔬 Measurement: Verify faster page load times for the Home page.
   */
-  const [
-    { data: settingsData, error: settingsError },
-    { data: games, error },
-    { data: profiles, error: profilesError }
-  ] = await Promise.all([
+  const [settingsRes, gamesRes, profilesRes] = await Promise.all([
     supabase
       .from('settings')
       .select('key, value'),
@@ -52,9 +48,9 @@ export default async function Home() {
       .order('display_name', { ascending: true })
   ]);
 
-  if (settingsError) {
-    console.error('Error fetching settings:', settingsError);
-  }
+  const { data: settingsData } = settingsRes;
+  const { data: games, error } = gamesRes;
+  const { data: profiles, error: profilesError } = profilesRes;
 
   const settingsMap = settingsData?.reduce((acc: Record<string, string>, setting: { key: string, value: string }) => {
     acc[setting.key] = setting.value
