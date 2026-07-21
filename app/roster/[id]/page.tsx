@@ -2,7 +2,7 @@ import { createClient } from '@/lib/supabase/server'
 import { ExternalLink, Calendar, MapPin } from 'lucide-react'
 import { buttonVariants } from '@/components/ui/button'
 import Link from 'next/link'
-import { notFound } from 'next/navigation'
+import { notFound, redirect } from 'next/navigation'
 import { CustomLink } from '@/lib/schemas'
 import Image from 'next/image'
 
@@ -11,14 +11,38 @@ export default async function AthleteProfilePage({ params }: { params: Promise<{
   const { id } = resolvedParams
   const supabase = await createClient()
 
-  // Fetch the profile
-  const { data: profile, error: profileError } = await supabase
-    .from('profiles')
-    .select('id, display_name, class, avatar_url, outward_links, user_roles!inner(role)')
-    .eq('id', id)
-    .single()
+  let profile = null
 
-  if (profileError || !profile) {
+  // 1. Try to find the profile by vanity_name first
+  const { data: profileByVanity } = await supabase
+    .from('profiles')
+    .select('id, display_name, class, avatar_url, outward_links, vanity_name, user_roles!inner(role)')
+    .eq('vanity_name', id)
+    .maybeSingle()
+
+  if (profileByVanity) {
+    profile = profileByVanity
+  } else {
+    // 2. If no match, check if it's a valid UUID, then query by ID
+    const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id)
+    if (isUuid) {
+      const { data: profileByUuid } = await supabase
+        .from('profiles')
+        .select('id, display_name, class, avatar_url, outward_links, vanity_name, user_roles!inner(role)')
+        .eq('id', id)
+        .maybeSingle()
+      
+      if (profileByUuid) {
+        profile = profileByUuid
+        // 3. Redirect if they have a vanity_name configured
+        if (profileByUuid.vanity_name) {
+          redirect(`/roster/${profileByUuid.vanity_name}`)
+        }
+      }
+    }
+  }
+
+  if (!profile) {
     notFound()
   }
 
@@ -37,7 +61,7 @@ export default async function AthleteProfilePage({ params }: { params: Promise<{
         registration_url
       )
     `)
-    .eq('user_id', id)
+    .eq('user_id', profile.id)
     .in('interest_level', ['REGISTERED', 'INTERESTED'])
 
   const links = profile.outward_links || {}
@@ -88,7 +112,7 @@ export default async function AthleteProfilePage({ params }: { params: Promise<{
             <div className="mt-6 bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl text-card-foreground rounded-2xl border border-slate-200/60 dark:border-slate-800/60 shadow-md p-6">
               <h3 className="text-sm font-medium text-muted-foreground uppercase tracking-wider mb-4 border-b border-slate-200 dark:border-slate-800 pb-2">Athlete Links</h3>
               <div className="flex flex-col gap-3">
-                <a href={`/api/calendar.ics?user_id=${id}`} className={buttonVariants({ variant: "outline", className: "w-full justify-start" })}>
+                <a href={`/api/calendar.ics?id=${profile.vanity_name || profile.id}`} className={buttonVariants({ variant: "outline", className: "w-full justify-start" })}>
                   <Calendar className="mr-2 h-4 w-4" /> Subscribe to Schedule
                 </a>
                   {links.instagram && (

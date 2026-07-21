@@ -4,18 +4,67 @@ import { NextResponse } from 'next/server';
 
 export async function GET(request: Request) {
   const url = new URL(request.url);
-  const userId = url.searchParams.get('user_id');
+  const idParam = url.searchParams.get('id') || url.searchParams.get('user_id');
 
   const supabase = await createClient();
+  let resolvedUserId: string | null = null;
+
+  if (idParam) {
+    // 1. Try to find the profile by vanity_name first
+    const { data: profileByVanity } = await supabase
+      .from('profiles')
+      .select('id')
+      .eq('vanity_name', idParam)
+      .maybeSingle();
+
+    if (profileByVanity) {
+      resolvedUserId = profileByVanity.id;
+    } else {
+      // 2. If no match, check if it's a valid UUID, then query by ID
+      const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(idParam);
+      if (isUuid) {
+        const { data: profileByUuid } = await supabase
+          .from('profiles')
+          .select('id')
+          .eq('id', idParam)
+          .maybeSingle();
+        
+        if (profileByUuid) {
+          resolvedUserId = profileByUuid.id;
+        }
+      }
+    }
+
+    // If an ID was requested but could not be resolved to a user,
+    // return an empty calendar feed rather than falling back to all games.
+    if (!resolvedUserId) {
+      const emptyIcs = [
+        'BEGIN:VCALENDAR',
+        'VERSION:2.0',
+        'PRODID:-//Highland Cal//EN',
+        'CALSCALE:GREGORIAN',
+        'END:VCALENDAR'
+      ].join('\r\n');
+      return new NextResponse(emptyIcs, {
+        status: 200,
+        headers: {
+          'Content-Type': 'text/calendar; charset=utf-8',
+          'Content-Disposition': 'attachment; filename="highland-cal.ics"',
+          'Cache-Control': 'public, max-age=3600, s-maxage=3600, stale-while-revalidate=86400',
+        },
+      });
+    }
+  }
+
   let query = supabase
     .from('games')
-    .select(userId ? 'id, name, location, registration_url, start_date, is_two_day, attendance!inner(user_id, interest_level)' : 'id, name, location, registration_url, start_date, is_two_day')
+    .select(resolvedUserId ? 'id, name, location, registration_url, start_date, is_two_day, attendance!inner(user_id, interest_level)' : 'id, name, location, registration_url, start_date, is_two_day')
     .gte('start_date', new Date(new Date().getTime() - 86400000).toISOString().split('T')[0])
     .order('start_date', { ascending: true });
 
-  if (userId) {
+  if (resolvedUserId) {
     query = query
-      .eq('attendance.user_id', userId)
+      .eq('attendance.user_id', resolvedUserId)
       .in('attendance.interest_level', ['REGISTERED', 'INTERESTED']);
   }
 

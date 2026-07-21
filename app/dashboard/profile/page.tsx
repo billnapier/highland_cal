@@ -15,9 +15,18 @@ export default async function ProfilePage() {
   // Fetch the user's profile
   const { data: profileData } = await supabase
     .from('profiles')
-    .select('class, avatar_url, outward_links')
+    .select('class, avatar_url, outward_links, vanity_name')
     .eq('id', user.id)
     .single()
+
+  // Fetch the user's role
+  const { data: roleData } = await supabase
+    .from('user_roles')
+    .select('role')
+    .eq('user_id', user.id)
+    .single()
+
+  const canHaveVanity = roleData?.role === 'APPROVED' || roleData?.role === 'ADMIN'
 
   return (
     <main className="flex flex-1 flex-col p-8 bg-gradient-to-br from-slate-50 via-blue-50/50 to-indigo-50/80 dark:from-slate-950 dark:via-blue-950/20 dark:to-indigo-950/30 min-h-[calc(100vh-4rem)]">
@@ -30,7 +39,7 @@ export default async function ProfilePage() {
         </div>
 
         <div className="rounded-2xl border border-slate-200/60 dark:border-slate-800/60 bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl text-card-foreground shadow-xl p-6">
-          <ProfileForm initialData={profileData || {}} />
+          <ProfileForm initialData={profileData || {}} canHaveVanity={canHaveVanity} />
         </div>
       </div>
     </main>
