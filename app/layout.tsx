@@ -27,12 +27,20 @@ export default async function RootLayout({
 }>) {
   const supabase = await createClient();
 
-  const { data: { user } } = await supabase.auth.getUser();
+  /*
+    ⚡ Bolt: Batch independent Supabase queries
+    💡 What: Use Promise.all to fetch the user and settings concurrently instead of sequentially.
+    🎯 Why: These two queries do not depend on each other. Running them sequentially causes a waterfall effect, delaying TTFB.
+    📊 Impact: Reduces time spent waiting for the database by up to ~50% (from T1+T2 to Max(T1, T2)).
+    🔬 Measurement: Verify faster page load times across the application since this is in the root layout.
+  */
+  const [userRes, settingsRes] = await Promise.all([
+    supabase.auth.getUser(),
+    supabase.from('settings').select('key, value')
+  ]);
 
-  // Fetch settings
-  const { data: settingsData } = await supabase
-    .from('settings')
-    .select('key, value')
+  const { data: { user } } = userRes;
+  const { data: settingsData } = settingsRes;
 
   const settingsMap = settingsData?.reduce((acc: Record<string, string>, setting: { key: string, value: string }) => {
     acc[setting.key] = setting.value
