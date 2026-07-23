@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useTransition } from 'react'
-import { Trash2 } from 'lucide-react'
+import { Trash2, Loader2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { deleteEvent } from '@/app/actions/events'
 
@@ -41,7 +41,11 @@ export default function DeleteEventButton({ eventId }: DeleteEventButtonProps) {
         onClick={handleDelete}
         disabled={isPending}
       >
-        <Trash2 className="mr-2 h-4 w-4" />
+        {isPending ? (
+          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+        ) : (
+          <Trash2 className="mr-2 h-4 w-4" />
+        )}
         {isPending ? 'Deleting...' : 'Delete Event'}
       </Button>
       {error && <p className="text-sm text-red-500 mt-1">{error}</p>}
