@@ -29,6 +29,13 @@ export default async function DashboardPage() {
     redirect('/')
   }
 
+  /*
+    ⚡ Bolt: Batch independent Supabase queries and optimize nested data fetching
+    💡 What: Modified the games query to use a join (`.select('*, attendance(*, profiles(display_name))')`) and removed the subsequent sequential attendance query.
+    🎯 Why: The original code performed a waterfall query: it fetched games, waited for the result, and then fetched attendance records. By using a joined query, we eliminate this waterfall and fetch everything concurrently.
+    📊 Impact: Reduces time spent waiting for the database by eliminating an entire round-trip (N+1 query pattern).
+    🔬 Measurement: Verify faster page load times for the Dashboard page.
+  */
   // Fetch the user's profile, role, and upcoming events concurrently to reduce latency
   const [
     { data: profileData },
@@ -41,7 +48,7 @@ export default async function DashboardPage() {
       .single(),
     supabase
       .from('games')
-      .select('*')
+      .select('*, attendance(*, profiles(display_name))')
       .order('start_date', { ascending: true })
       .gte('start_date', new Date(new Date().getTime() - 86400000).toISOString().split('T')[0])
   ])
@@ -50,22 +57,6 @@ export default async function DashboardPage() {
   const role = (Array.isArray(roleRecord) ? roleRecord[0]?.role : roleRecord?.role) || 'UNKNOWN'
   
   const hasSubmittedApplication = !!profileData?.throwing_experience || typeof profileData?.attended_practice === 'boolean'
-
-  const gameIds = games?.map(g => g.id) || []
-  
-  // Fetch attendance records for these events
-  let attendanceData = null
-  if (gameIds.length > 0) {
-    const { data, error: attendanceError } = await supabase
-      .from('attendance')
-      .select('*, profiles(display_name)')
-      .in('game_id', gameIds)
-    
-    if (attendanceError) {
-      console.error('Error fetching attendance:', attendanceError)
-    }
-    attendanceData = data
-  }
 
   return (
     <main className="flex flex-1 flex-col p-4 md:p-8 bg-gradient-to-br from-slate-50 via-blue-50/50 to-indigo-50/80 dark:from-slate-950 dark:via-blue-950/20 dark:to-indigo-950/30 min-h-[calc(100vh-4rem)]">
@@ -106,7 +97,7 @@ export default async function DashboardPage() {
                     const endDate = new Date(startDate);
                     if (isTwoDay) endDate.setDate(endDate.getDate() + 1);
                     
-                    const gameAttendance = attendanceData?.filter(a => a.game_id === game.id) || [];
+                    const gameAttendance = game.attendance || [];
                     
                     return (
                       <div key={game.id} className={CARD_CLASSES}>
