@@ -3,7 +3,7 @@
 import { useState, useTransition } from 'react';
 import { useForm, useFieldArray } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { Plus, Trash2, Save } from 'lucide-react';
+import { Plus, Trash2, Save, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -244,7 +244,11 @@ export default function ProfileForm({ initialData, canHaveVanity }: ProfileFormP
 
       <div className="pt-4 border-t flex justify-end">
         <Button type="submit" disabled={isPending}>
-          <Save className="mr-2 h-4 w-4" />
+          {isPending ? (
+            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+          ) : (
+            <Save className="mr-2 h-4 w-4" />
+          )}
           {isPending ? 'Saving...' : 'Save Profile'}
         </Button>
       </div>
