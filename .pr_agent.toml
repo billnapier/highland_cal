@@ -7,6 +7,7 @@ git_provider = "github"
 auto_review = true
 auto_describe = true
 auto_improve = true
+pr_actions = ["opened", "reopened", "ready_for_review", "synchronize"]
 
 [pr_reviewer]
 num_code_suggestions = 4
