@@ -14,11 +14,11 @@ jobs:
       pull-requests: write
       contents: read
     name: Run PR Agent
-    if: ${{ github.event.sender.type != 'Bot' }}
+    if: ${{ github.event.sender.type != 'Bot' && (github.event_name == 'pull_request' || github.event.issue.pull_request) }}
     steps:
       - uses: actions/checkout@v4
       - name: PR Agent action step
-        uses: the-pr-agent/pr-agent@main
+        uses: the-pr-agent/pr-agent@v0.22
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
