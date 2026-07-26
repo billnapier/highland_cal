@@ -16,8 +16,12 @@ jobs:
     name: Run PR Agent
     if: ${{ github.event.sender.type != 'Bot' }}
     steps:
+      - uses: actions/checkout@v4
       - name: PR Agent action step
         uses: the-pr-agent/pr-agent@main
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          GOOGLE_AI_STUDIO.GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          CONFIG.MODEL: "gemini/gemini-2.5-flash"
+          CONFIG.FALLBACK_MODELS: '["gemini/gemini-2.5-flash"]'

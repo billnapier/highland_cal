@@ -1,6 +1,6 @@
 [config]
-model = "google/gemini-2.5-flash"
-fallback_models = ["google/gemini-2.5-pro"]
+model = "gemini/gemini-2.5-flash"
+fallback_models = ["gemini/gemini-2.5-flash"]
 git_provider = "github"
 
 [pr_reviewer]
