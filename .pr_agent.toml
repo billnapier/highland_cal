@@ -1,0 +1,22 @@
+[config]
+model = "gemini/gemini-3.5-flash"
+fallback_models = ["gemini/gemini-3.5-flash-lite"]
+git_provider = "github"
+
+[github_action_config]
+auto_review = true
+auto_describe = true
+auto_improve = true
+pr_actions = ["opened", "reopened", "ready_for_review", "synchronize"]
+
+[pr_reviewer]
+num_code_suggestions = 4
+inline_code_comments = true
+ask_and_reflect = true
+
+[pr_description]
+publish_labels = true
+add_original_user_description = true
+
+[pr_code_suggestions]
+num_code_suggestions = 4
