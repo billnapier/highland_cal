@@ -11,14 +11,41 @@ export default async function AthleteProfilePage({ params }: { params: Promise<{
   const { id } = resolvedParams
   const supabase = await createClient()
 
+  /*
+    ⚡ Bolt: Combine sequential Supabase queries into a single joined query
+    💡 What: Modified the profile fetch to include `attendance` data in the same `.select()` call.
+    🎯 Why: Previously, the code fetched the profile, waited, and then fetched the attendance records. Joining these into a single query eliminates the N+1 waterfall effect on the server.
+    📊 Impact: Reduces time spent waiting for the database by eliminating an entire round-trip, significantly improving TTFB.
+    🔬 Measurement: Verify faster page load times for the Athlete Profile page.
+  */
   let profile = null
+  let attendanceError = null
+
+  const profileSelectQuery = `
+    id, display_name, class, avatar_url, outward_links, vanity_name, user_roles!inner(role),
+    attendance (
+      interest_level,
+      attend_day,
+      games (
+        id,
+        name,
+        start_date,
+        is_two_day,
+        location,
+        registration_url
+      )
+    )
+  `
 
   // 1. Try to find the profile by vanity_name first
-  const { data: profileByVanity } = await supabase
+  const { data: profileByVanity, error: vanityError } = await supabase
     .from('profiles')
-    .select('id, display_name, class, avatar_url, outward_links, vanity_name, user_roles!inner(role)')
+    .select(profileSelectQuery)
     .eq('vanity_name', id)
+    .in('attendance.interest_level', ['REGISTERED', 'INTERESTED'])
     .maybeSingle()
+
+  if (vanityError) attendanceError = vanityError
 
   if (profileByVanity) {
     profile = profileByVanity
@@ -26,12 +53,15 @@ export default async function AthleteProfilePage({ params }: { params: Promise<{
     // 2. If no match, check if it's a valid UUID, then query by ID
     const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id)
     if (isUuid) {
-      const { data: profileByUuid } = await supabase
+      const { data: profileByUuid, error: uuidError } = await supabase
         .from('profiles')
-        .select('id, display_name, class, avatar_url, outward_links, vanity_name, user_roles!inner(role)')
+        .select(profileSelectQuery)
         .eq('id', id)
+        .in('attendance.interest_level', ['REGISTERED', 'INTERESTED'])
         .maybeSingle()
       
+      if (uuidError) attendanceError = uuidError
+
       if (profileByUuid) {
         profile = profileByUuid
         // 3. Redirect if they have a vanity_name configured
@@ -46,28 +76,12 @@ export default async function AthleteProfilePage({ params }: { params: Promise<{
     notFound()
   }
 
-  // Fetch attendance records to get the events this athlete is signed up for
-  const { data: attendanceRecords, error: attendanceError } = await supabase
-    .from('attendance')
-    .select(`
-      interest_level,
-      attend_day,
-      games (
-        id,
-        name,
-        start_date,
-        is_two_day,
-        location,
-        registration_url
-      )
-    `)
-    .eq('user_id', profile.id)
-    .in('interest_level', ['REGISTERED', 'INTERESTED'])
-
+  const attendanceRecords = profile.attendance || []
   const links = profile.outward_links || {}
 
   // Filter out any attendance records where the game might have been deleted but attendance remains
-  const validAttendances = attendanceRecords?.filter(a => a.games) || []
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const validAttendances = attendanceRecords.filter((a: any) => a.games) || []
   
   // Sort games by start date
   validAttendances.sort((a, b) => {
