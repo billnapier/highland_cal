@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { approveUser, promoteToAdmin, deleteUser } from '@/app/actions/admin'
+import { Loader2, Check, ShieldAlert, Trash2 } from 'lucide-react'
 
 export function ApproveButton({ userId }: { userId: string }) {
   const [loading, setLoading] = useState(false)
@@ -23,6 +24,11 @@ export function ApproveButton({ userId }: { userId: string }) {
 
   return (
     <Button variant="outline" size="sm" onClick={handleApprove} disabled={loading} className="border-green-500 text-green-600 hover:bg-green-50">
+      {loading ? (
+        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+      ) : (
+        <Check className="mr-2 h-4 w-4" />
+      )}
       {loading ? 'Approving...' : 'Approve'}
     </Button>
   )
@@ -49,6 +55,11 @@ export function PromoteButton({ userId }: { userId: string }) {
 
   return (
     <Button variant="outline" size="sm" onClick={handlePromote} disabled={loading} className="border-purple-500 text-purple-600 hover:bg-purple-50">
+      {loading ? (
+        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+      ) : (
+        <ShieldAlert className="mr-2 h-4 w-4" />
+      )}
       {loading ? 'Promoting...' : 'Promote to Admin'}
     </Button>
   )
@@ -75,6 +86,11 @@ export function DeleteUserButton({ userId }: { userId: string }) {
 
   return (
     <Button variant="destructive" size="sm" onClick={handleDelete} disabled={loading}>
+      {loading ? (
+        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+      ) : (
+        <Trash2 className="mr-2 h-4 w-4" />
+      )}
       {loading ? 'Deleting...' : 'Delete'}
     </Button>
   )
