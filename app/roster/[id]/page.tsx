@@ -42,7 +42,6 @@ export default async function AthleteProfilePage({ params }: { params: Promise<{
     .from('profiles')
     .select(profileSelectQuery)
     .eq('vanity_name', id)
-    .in('attendance.interest_level', ['REGISTERED', 'INTERESTED'])
     .maybeSingle()
 
   if (vanityError) attendanceError = vanityError
@@ -57,7 +56,6 @@ export default async function AthleteProfilePage({ params }: { params: Promise<{
         .from('profiles')
         .select(profileSelectQuery)
         .eq('id', id)
-        .in('attendance.interest_level', ['REGISTERED', 'INTERESTED'])
         .maybeSingle()
       
       if (uuidError) attendanceError = uuidError
@@ -79,9 +77,10 @@ export default async function AthleteProfilePage({ params }: { params: Promise<{
   const attendanceRecords = profile.attendance || []
   const links = profile.outward_links || {}
 
-  // Filter out any attendance records where the game might have been deleted but attendance remains
+  // Filter out any attendance records where the game might have been deleted but attendance remains,
+  // and ensure we only show REGISTERED or INTERESTED levels.
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const validAttendances = attendanceRecords.filter((a: any) => a.games) || []
+  const validAttendances = attendanceRecords.filter((a: any) => a.games && ['REGISTERED', 'INTERESTED'].includes(a.interest_level)) || []
   
   // Sort games by start date
   validAttendances.sort((a, b) => {
