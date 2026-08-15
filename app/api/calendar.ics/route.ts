@@ -10,42 +10,37 @@ export async function GET(request: Request) {
   let resolvedUserId: string | null = null;
   let athleteName = '';
 
-  const [clubSettingResult, profileByVanityResult] = await Promise.all([
+  const isUuid = idParam ? /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(idParam) : false;
+
+  let profileQuery = supabase
+    .from('profiles')
+    .select('id, display_name');
+
+  if (idParam) {
+    if (isUuid) {
+      profileQuery = profileQuery.or(`vanity_name.eq.${idParam},id.eq.${idParam}`);
+    } else {
+      profileQuery = profileQuery.eq('vanity_name', idParam);
+    }
+  }
+
+  const [clubSettingResult, profileResult] = await Promise.all([
     supabase
       .from('settings')
       .select('value')
       .eq('key', 'club_name')
       .maybeSingle(),
     idParam
-      ? supabase
-          .from('profiles')
-          .select('id, display_name')
-          .eq('vanity_name', idParam)
-          .maybeSingle()
+      ? profileQuery.maybeSingle()
       : Promise.resolve({ data: null })
   ]);
 
   const clubName = clubSettingResult.data?.value || 'Highland Cal';
-  const profileByVanity = profileByVanityResult.data;
+  const profile = profileResult.data;
 
-  if (profileByVanity) {
-    resolvedUserId = profileByVanity.id;
-    athleteName = profileByVanity.display_name || '';
-  } else if (idParam) {
-    // 2. If no match, check if it's a valid UUID, then query by ID
-    const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(idParam);
-    if (isUuid) {
-      const { data: profileByUuid } = await supabase
-        .from('profiles')
-        .select('id, display_name')
-        .eq('id', idParam)
-        .maybeSingle();
-      
-      if (profileByUuid) {
-        resolvedUserId = profileByUuid.id;
-        athleteName = profileByUuid.display_name || '';
-      }
-    }
+  if (profile) {
+    resolvedUserId = profile.id;
+    athleteName = profile.display_name || '';
   }
 
   // If an ID was requested but could not be resolved to a user,
