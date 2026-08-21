@@ -18,34 +18,43 @@ export async function deleteEvent(eventId: string) {
       return { success: false, message: 'Unauthorized' }
     }
 
-    // Defensive check: verify user exists in Profiles
-    const { data: profileData, error: profileError } = await supabase
-      .from('profiles')
-      .select('id')
-      .eq('id', user.id)
-      .single()
+    /*
+      ⚡ Bolt: Consolidate sequential database queries in deleteEvent action
+      💡 What: Combined three sequential queries (profile existence, user role check, and event name fetch) into a single concurrent Promise.all().
+      🎯 Why: The original code caused a query waterfall (wait for profile -> wait for role -> wait for event). Fetching these concurrently drastically reduces execution latency.
+      📊 Impact: Removes 2 database round trips, speeding up the server action response time.
+      🔬 Measurement: Measure mutation duration before and after execution using Network tab timings.
+    */
+    const [
+      { data: profileData, error: profileError },
+      { data: roleData, error: roleError },
+      { data: eventData }
+    ] = await Promise.all([
+      supabase
+        .from('profiles')
+        .select('id')
+        .eq('id', user.id)
+        .single(),
+      supabase
+        .from('user_roles')
+        .select('role')
+        .eq('user_id', user.id)
+        .single(),
+      supabase
+        .from('games')
+        .select('name')
+        .eq('id', eventId)
+        .single()
+    ])
 
     if (profileError || !profileData) {
       return { success: false, message: 'User profile not found' }
     }
 
-    // Verify the user is an ADMIN
-    const { data: roleData, error: roleError } = await supabase
-      .from('user_roles')
-      .select('role')
-      .eq('user_id', user.id)
-      .single()
-
     if (roleError || !roleData || roleData.role !== 'ADMIN') {
       return { success: false, message: 'Forbidden: Only admins can delete events' }
     }
 
-    // Fetch event name before deleting
-    const { data: eventData } = await supabase
-      .from('games')
-      .select('name')
-      .eq('id', eventId)
-      .single()
     const eventName = eventData?.name || 'Unknown Event'
 
     // Delete the event
