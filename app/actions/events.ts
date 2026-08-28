@@ -18,34 +18,31 @@ export async function deleteEvent(eventId: string) {
       return { success: false, message: 'Unauthorized' }
     }
 
-    // Defensive check: verify user exists in Profiles
-    const { data: profileData, error: profileError } = await supabase
-      .from('profiles')
-      .select('id')
-      .eq('id', user.id)
-      .single()
+    /*
+      ⚡ Bolt: Batch independent Supabase queries
+      💡 What: Use Promise.all to fetch the user profile, user role, and event name concurrently instead of sequentially.
+      🎯 Why: These three queries do not depend on each other's results. Running them sequentially causes a waterfall effect.
+      📊 Impact: Reduces time spent waiting for the database when deleting an event (from T1+T2+T3 to Max(T1, T2, T3)).
+      🔬 Measurement: Verify faster execution time of the deleteEvent action.
+    */
+    const [
+      { data: profileData, error: profileError },
+      { data: roleData, error: roleError },
+      { data: eventData }
+    ] = await Promise.all([
+      supabase.from('profiles').select('id').eq('id', user.id).single(),
+      supabase.from('user_roles').select('role').eq('user_id', user.id).single(),
+      supabase.from('games').select('name').eq('id', eventId).single()
+    ])
 
     if (profileError || !profileData) {
       return { success: false, message: 'User profile not found' }
     }
 
-    // Verify the user is an ADMIN
-    const { data: roleData, error: roleError } = await supabase
-      .from('user_roles')
-      .select('role')
-      .eq('user_id', user.id)
-      .single()
-
     if (roleError || !roleData || roleData.role !== 'ADMIN') {
       return { success: false, message: 'Forbidden: Only admins can delete events' }
     }
 
-    // Fetch event name before deleting
-    const { data: eventData } = await supabase
-      .from('games')
-      .select('name')
-      .eq('id', eventId)
-      .single()
     const eventName = eventData?.name || 'Unknown Event'
 
     // Delete the event
