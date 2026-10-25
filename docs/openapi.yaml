@@ -29,6 +29,12 @@ info:
 
     ## Errors
     All non-2xx responses use the `Error` schema with a stable machine-readable `code`.
+
+    ## Rate limiting
+    Every response carries `RateLimit-Limit`, `RateLimit-Remaining`, and `RateLimit-Reset` headers
+    reporting the current bucket state. Unauthenticated reads are limited per IP (120/min);
+    authenticated requests are limited per token (300 reads/min, 60 writes/min). Exceeding a limit
+    returns `429` with a `Retry-After` header.
   license:
     name: See LICENSE
     url: https://github.com/billnapier/highland_cal/blob/main/LICENSE
@@ -73,6 +79,13 @@ paths:
       responses:
         '200':
           description: The caller's identity.
+          headers:
+            RateLimit-Limit:
+              $ref: '#/components/headers/RateLimitLimit'
+            RateLimit-Remaining:
+              $ref: '#/components/headers/RateLimitRemaining'
+            RateLimit-Reset:
+              $ref: '#/components/headers/RateLimitReset'
           content:
             application/json:
               schema:
@@ -671,9 +684,30 @@ components:
         for agents, which may retry on timeouts.
       schema: { type: string, maxLength: 255 }
 
+  headers:
+    RateLimitLimit:
+      description: Maximum requests per window.
+      schema: { type: integer }
+    RateLimitRemaining:
+      description: Requests left in the current window.
+      schema: { type: integer }
+    RateLimitReset:
+      description: Unix timestamp (seconds) when the window resets.
+      schema: { type: integer }
+    RetryAfterHeader:
+      description: Seconds until the window resets (only on 429).
+      schema: { type: integer }
+
   responses:
     Unauthorized:
       description: Missing, malformed, expired, or revoked token.
+      headers:
+        RateLimit-Limit:
+          $ref: '#/components/headers/RateLimitLimit'
+        RateLimit-Remaining:
+          $ref: '#/components/headers/RateLimitRemaining'
+        RateLimit-Reset:
+          $ref: '#/components/headers/RateLimitReset'
       content:
         application/json:
           schema: { $ref: '#/components/schemas/Error' }
@@ -681,6 +715,13 @@ components:
             error: { code: unauthorized, message: 'Invalid or revoked token' }
     Forbidden:
       description: Authenticated, but the role or token scopes do not allow this.
+      headers:
+        RateLimit-Limit:
+          $ref: '#/components/headers/RateLimitLimit'
+        RateLimit-Remaining:
+          $ref: '#/components/headers/RateLimitRemaining'
+        RateLimit-Reset:
+          $ref: '#/components/headers/RateLimitReset'
       content:
         application/json:
           schema: { $ref: '#/components/schemas/Error' }
@@ -688,6 +729,13 @@ components:
             error: { code: forbidden, message: 'Only admins can delete events' }
     NotFound:
       description: Resource does not exist.
+      headers:
+        RateLimit-Limit:
+          $ref: '#/components/headers/RateLimitLimit'
+        RateLimit-Remaining:
+          $ref: '#/components/headers/RateLimitRemaining'
+        RateLimit-Reset:
+          $ref: '#/components/headers/RateLimitReset'
       content:
         application/json:
           schema: { $ref: '#/components/schemas/Error' }
@@ -695,11 +743,25 @@ components:
             error: { code: not_found, message: 'Event not found' }
     Conflict:
       description: The request conflicts with current state (e.g. approving an already-approved user).
+      headers:
+        RateLimit-Limit:
+          $ref: '#/components/headers/RateLimitLimit'
+        RateLimit-Remaining:
+          $ref: '#/components/headers/RateLimitRemaining'
+        RateLimit-Reset:
+          $ref: '#/components/headers/RateLimitReset'
       content:
         application/json:
           schema: { $ref: '#/components/schemas/Error' }
     ValidationError:
       description: Request body or parameters failed validation.
+      headers:
+        RateLimit-Limit:
+          $ref: '#/components/headers/RateLimitLimit'
+        RateLimit-Remaining:
+          $ref: '#/components/headers/RateLimitRemaining'
+        RateLimit-Reset:
+          $ref: '#/components/headers/RateLimitReset'
       content:
         application/json:
           schema: { $ref: '#/components/schemas/Error' }
@@ -714,6 +776,13 @@ components:
       description: |
         The `Idempotency-Key` was already used with a different request body.
         Retry with the original body, or use a new key for a new request.
+      headers:
+        RateLimit-Limit:
+          $ref: '#/components/headers/RateLimitLimit'
+        RateLimit-Remaining:
+          $ref: '#/components/headers/RateLimitRemaining'
+        RateLimit-Reset:
+          $ref: '#/components/headers/RateLimitReset'
       content:
         application/json:
           schema: { $ref: '#/components/schemas/Error' }
@@ -723,9 +792,14 @@ components:
       description: |
         Too many requests (per token, or per IP for unauthenticated reads). See `Retry-After`.
       headers:
+        RateLimit-Limit:
+          $ref: '#/components/headers/RateLimitLimit'
+        RateLimit-Remaining:
+          $ref: '#/components/headers/RateLimitRemaining'
+        RateLimit-Reset:
+          $ref: '#/components/headers/RateLimitReset'
         Retry-After:
-          schema: { type: integer }
-          description: Seconds until the window resets.
+          $ref: '#/components/headers/RetryAfterHeader'
       content:
         application/json:
           schema: { $ref: '#/components/schemas/Error' }

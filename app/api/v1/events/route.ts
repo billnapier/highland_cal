@@ -10,10 +10,11 @@ import { CoreError, IdempotencyConflictError } from '@/lib/core/errors'
  * Supports from, to, type, include=attendance, limit, cursor.
  */
 export async function GET(request: NextRequest) {
+  let rateLimit: { limit: number; remaining: number; reset: number } | null = null
   try {
     const auth = await authenticateRequest(request, 'read')
     const { client } = auth
-    const identity = auth.kind === 'pat' ? auth.identity : null
+    rateLimit = auth.kind === 'pat' ? auth.identity.rate_limit : auth.rate_limit
 
     const url = new URL(request.url)
     const from = url.searchParams.get('from')
@@ -51,7 +52,7 @@ export async function GET(request: NextRequest) {
 
     if (error) {
       console.error('Error listing events:', error)
-      return errorResponse(new CoreError('internal', 'Failed to list events'))
+      return errorResponse(new CoreError('internal', 'Failed to list events'), rateLimit)
     }
 
     const items = rows || []
@@ -67,10 +68,10 @@ export async function GET(request: NextRequest) {
     return jsonResponse(
       { data: events, next_cursor: nextCursor },
       200,
-      identity?.rate_limit ?? null,
+      rateLimit,
     )
   } catch (e) {
-    return errorResponse(e)
+    return errorResponse(e, rateLimit)
   }
 }
 
@@ -81,9 +82,11 @@ export async function GET(request: NextRequest) {
  * With an idempotency Key,uses api_create_event() RPC (atomic). * Without,goes through lib/core/events createEvent()
  */
 export async function POST(request: NextRequest) {
+  let rateLimit: { limit: number; remaining: number; reset: number } | null = null
   try {
     const auth = await requireAuth(request,'write')
-    const { client,identity } = auth
+    const { client, identity } = auth
+    rateLimit = identity.rate_limit
 
     const idempotencyKey = request.headers.get('Idempotency-Key')
     const body = await request.json()
@@ -107,21 +110,21 @@ export async function POST(request: NextRequest) {
 
       if (error) {
         if (error.code === 'PT409') {
-          return errorResponse(new IdempotencyConflictError(error.message || 'Idempotency-Key reused with a different request'))
+          return errorResponse(new IdempotencyConflictError(error.message || 'Idempotency-Key reused with a different request'), rateLimit)
         }
         console.error('Error creating event (idempotent):', error)
-        return errorResponse(new CoreError('internal', 'Failed to create event'))
+        return errorResponse(new CoreError('internal', 'Failed to create event'), rateLimit)
       }
 
       // api_create_event() returns { status, replayed, response }; the spec's
       // 201 body is the Event object itself (replayed or not — same shape).
-      return jsonResponse(data.response, data.status, identity.rate_limit)
+      return jsonResponse(data.response, data.status, rateLimit)
     }
 
     // No idempotency key-> regular insert through core
     const event = await core.createEvent(client, identity.user_id, body)
-    return jsonResponse(event, 201, identity.rate_limit)
+    return jsonResponse(event, 201, rateLimit)
   } catch (e) {
-    return errorResponse(e)
+    return errorResponse(e, rateLimit)
   }
 }

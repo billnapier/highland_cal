@@ -12,11 +12,12 @@ interface RouteParams {
  * Public. Returns attendance entries for this event, with user summaries.
  */
 export async function GET(request: NextRequest, { params }: RouteParams) {
+  let rateLimit: { limit: number; remaining: number; reset: number } | null = null
   try {
     const { eventId } = await params
     const auth = await authenticateRequest(request, 'read')
     const { client } = auth
-    const identity = auth.kind === 'pat' ? auth.identity : null
+    rateLimit = auth.kind === 'pat' ? auth.identity.rate_limit : auth.rate_limit
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const db = client as any
@@ -29,10 +30,10 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
       .maybeSingle()
 
     if (eventError) {
-      return errorResponse(new CoreError('internal', 'Failed to fetch event'))
+      return errorResponse(new CoreError('internal', 'Failed to fetch event'), rateLimit)
     }
     if (!event) {
-      return errorResponse(new NotFoundError('Event not found'))
+      return errorResponse(new NotFoundError('Event not found'), rateLimit)
     }
 
     const { data, error } = await db
@@ -46,11 +47,11 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
 
     if (error) {
       console.error('Error fetching attendance:', error)
-      return errorResponse(new CoreError('internal', 'Failed to fetch attendance'))
+      return errorResponse(new CoreError('internal', 'Failed to fetch attendance'), rateLimit)
     }
 
-    return jsonResponse({ data: data || [] }, 200, identity?.rate_limit ?? null)
+    return jsonResponse({ data: data || [] }, 200, rateLimit)
   } catch (e) {
-    return errorResponse(e)
+    return errorResponse(e, rateLimit)
   }
 }

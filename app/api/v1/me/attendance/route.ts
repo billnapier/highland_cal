@@ -8,9 +8,11 @@ import { fromPostgrestError } from '@/lib/core/errors'
  * List the caller's RSVPs across upcoming events, with event details embedded.
  */
 export async function GET(request: NextRequest) {
+  let rateLimit: { limit: number; remaining: number; reset: number } | null = null
   try {
     const auth = await requireAuth(request, 'read')
     const { client, identity } = auth
+    rateLimit = identity.rate_limit
 
     const url = new URL(request.url)
     const from = url.searchParams.get('from')
@@ -38,8 +40,8 @@ export async function GET(request: NextRequest) {
       throw fromPostgrestError(error, 'Failed to fetch attendance')
     }
 
-    return jsonResponse({ data: data || [] }, 200, identity.rate_limit)
+    return jsonResponse({ data: data || [] }, 200, rateLimit)
   } catch (e) {
-    return errorResponse(e)
+    return errorResponse(e, rateLimit)
   }
 }

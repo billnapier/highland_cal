@@ -9,9 +9,11 @@ import { NotFoundError } from '@/lib/core/errors'
  * Agents should call this first to confirm identity.
  */
 export async function GET(request: NextRequest) {
+  let rateLimit: { limit: number; remaining: number; reset: number } | null = null
   try {
     const auth = await requireAuth(request, 'read')
     const { client, identity } = auth
+    rateLimit = identity.rate_limit
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const { data: user, error } = await client
@@ -48,8 +50,8 @@ export async function GET(request: NextRequest) {
       capabilities: identity.scopes,
     }
 
-    return jsonResponse(body, 200, identity.rate_limit)
+    return jsonResponse(body, 200, rateLimit)
   } catch (e) {
-    return errorResponse(e)
+    return errorResponse(e, rateLimit)
   }
 }

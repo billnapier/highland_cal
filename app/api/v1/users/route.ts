@@ -10,9 +10,11 @@ import { CoreError } from '@/lib/core/errors'
  * with email and role.
  */
 export async function GET(request: NextRequest) {
+  let rateLimit: { limit: number; remaining: number; reset: number } | null = null
   try {
     const auth = await authenticateRequest(request, 'read')
     const { client } = auth
+    rateLimit = auth.kind === 'pat' ? auth.identity.rate_limit : auth.rate_limit
     const identity = auth.kind === 'pat' ? auth.identity : null
 
     const url = new URL(request.url)
@@ -44,7 +46,7 @@ export async function GET(request: NextRequest) {
 
       if (error) {
         console.error('Error listing users (admin):', error)
-        return errorResponse(new CoreError('internal', 'Failed to list users'))
+        return errorResponse(new CoreError('internal', 'Failed to list users'), rateLimit)
       }
 
       const items = rows || []
@@ -75,7 +77,7 @@ export async function GET(request: NextRequest) {
         nextCursor = users[users.length - 1].display_name
       }
 
-      return jsonResponse({ data: users, next_cursor: nextCursor }, 200, identity?.rate_limit ?? null)
+      return jsonResponse({ data: users, next_cursor: nextCursor }, 200, rateLimit)
     }
 
     // Public roster: only APPROVED/ADMIN users via join, public fields
@@ -92,7 +94,7 @@ export async function GET(request: NextRequest) {
 
     if (error) {
       console.error('Error listing users (public):', error)
-      return errorResponse(new CoreError('internal', 'Failed to list users'))
+      return errorResponse(new CoreError('internal', 'Failed to list users'), rateLimit)
     }
 
     const items = rows || []
@@ -110,8 +112,8 @@ export async function GET(request: NextRequest) {
       nextCursor = publicUsers[publicUsers.length - 1].display_name as string
     }
 
-    return jsonResponse({ data: publicUsers, next_cursor: nextCursor }, 200)
+    return jsonResponse({ data: publicUsers, next_cursor: nextCursor }, 200, rateLimit)
   } catch (e) {
-    return errorResponse(e)
+    return errorResponse(e, rateLimit)
   }
 }

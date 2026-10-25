@@ -30,12 +30,14 @@ async function resolveUserId(db: any, userId: string): Promise<string> {
  * Promote an approved user to admin. ADMIN only; scope users:admin.
  */
 export async function POST(request: NextRequest, { params }: RouteParams) {
+  let rateLimit: { limit: number; remaining: number; reset: number } | null = null
   try {
     const rawId = (await params).userId
     const auth = await requireAuth(request, 'write')
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const db = auth.client as any
     const userId = await resolveUserId(db, rawId)
+    rateLimit = auth.identity.rate_limit
 
     await coreUsers.promoteToAdmin(auth.client, userId)
 
@@ -47,14 +49,14 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
       .maybeSingle()
 
     if (error || !user) {
-      return errorResponse(new NotFoundError('User not found'))
+      return errorResponse(new NotFoundError('User not found'), rateLimit)
     }
 
     // Flatten the joined role:user_roles!inner(role) shape to a plain string.
     user.role = (user.role as { role?: string } | undefined)?.role ?? null
 
-    return jsonResponse(user, 200, auth.identity.rate_limit)
+    return jsonResponse(user, 200, rateLimit)
   } catch (e) {
-    return errorResponse(e)
+    return errorResponse(e, rateLimit)
   }
 }

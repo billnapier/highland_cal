@@ -1,6 +1,35 @@
 import { createClient } from '@supabase/supabase-js'
 import { fromPostgrestError, CoreError } from '@/lib/core/errors'
 
+/** Hash an IP address for anonymous rate limiting (SHA-256 hex digest). */
+async function hashIP(ip: string): Promise<string> {
+  const encoder = new TextEncoder()
+  const data = encoder.encode(ip)
+  const hashBuffer = await crypto.subtle.digest('SHA-256', data)
+  const hashArray = Array.from(new Uint8Array(hashBuffer))
+  return hashArray.map(b => b.toString(16).padStart(2, '0')).join('')
+}
+
+/**
+ * Extract the client IP from request headers.
+ * Returns a best-effort value; '0.0.0.0' when no IP is available.
+ */
+function getClientIP(request: Request): string {
+  // Fly.io, Vercel, and most proxies set this
+  const forwarded = request.headers.get('x-forwarded-for')
+  if (forwarded) {
+    const ips = forwarded.split(',').map(s => s.trim())
+    return ips[0] || '0.0.0.0'
+  }
+  // Cloudflare
+  const cf = request.headers.get('cf-connecting-ip')
+  if (cf) return cf
+  // Vercel
+  const real = request.headers.get('x-real-ip')
+  if (real) return real
+  return '0.0.0.0'
+}
+
 /**
  * Result of a successful PAT-authenticated request.
  */
@@ -28,7 +57,14 @@ export interface AnonymousIdentity {
   kind: 'anonymous'
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   client: any
+  rate_limit: {
+    limit: number
+    remaining: number
+    reset: number
+  }
 }
+
+export type RateLimitInfo = { limit: number; remaining: number; reset: number }
 
 export type RequestIdentity = PatIdentity | AnonymousIdentity
 
@@ -76,7 +112,15 @@ export async function authenticateRequest(
 ): Promise<RequestIdentity> {
   const token = parseBearer(request)
   if (!token) {
-    return { kind: 'anonymous', client: anonClient() }
+    // Anonymous requests: get rate-limit budget for this IP
+    const client = anonClient()
+    const ipHash = await hashIP(getClientIP(request))
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { data: rl } = await (client as any).rpc('api_rate_limit_anonymous', { ip_hash: ipHash })
+    const rateLimit = rl as { limit: number; remaining: number; reset: number } | null ?? {
+      limit: 120, remaining: 119, reset: Math.floor(Date.now() / 1000) + 60,
+    }
+    return { kind: 'anonymous', client, rate_limit: rateLimit }
   }
 
   const client = anonClient(token)
