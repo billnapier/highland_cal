@@ -97,8 +97,8 @@ SELECT ok(NOT has_table_privilege(r, 'public.notification_outbox', p), r || ' ha
   FROM unnest(ARRAY['anon', 'authenticated']) r, unnest(ARRAY['SELECT', 'INSERT', 'UPDATE', 'DELETE']) p;
 SELECT ok(NOT has_function_privilege(r, f, 'EXECUTE'), r || ' cannot execute ' || f)
   FROM unnest(ARRAY['anon', 'authenticated']) r,
-       unnest(ARRAY['public.claim_notifications(integer)', 'public.complete_notification(uuid, text, boolean)',
-                    'public.skip_notification(uuid, text)', 'public.request_header(text)',
+       unnest(ARRAY['public.claim_notifications(integer)', 'public.complete_notification(uuid, uuid, text, boolean)',
+                    'public.skip_notification(uuid, uuid, text)', 'public.request_header(text)',
                     'public.notification_recipients(text, uuid)']) f;
 
 -- 6. api_create_event must run with the caller's privileges (RLS applies).

@@ -15,6 +15,8 @@ export type OutboxKind =
 
 export interface ClaimedNotification {
   id: string
+  /** Lease token; must be presented when settling the attempt. */
+  claim_token: string
   kind: OutboxKind
   subject_id: string | null
   payload: Record<string, unknown>
@@ -86,7 +88,12 @@ export function renderNotification(
     case 'EVENT_DELETED': {
       const { action, subject } = EVENT_ACTION[n.kind]
       const name = str(p.name) ?? 'Unknown Event'
-      const type = p.type === 'PRACTICE' ? 'PRACTICE' : p.type === 'EVENT' ? 'EVENT' : undefined
+      // Deletion emails historically received only the event name, so they
+      // always read "Event Canceled" (even for practices). Preserve that.
+      const type =
+        n.kind === 'EVENT_DELETED'
+          ? undefined
+          : p.type === 'PRACTICE' ? 'PRACTICE' : p.type === 'EVENT' ? 'EVENT' : undefined
       return {
         to: opts.initialAdminEmail || n.recipients[0],
         bcc: n.recipients,

@@ -142,7 +142,7 @@ SELECT throws_ok($$ SELECT count(*) FROM public.notification_outbox $$, '42501',
   'session: outbox is not readable (even by admins)');
 SELECT throws_ok($$ SELECT * FROM public.claim_notifications(10) $$, '42501', NULL,
   'session: cannot claim notifications (would expose emails)');
-SELECT throws_ok($$ SELECT public.complete_notification(gen_random_uuid(), NULL) $$, '42501', NULL,
+SELECT throws_ok($$ SELECT public.complete_notification(gen_random_uuid(), gen_random_uuid(), NULL) $$, '42501', NULL,
   'session: cannot mark notifications sent');
 SELECT throws_ok($$ INSERT INTO public.notification_outbox (kind, payload) VALUES ('EVENT_CREATED', '{}') $$, '42501', NULL,
   'session: cannot enqueue arbitrary notifications');
@@ -154,6 +154,17 @@ SELECT throws_ok($$ SELECT * FROM public.claim_notifications(10) $$, '42501', NU
 
 -- =============================================================== Delivery ==
 SELECT tests.as_owner();
+CREATE TABLE tests.leases (id uuid PRIMARY KEY, token uuid);
+GRANT ALL ON tests.leases TO service_role;
+CREATE FUNCTION tests.claim(n int) RETURNS SETOF uuid LANGUAGE sql AS $$
+  INSERT INTO tests.leases (id, token)
+    SELECT id, claim_token FROM public.claim_notifications(n)
+  ON CONFLICT (id) DO UPDATE SET token = excluded.token
+  RETURNING id
+$$;
+CREATE FUNCTION tests.tok(i uuid) RETURNS uuid LANGUAGE sql AS $$ SELECT token FROM tests.leases WHERE id = i $$;
+GRANT EXECUTE ON ALL FUNCTIONS IN SCHEMA tests TO service_role;
+SELECT tests.as_owner();
 DELETE FROM public.notification_outbox;
 INSERT INTO public.notification_outbox (id, kind, subject_id, payload, created_at) VALUES
   ('20000000-0000-0000-0000-000000000001', 'EVENT_CREATED', NULL, '{"name": "A"}', now() - interval '3 min'),
@@ -161,7 +172,8 @@ INSERT INTO public.notification_outbox (id, kind, subject_id, payload, created_a
   ('20000000-0000-0000-0000-000000000003', 'USER_APPROVED', '00000000-0000-0000-0000-0000000000f0', '{}', now() - interval '1 min');
 
 SELECT tests.as_role('service_role');
-CREATE TEMP TABLE claim1 AS SELECT * FROM public.claim_notifications(10);
+SELECT tests.claim(10);
+CREATE TEMP TABLE claim1 AS SELECT n.id, n.kind, n.subject_id, n.payload, n.created_at, n.attempts, n.recipients, l.token AS claim_token FROM public.notification_outbox n JOIN tests.leases l ON l.id = n.id WHERE n.id IN ('20000000-0000-0000-0000-000000000001', '20000000-0000-0000-0000-000000000002', '20000000-0000-0000-0000-000000000003');
 SELECT is((SELECT count(*)::int FROM claim1), 3, 'claim: returns all pending rows');
 SELECT is((SELECT array_agg(id ORDER BY ord) FROM (SELECT id, row_number() OVER () ord FROM claim1) s),
   ARRAY['20000000-0000-0000-0000-000000000001', '20000000-0000-0000-0000-000000000002', '20000000-0000-0000-0000-000000000003']::uuid[],
@@ -177,9 +189,9 @@ SELECT is((SELECT recipients FROM claim1 WHERE kind = 'USER_APPROVED'),
 SELECT is((SELECT count(*)::int FROM public.claim_notifications(10)), 0,
   'claim: claimed rows are leased (not handed out twice)');
 
-SELECT public.complete_notification('20000000-0000-0000-0000-000000000001', NULL);
-SELECT public.complete_notification('20000000-0000-0000-0000-000000000002', 'rate_limit_exceeded: slow down');
-SELECT public.skip_notification('20000000-0000-0000-0000-000000000003', 'email disabled');
+SELECT public.complete_notification('20000000-0000-0000-0000-000000000001', tests.tok('20000000-0000-0000-0000-000000000001'::uuid), NULL);
+SELECT public.complete_notification('20000000-0000-0000-0000-000000000002', tests.tok('20000000-0000-0000-0000-000000000002'::uuid), 'rate_limit_exceeded: slow down');
+SELECT public.skip_notification('20000000-0000-0000-0000-000000000003', tests.tok('20000000-0000-0000-0000-000000000003'::uuid), 'email disabled');
 SELECT ok((SELECT sent_at IS NOT NULL FROM public.notification_outbox WHERE id = '20000000-0000-0000-0000-000000000001'),
   'complete: success marks the row sent');
 SELECT ok((SELECT sent_at IS NULL AND claimed_at IS NULL AND NOT ambiguous AND last_error = 'rate_limit_exceeded: slow down'
@@ -198,13 +210,14 @@ UPDATE public.user_roles SET role = 'APPROVED' WHERE user_id = '00000000-0000-00
 UPDATE public.notification_outbox SET next_attempt_at = now() - interval '1 second'
  WHERE id = '20000000-0000-0000-0000-000000000002';
 SELECT tests.as_role('service_role');
-CREATE TEMP TABLE claim2 AS SELECT * FROM public.claim_notifications(10);
+SELECT tests.claim(10);
+CREATE TEMP TABLE claim2 AS SELECT n.id, n.kind, n.subject_id, n.payload, n.created_at, n.attempts, n.recipients, l.token AS claim_token FROM public.notification_outbox n JOIN tests.leases l ON l.id = n.id WHERE n.id = '20000000-0000-0000-0000-000000000002';
 SELECT is((SELECT array_agg(id) FROM claim2), ARRAY['20000000-0000-0000-0000-000000000002']::uuid[],
   'retry: only the failed row is reclaimed once its backoff elapses');
 SELECT is((SELECT recipients FROM claim2), ARRAY['admin2@example.com', 'admin@example.com', 'pending@example.com'],
   'retry: recipients are the ones frozen at the first attempt (admin2 was demoted since)');
 SELECT is((SELECT attempts FROM claim2), 2, 'retry: attempt counter increments');
-SELECT public.complete_notification('20000000-0000-0000-0000-000000000002', 'internal_server_error: boom', true);
+SELECT public.complete_notification('20000000-0000-0000-0000-000000000002'::uuid, tests.tok('20000000-0000-0000-0000-000000000002'::uuid), 'internal_server_error: boom', true);
 SELECT tests.as_owner();
 SELECT ok((SELECT ambiguous AND next_attempt_at BETWEEN now() + interval '9 minutes' AND now() + interval '11 minutes'
              FROM public.notification_outbox WHERE id = '20000000-0000-0000-0000-000000000002'),
@@ -215,7 +228,8 @@ DELETE FROM public.notification_outbox;
 INSERT INTO public.notification_outbox (kind, payload)
   SELECT 'EVENT_CREATED', jsonb_build_object('name', 'E' || g) FROM generate_series(1, 20) g;
 SELECT tests.as_role('service_role');
-SELECT public.complete_notification(c.id, 'rate_limit_exceeded: slow down') FROM public.claim_notifications(20) c;
+SELECT tests.claim(20);
+SELECT public.complete_notification(n.id, l.token, 'rate_limit_exceeded: slow down') FROM public.notification_outbox n JOIN tests.leases l ON l.id = n.id;
 SELECT is((SELECT count(*)::int FROM public.claim_notifications(20)), 0,
   'outage: a full failed batch is not reclaimed in the next round');
 SELECT tests.as_owner();

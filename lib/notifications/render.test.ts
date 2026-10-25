@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { render } from '@react-email/components'
+import EventNotificationEmail from '@/emails/EventNotificationEmail'
 import { formatTime, renderNotification, type ClaimedNotification } from './render'
 
 const opts = { appUrl: 'https://club.example', initialAdminEmail: 'founder@example.com' }
@@ -7,6 +8,7 @@ const opts = { appUrl: 'https://club.example', initialAdminEmail: 'founder@examp
 function row(partial: Partial<ClaimedNotification>): ClaimedNotification {
   return {
     id: '20000000-0000-0000-0000-000000000001',
+    claim_token: '30000000-0000-0000-0000-000000000001',
     kind: 'EVENT_CREATED',
     subject_id: null,
     payload: {},
@@ -62,6 +64,20 @@ describe('renderNotification', () => {
     const html = await render(del.react)
     expect(html).toContain('Event Canceled')
     expect(html).not.toContain('View on Dashboard')
+  })
+
+  it('delete renders exactly what the old code sent (name only), for events and practices', async () => {
+    // The old deleteEvent() passed only { name }, so practices also read "Event Canceled".
+    const old = await render(
+      EventNotificationEmail({ actionType: 'DELETE', eventName: 'Tuesday Practice', dashboardUrl: 'https://club.example/dashboard' })
+    )
+    for (const type of ['EVENT', 'PRACTICE']) {
+      const m = renderNotification(
+        row({ kind: 'EVENT_DELETED', payload: { ...game, name: 'Tuesday Practice', type, start_time: '18:00:00' } }),
+        opts
+      )!
+      expect(await render(m.react)).toBe(old)
+    }
   })
 
   it('practice: Postgres times ("15:00:00") render as the UI stores them ("15:00")', async () => {
