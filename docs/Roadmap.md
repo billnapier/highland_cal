@@ -210,3 +210,44 @@ This document serves as the guide for the LLM developer. The LLM should implemen
 - [x] Verify if any design docs need updates related to this deployment feature.
 **Runnable State:**
 - The documentation is complete and accessible for any club looking to reuse the codebase.
+
+---
+
+## Milestone 14: Agent API (REST + Personal Access Tokens)
+**Goal:** Expose event management, RSVPs, and admin user management over a versioned JSON REST API so AI agents, scripts, and cron jobs can operate the club calendar on a member's behalf.
+**References:**
+- `API.md` (usage guide) and `openapi.yaml` (contract — the source of truth for every route, field, and error)
+- `Detailed_Design.md` > 3.5 `Api_Tokens` Table, 4.6 Agent API, 4.7 Personal Access Tokens
+- `User_Journeys.md` > Journey 11: Connecting an AI Agent, Journey 12: Agent-Assisted Club Administration
+**Tasks:**
+- [ ] **Refactor to a shared core.** Move the business logic of `app/actions/events.ts`, `attendance.ts`, and `admin.ts` into framework-agnostic functions in `lib/core/` that take an explicit `Actor` (`{ userId, role, scopes }`). The existing Server Actions become thin wrappers (resolve session → build Actor → call core → `revalidatePath`). UI behavior must not change.
+- [ ] **Migration** `supabase/migrations/<timestamp>_api_tokens.sql`: create `Api_Tokens` (with RLS), `Api_Rate_Limits`, and `Api_Idempotency_Keys` tables and the `api_rate_limit_hit()` function as specified in `Detailed_Design.md` §3.5.
+- [ ] **Token management UI** on `/dashboard/profile`: an "API Tokens" section to create (name, scopes, expiry), list (name, prefix, scopes, created, last used, expires), and revoke tokens. The plaintext token is shown exactly once in a copy-to-clipboard dialog. Admin-only scopes are offered only to Admins.
+- [ ] **Auth helper** `lib/api/auth.ts`: parse `Authorization: Bearer`, hash, look up the token, reject expired/revoked, load the owner's **current** role, build the Actor, update `last_used_at` (throttled), apply rate limits. Designed so a second credential type (Supabase OAuth JWT, Milestone 15) can be added without touching routes.
+- [ ] **API routes** under `app/api/v1/` implementing every operation in `openapi.yaml`: `/me`, `/me/attendance`, `/events`, `/events/{id}`, `/events/{id}/attendance`, `/events/{id}/attendance/me`, `/users`, `/users/{id}`, `/users/{id}/approve`, `/users/{id}/promote`, `/tokens`, `/tokens/{id}`. Use the shared Zod schemas from `lib/schemas.ts`, real HTTP status codes, and the standard error envelope. Mutations trigger the same emails and `revalidatePath` calls as the UI.
+- [ ] **Docs routes:** serve the spec at `/api/v1/openapi.yaml` and a rendered interactive reference at `/api/v1/docs` (static HTML page loading Scalar or Redoc from a CDN — no new runtime dependency).
+- [ ] **Tests** (add a test runner, e.g. Vitest, and wire it into CI): core authorization matrix (role × scope × action), token hashing/expiry/revocation, and contract tests asserting each route's responses validate against `openapi.yaml`.
+- [ ] **CI:** add `npx @redocly/cli lint docs/openapi.yaml` and the test suite to `.github/workflows/ci.yml`.
+- [ ] Verify `API.md` examples work end-to-end against a preview deployment; update docs for anything that changed during implementation.
+**Runnable State:**
+- A member can create a token in their profile, and `curl -H "Authorization: Bearer hcal_pat_…" https://<site>/api/v1/me` returns their identity and capabilities.
+- An Approved member's token can create/edit their events and RSVP; an Admin's token can delete events and approve/promote/delete users; a Pending member's token is read-only; revoked or expired tokens return `401`.
+- `/api/v1/docs` renders the API reference, and the web UI behaves exactly as before.
+- No new manual setup steps for clubs: "Sync fork" applies the migration automatically.
+
+---
+
+## Milestone 15: OAuth & Hosted MCP Endpoint (Future)
+**Goal:** Let non-technical members connect MCP-native apps (Claude.ai, Claude Desktop, ChatGPT connectors) with a "Sign in with Google" consent flow instead of copying a token.
+**Prerequisites:** Milestone 14 complete; re-evaluate the status of Supabase Auth's OAuth 2.1 server (public beta as of this writing) and its scope support before starting.
+**References:**
+- `Detailed_Design.md` > 4.8 Future: OAuth 2.1 & MCP
+- Supabase docs: OAuth 2.1 Server and MCP Authentication
+**Tasks:**
+- [ ] Document the opt-in Supabase dashboard steps in `Deployment.md` (enable OAuth 2.1 server, asymmetric JWT signing keys, dynamic client registration). This must remain **optional** — instances that skip it keep working with PATs only.
+- [ ] Build the OAuth consent page (`/oauth/consent`) reusing the existing Google login.
+- [ ] Extend `lib/api/auth.ts` to accept Supabase-issued OAuth access tokens (verify via JWKS; map to an Actor; apply scopes once Supabase supports them).
+- [ ] Add a hosted MCP endpoint at `/api/mcp` (e.g. using Vercel's `mcp-handler`) exposing the same `lib/core` operations as MCP tools, accepting either a PAT or an OAuth token, and publishing OAuth protected-resource metadata.
+- [ ] Add "Connected apps" to the profile page to list and revoke OAuth grants.
+**Runnable State:**
+- A member can add `https://<site>/api/mcp` as a custom connector in Claude.ai, sign in with Google, approve consent, and ask Claude to RSVP for them.

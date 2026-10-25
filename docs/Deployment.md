@@ -135,3 +135,14 @@ If you want your site to live at a professional domain (e.g., `myclub.com`) and 
    - In Vercel, go to Settings > Environment Variables, and add `RESEND_API_KEY` with your new key, and `RESEND_FROM_EMAIL` (e.g., `notifications@myclub.com`).
 5. Redeploy your app in Vercel to apply the new environment variables.
 
+---
+
+## Optional: Using the Agent API
+
+Once Milestone 14 is deployed, your site automatically includes the Agent API — **no extra setup is required**. "Sync fork" applies the database migration for API tokens like any other update.
+
+- Members create tokens at **Profile → API Tokens** and use them with AI assistants or scripts.
+- Your instance's API reference is at `https://<your-site>/api/v1/docs`.
+- Full instructions: [API.md](./API.md).
+- The API uses the existing `SUPABASE_SERVICE_ROLE_KEY` (already set by the Vercel Supabase integration). Never expose this key publicly or prefix it with `NEXT_PUBLIC_`.
+

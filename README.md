@@ -41,6 +41,11 @@ Here is a look at what Highland Cal delivers out-of-the-box:
   - New events / major schedule changes (sent to all Approved Athletes)
   - Event deletions (sent to all Approved Athletes)
 
+### 🤖 For AI Agents & Automation *(Milestone 14 — in progress)*
+* **Agent API**: A versioned REST API (`/api/v1`) lets your AI assistant, scripts, or cron jobs read the schedule, RSVP for you, and (for Admins) manage events and approve members, with the same permission rules as the website.
+* **Personal Access Tokens**: Create revocable, scoped tokens from your profile page. No passwords, no extra setup for the club.
+* **Self-documenting**: Every instance serves its OpenAPI spec at `/api/v1/openapi.yaml` and an interactive reference at `/api/v1/docs`. See the [API Guide](./docs/API.md).
+
 ---
 
 ## ⚡ Want Your Own Club's Version? (Deploy in 5 Minutes!)
@@ -127,6 +132,7 @@ For detailed discussions about our system design, schemas, and security model, p
 * [Detailed System Design](./docs/Detailed_Design.md)
 * [Visual Design Guidelines](./docs/Visual_Design.md)
 * [Implementation Roadmap](./docs/Roadmap.md)
+* [Agent API Guide](./docs/API.md) and [OpenAPI Spec](./docs/openapi.yaml)
 
 ---
 

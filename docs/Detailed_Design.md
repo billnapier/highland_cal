@@ -9,6 +9,7 @@ Highland Cal is a decentralized, self-hosted web application built for Highland 
 - **Database / Auth:** Supabase (PostgreSQL, Row Level Security, Auth)
 - **Authentication Provider:** Google OAuth 2.0 (Federated, Zero Password)
 - **Email Service:** Resend with `react-email` templates
+- **Agent API:** Versioned REST API (`/api/v1`) described by an OpenAPI 3.1 spec (`docs/openapi.yaml`), authenticated with Personal Access Tokens
 - **Hosting:** Vercel
 
 ## 3. Database Schema & RLS Policies (PostgreSQL)
@@ -92,6 +93,47 @@ Tracks RSVPs.
 - **Read:** Publicly readable.
 - **Insert/Update/Delete:** Allowed only if `user_id = auth.uid()` AND the user's `role` in `User_Roles` is `'APPROVED'` or `'ADMIN'`. If a user's role is revoked to `'PENDING'`, their past attendance records are frozen (read-only).
 
+### 3.4 `Settings` Table
+Key/value store for site customization (`club_name`, home page blurb, `hero_image_url`).
+- **Read:** Publicly readable. **Write:** `ADMIN` only.
+
+### 3.5 Agent API Tables (Milestone 14)
+Added in a new timestamped migration (`supabase/migrations/<timestamp>_api_tokens.sql`). Never edit the initial migration.
+
+**`Api_Tokens` Table** (Personal Access Tokens)
+- `id` (uuid, Primary Key): Default `gen_random_uuid()`.
+- `user_id` (uuid, NOT NULL): References `Profiles(id)` **on delete cascade** — deleting a user deletes their tokens.
+- `name` (text, NOT NULL): Human label (e.g. "Hermes agent"), 1–100 chars.
+- `token_hash` (text, NOT NULL, UNIQUE): Hex SHA-256 of the full plaintext token. The plaintext is never stored.
+- `prefix` (text, NOT NULL): First 12 characters of the token (e.g. `hcal_pat_Ab3`) for display/identification.
+- `scopes` (text[], NOT NULL, default `'{}'`): Subset of `['attendance:write', 'events:write', 'events:delete', 'users:admin']`, enforced by a `CHECK` constraint (`scopes <@ ARRAY[...]`).
+- `created_at` (timestamptz): Default `now()`.
+- `expires_at` (timestamptz, nullable): `NULL` = never expires.
+- `last_used_at` (timestamptz, nullable).
+- `revoked_at` (timestamptz, nullable): Revocation is a soft delete so `last_used_at` history is kept for auditing.
+
+**RLS Policies (`Api_Tokens`):**
+- **Read:** Only the owner (`user_id = auth.uid()`). Tokens are *not* public, unlike the rest of the schema.
+- **Insert:** Owner only (`user_id = auth.uid()`), from the authenticated session in the web UI. Any role may create a token (a `PENDING` user's token is effectively read-only).
+- **Update:** Owner only, and only to set `revoked_at` (enforced by the Server Action; a trigger rejects changes to `token_hash`, `user_id`, and `scopes`).
+- **Delete:** None via RLS; cascade only.
+- Token lookup during API authentication uses the service-role client (see §4.7) because the API request has no Supabase session.
+
+**`Api_Rate_Limits` Table** (fixed-window counters; keeps the $0 budget by avoiding Redis/KV)
+- `bucket` (text): e.g. `token:<id>:write`, `ip:<hash>:read`.
+- `window_start` (timestamptz).
+- `count` (integer).
+- Primary Key `(bucket, window_start)`. RLS enabled with **no** policies (service role only).
+- `api_rate_limit_hit(bucket text, max_count int, window_seconds int) RETURNS TABLE(allowed boolean, remaining int, reset_at timestamptz)`: `SECURITY DEFINER` function that atomically upserts and increments the counter for the current window. Old windows are deleted opportunistically (e.g. 1% of calls delete rows older than 1 hour).
+
+**`Api_Idempotency_Keys` Table**
+- `token_id` (uuid): References `Api_Tokens(id)` on delete cascade.
+- `key` (text, ≤ 255 chars).
+- `request_hash` (text): SHA-256 of method + path + body, to reject reuse of a key with a different payload (`409`).
+- `status` (integer) and `response` (jsonb): The stored result to replay.
+- `created_at` (timestamptz). Primary Key `(token_id, key)`. Rows older than 24 hours are ignored and pruned opportunistically.
+- RLS enabled with **no** policies (service role only).
+
 ## 4. Application Logic & Workflows
 
 ### 4.1 Onboarding & Authentication Flow
@@ -134,15 +176,90 @@ Tracks RSVPs.
 - **Warning System for Changes:**
   - If a user attempts to update an already existing `vanity_name` in the profile settings, the frontend UI must display a prominent warning: *"Changing your vanity name will break any profile links and iCal subscription feeds you have previously shared."*
 
+### 4.6 Agent API (Milestone 14)
+A versioned JSON REST API under `/api/v1` lets AI agents, scripts, and cron jobs do what a member can do in the UI. The full contract is `docs/openapi.yaml` (OpenAPI 3.1, **spec-first**: the spec is written/updated first and the implementation must conform to it). The user-facing guide is `docs/API.md`.
+
+**Why REST instead of exposing Server Actions:** Server Actions are invoked through React's internal RPC protocol and have no stable public contract. They also always return HTTP 200 with `{ success: false }` on failure, which is fine for the UI but poor for agents. The API uses real status codes and a standard error envelope (`{ error: { code, message, details? } }`).
+
+**Shared core (single source of business rules):**
+- All business logic for events, attendance, and user administration lives in `lib/core/*` as plain async functions that take an explicit `Actor` and a Supabase client:
+  ```ts
+  type Actor = { userId: string; role: 'PENDING' | 'APPROVED' | 'ADMIN'; scopes: Scope[] | 'session' }
+  ```
+  `scopes: 'session'` means a logged-in browser session (all scopes the role allows).
+- Core functions perform **every** authorization check explicitly (role, scope, ownership such as "APPROVED users may only edit events they created"), validate input with the Zod schemas in `lib/schemas.ts`, perform the mutation, and send emails. They return typed results or throw typed errors (`ForbiddenError`, `NotFoundError`, `ValidationError`, `ConflictError`) that both callers map to their own response style.
+- **Server Actions** (`app/actions/*`) become thin wrappers: resolve the session, build an Actor, call core, then `revalidatePath`. They keep using the session (anon-key) client, so **RLS still applies as defense-in-depth** for UI requests.
+- **API routes** (`app/api/v1/**/route.ts`) are thin wrappers too: authenticate (§4.7), call core, then `revalidatePath`, and serialize JSON.
+
+**Database access from the API — the critical security point:**
+API requests carry a PAT, not a Supabase session, so `auth.uid()` is unavailable and RLS cannot identify the caller. The API therefore uses the **service-role client**, which bypasses RLS, exactly as `deleteUser` already does today (see §4.3). Consequences and rules:
+1. The application-layer checks in `lib/core` are the **only** gate on API writes. They must be complete and covered by the authorization-matrix tests (role × scope × action × ownership).
+2. Every core write must be scoped explicitly in the query (e.g. attendance upserts always set `user_id = actor.userId` from the Actor, never from the request body).
+3. API routes must never pass request data straight into a Supabase query without going through core.
+4. *(Alternative considered: minting short-lived Supabase JWTs per request so RLS applies. Rejected for v1: Supabase is moving projects to asymmetric signing keys that the app cannot sign with, and the HS256 legacy secret is deprecated. If Milestone 15 lands, OAuth access tokens **are** real Supabase JWTs, and those requests can use an RLS-enforced client.)*
+
+**Conventions** (detailed in `API.md` §4): `snake_case` fields matching the DB; `start_date` as local `YYYY-MM-DD`; `start_time`/`end_time` as local `HH:MM` (the DB `time` type's seconds are dropped on output); cursor pagination (`limit` ≤ 200); partial `PATCH`; idempotent `PUT` for RSVPs; optional `Idempotency-Key` on `POST /events`.
+
+**Notifications:** API mutations send the same Resend emails as the UI. Event creation emails by default (`notify: false` suppresses it, a new capability that is useful for routine practices); edits email only with `major_change: true`; deletes email unless `?notify=false`. The "suppress" options are also added to the core so the UI could expose them later.
+
+**Caching:** API mutations call the same `revalidatePath('/')` / `revalidatePath('/dashboard')` as the UI. `GET` responses for unauthenticated callers may set `Cache-Control: public, s-maxage=60`; authenticated responses are `private, no-store`.
+
+**Visibility rules for `/users`:** Unauthenticated and non-admin callers get the public roster (only `APPROVED`/`ADMIN` users; no `email` or `role`, consistent with the public roster page). Admin callers with `users:admin` get all users including `PENDING`, with `email` and `role`. A user always sees their own `email`/`role` via `/me`.
+
+**Rate limiting:** Per token, 60 writes/min and 300 reads/min; unauthenticated reads 120/min per IP (hashed). Implemented with `api_rate_limit_hit()` (§3.5). Returns `429` with `Retry-After` and `RateLimit-*` headers.
+
+**CORS:** No `Access-Control-Allow-Origin` for authenticated routes. The API is for server-side callers. Public `GET` routes may allow `*` without credentials.
+
+**API documentation (generated from the spec, not duplicated):**
+- `docs/openapi.yaml` is the contract. `docs/API.md` is a hand-written guide (concepts, auth, recipes, agent setup) that links to the spec instead of re-listing every field.
+- `GET /api/v1/openapi.yaml` serves the spec file (read at build time).
+- `GET /api/v1/docs` returns a static HTML page that loads an OpenAPI renderer (Scalar or Redoc) from a CDN and points it at the spec, so each instance has an always-current interactive reference with no new npm dependency.
+- CI lints the spec (`@redocly/cli lint`) and contract tests validate responses against it to prevent drift.
+
+### 4.7 Personal Access Tokens (PATs)
+**Format:** `hcal_pat_` + 43 characters of base62 from a cryptographically secure RNG (~256 bits). The fixed prefix makes leaked tokens recognizable to secret scanners and in logs.
+
+**Creation (web UI only):**
+1. On `/dashboard/profile`, the user opens **API Tokens → Create token** and enters a name, scopes, and expiry (30/90/365 days or never). Admin-only scopes (`events:delete`, `users:admin`) are shown only to Admins.
+2. A Server Action generates the token, stores `sha256(token)`, the `prefix`, scopes, and expiry in `Api_Tokens` using the **session** client (RLS: owner-only insert), and returns the plaintext once.
+3. The UI shows the plaintext in a dialog with a copy button and a warning that it will not be shown again.
+There is deliberately **no API endpoint to create tokens**, so a leaked token cannot mint new ones.
+
+**Authentication of an API request (`lib/api/auth.ts`):**
+1. Require `Authorization: Bearer hcal_pat_…`; otherwise, treat as anonymous (public routes) or return `401`.
+2. Compute SHA-256 and look up `Api_Tokens` by `token_hash` with the service-role client. (Lookup by an indexed hash of a high-entropy secret is not timing-sensitive; no plaintext comparison is performed.)
+3. Reject if not found, `revoked_at` is set, or `expires_at` has passed → `401`.
+4. Load the owner's **current** role from `User_Roles` on every request (no caching), so demotions take effect immediately.
+5. Build `Actor = { userId, role, scopes }`. Effective permission = role ∩ scopes (see the matrix in `API.md` §3).
+6. Apply rate limits; update `last_used_at` at most once per minute per token to limit writes.
+7. Never log the `Authorization` header or the plaintext token.
+
+The helper returns a discriminated union (`{ kind: 'pat', actor } | { kind: 'anonymous' }`) so a future `{ kind: 'oauth', actor }` can be added (Milestone 15) without changing route code.
+
+**Revocation:** From the profile page (session) or `DELETE /api/v1/tokens/{id}` (a token may revoke itself or other tokens of the same owner). Sets `revoked_at`. Deleting a user cascades and removes their tokens.
+
+### 4.8 Future: OAuth 2.1 & MCP (Milestone 15)
+- **Why not reuse Google OAuth tokens directly:** Google access tokens are issued for Google APIs, and the app never holds them — Supabase exchanges them for its own session JWT, which is what RLS understands. Validating Google tokens ourselves would mean a parallel auth system. Supabase session tokens could technically be reused, but they expire hourly and refresh-token rotation means an agent and a browser sharing a session log each other out.
+- **Planned approach:** Supabase Auth's OAuth 2.1 server (public beta at time of writing) turns each instance into an OAuth provider. Agents run the authorization-code + PKCE flow, the user signs in with the existing Google button and approves a consent screen we host, and the agent receives a Supabase JWT (with a `client_id` claim) that works with existing RLS. Dynamic client registration lets MCP clients self-register.
+- **Hosted MCP endpoint:** `/api/mcp` would expose the `lib/core` operations as MCP tools and accept either a PAT or an OAuth access token.
+- **Constraints:** Requires per-instance Supabase dashboard configuration (enable the OAuth server and asymmetric signing keys), so it must stay **opt-in** to preserve the zero-configuration deployment promise. Supabase OAuth tokens currently carry the user's full privileges (no scopes), so PATs remain the recommended option for least-privilege automation.
+- **Why PATs first:** Most agent runtimes (e.g. Hermes skills, cron jobs, CLI tools) consume static bearer tokens from environment variables and cannot complete an interactive browser OAuth flow unattended.
+
 ## 5. Next.js Application Structure
 - `/app/page.tsx`: Public dashboard showing upcoming games.
 - `/app/auth/callback/route.ts`: Supabase Auth callback handler and admin bootstrapper.
 - `/app/api/calendar.ics/route.ts`: iCal feed generator.
+- `/app/api/v1/**/route.ts`: Agent REST API route handlers (thin wrappers over `lib/core`). See `docs/openapi.yaml`.
+- `/app/api/v1/openapi.yaml/route.ts` and `/app/api/v1/docs/route.ts`: Serve the spec and the rendered API reference.
 - `/app/dashboard/page.tsx`: Authenticated athlete view.
 - `/app/dashboard/admin/page.tsx`: Admin-only view for user management.
+- `/app/dashboard/profile/page.tsx`: Profile editing, including the **API Tokens** section.
+- `/app/actions/...`: Next.js Server Actions (thin wrappers over `lib/core`, plus `revalidatePath`).
 - `/components/...`: Reusable UI components (buttons, forms, modals).
-- `/lib/actions/...`: Next.js Server Actions for database mutations and sending Resend emails.
-- `/lib/supabase/...`: Supabase client initialization (browser and server).
+- `/lib/core/...`: Framework-agnostic business logic and authorization (events, attendance, users, tokens), shared by Server Actions and the API.
+- `/lib/api/...`: API-only helpers: PAT authentication, rate limiting, idempotency, error/JSON responses.
+- `/lib/supabase/...`: Supabase client initialization (browser, server session, and service-role admin).
+- `/docs/openapi.yaml`: The API contract. `/docs/API.md`: The API usage guide.
 
 ## 6. CI/CD & Testing
 
@@ -150,7 +267,9 @@ Tracks RSVPs.
 GitHub Actions workflows must be configured to run automated checks on every pull request. This includes:
 - Linting (`eslint`)
 - Formatting (`prettier`)
-- Automated tests
+- Type-checking (`tsc --noEmit`)
+- OpenAPI spec linting (`npx @redocly/cli lint docs/openapi.yaml`) — added in Milestone 14
+- Automated tests (Vitest, added in Milestone 14): including the API authorization matrix and contract tests that validate API responses against `docs/openapi.yaml`
 The CI pipeline should fail and block merges if these checks do not pass.
 
 ### 6.2 Vercel (CD & Previews)
