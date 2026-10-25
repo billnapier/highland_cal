@@ -9,10 +9,14 @@ import { renderNotification, type ClaimedNotification, type EmailMessage } from 
 // only on writes RLS already allowed. Never add parameters that let a caller
 // choose recipients or content.
 
+/**
+ * Send one email. `uncertain` means the provider may have accepted it anyway
+ * (network error, timeout, 5xx). Definite rejections (4xx) are not uncertain.
+ */
 export type SendEmail = (
   message: EmailMessage & { from: string },
   idempotencyKey: string
-) => Promise<{ error: string | null }>
+) => Promise<{ error: string | null; uncertain?: boolean }>
 
 export interface DispatchDeps {
   /** Service-role client. */
@@ -57,17 +61,23 @@ export async function dispatchNotifications(deps: DispatchDeps): Promise<Dispatc
         continue
       }
 
+      // The outbox id is the Resend idempotency key, and recipients are frozen
+      // on the first claim, so a retry sends a byte-identical request: if we
+      // crashed after Resend accepted it, the retry is deduplicated (Resend
+      // keeps keys for 24h; the claim rules stop retrying ambiguous rows
+      // before that window closes).
       let sendError: string | null
+      let uncertain = false
       try {
-        // The outbox id is the Resend idempotency key: if we crash after Resend
-        // accepts the message but before we record sent_at, the retry is a no-op.
-        ;({ error: sendError } = await deps.send({ ...message, from: deps.from }, row.id))
+        ;({ error: sendError, uncertain = false } = await deps.send({ ...message, from: deps.from }, row.id))
       } catch (e) {
         sendError = e instanceof Error ? e.message : String(e)
+        uncertain = true
       }
       await settle(deps.supabase, 'complete_notification', {
         notification_id: row.id,
         error: sendError ? sendError.slice(0, 500) : null,
+        uncertain,
       })
       if (sendError) {
         console.error('Notification send failed', { id: row.id, kind: row.kind, error: sendError })

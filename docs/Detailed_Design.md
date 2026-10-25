@@ -213,7 +213,7 @@ The flags travel as headers so both entry points work the same way. Server Actio
 - **It uses the service-role client, but takes no caller input.** It only drains the outbox, so it cannot be made to email arbitrary content or recipients. This is the second and final sanctioned service-role use, alongside `auth.admin.deleteUser()`.
 - **Triggered** right after every successful mutation (Server Actions and API routes) via Next.js `after()`, so emails go out promptly without delaying the response. A daily Vercel Cron job (`/api/cron/notifications`, protected by `CRON_SECRET`, within Hobby-plan limits) drains anything left over.
 - **Edge cases:**
-  - At-least-once delivery: a crash between Resend accepting a message and `sent_at` being written can cause one duplicate send. Pass the outbox `id` as Resend's idempotency key to prevent this.
+  - At-least-once delivery, made safe: the outbox `id` is Resend's idempotency key, and recipients are frozen on the first claim, so every retry sends an identical request and Resend deduplicates it. Resend keeps keys for 24 hours, so an *ambiguous* attempt (network error, 5xx, or a lease that expired mid-send) is retried only within 23 hours of the first attempt; after that it is left unsent with `ambiguous = true` for an admin to review instead of risking a duplicate. Definite failures (4xx) back off exponentially (5, 10, 20, 40 minutes) so an outage can't burn all 5 attempts in one run.
   - Server Actions keep the existing behavior: emails are sent only when the email env vars are configured. Otherwise rows are marked `sent_at` with `last_error = 'email disabled'`.
 
 ## 4. Application Logic & Workflows

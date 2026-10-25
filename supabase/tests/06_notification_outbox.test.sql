@@ -168,7 +168,7 @@ SELECT is((SELECT array_agg(id ORDER BY ord) FROM (SELECT id, row_number() OVER 
   'claim: oldest first');
 SELECT is((SELECT recipients FROM claim1 WHERE kind = 'EVENT_CREATED'),
   ARRAY['admin2@example.com', 'admin@example.com', 'approved@example.com', 'other@example.com', 'pending@example.com'],
-  'recipients: event emails go to every APPROVED/ADMIN member (c was promoted)');
+  'recipients: event emails go to every APPROVED/ADMIN member, byte-ordered (c was promoted)');
 SELECT is((SELECT recipients FROM claim1 WHERE kind = 'NEW_REGISTRATION'),
   ARRAY['admin2@example.com', 'admin@example.com', 'pending@example.com'],
   'recipients: registration notices go to admins only');
@@ -178,25 +178,81 @@ SELECT is((SELECT count(*)::int FROM public.claim_notifications(10)), 0,
   'claim: claimed rows are leased (not handed out twice)');
 
 SELECT public.complete_notification('20000000-0000-0000-0000-000000000001', NULL);
-SELECT public.complete_notification('20000000-0000-0000-0000-000000000002', 'resend: 500');
+SELECT public.complete_notification('20000000-0000-0000-0000-000000000002', 'rate_limit_exceeded: slow down');
 SELECT public.skip_notification('20000000-0000-0000-0000-000000000003', 'email disabled');
 SELECT ok((SELECT sent_at IS NOT NULL FROM public.notification_outbox WHERE id = '20000000-0000-0000-0000-000000000001'),
   'complete: success marks the row sent');
-SELECT ok((SELECT sent_at IS NULL AND claimed_at IS NULL AND last_error = 'resend: 500'
+SELECT ok((SELECT sent_at IS NULL AND claimed_at IS NULL AND NOT ambiguous AND last_error = 'rate_limit_exceeded: slow down'
              FROM public.notification_outbox WHERE id = '20000000-0000-0000-0000-000000000002'),
-  'complete: failure releases the lease and records the error');
-SELECT is((SELECT array_agg(id) FROM public.claim_notifications(10)),
-  ARRAY['20000000-0000-0000-0000-000000000002']::uuid[], 'retry: only the failed row is reclaimed');
-
+  'complete: definite failure releases the lease, records the error, is not ambiguous');
+SELECT is((SELECT count(*)::int FROM public.claim_notifications(10)), 0,
+  'backoff: a failed row is not retried immediately (same dispatcher run)');
 SELECT tests.as_owner();
-UPDATE public.notification_outbox SET attempts = 5, claimed_at = NULL WHERE id = '20000000-0000-0000-0000-000000000002';
+SELECT ok((SELECT next_attempt_at BETWEEN now() + interval '4 minutes' AND now() + interval '6 minutes'
+             FROM public.notification_outbox WHERE id = '20000000-0000-0000-0000-000000000002'),
+  'backoff: first retry is ~5 minutes out');
+
+-- Recipients are frozen on the first claim: a membership change before the
+-- retry must not change the request sent under the same idempotency key.
+UPDATE public.user_roles SET role = 'APPROVED' WHERE user_id = '00000000-0000-0000-0000-00000000000e';
+UPDATE public.notification_outbox SET next_attempt_at = now() - interval '1 second'
+ WHERE id = '20000000-0000-0000-0000-000000000002';
+SELECT tests.as_role('service_role');
+CREATE TEMP TABLE claim2 AS SELECT * FROM public.claim_notifications(10);
+SELECT is((SELECT array_agg(id) FROM claim2), ARRAY['20000000-0000-0000-0000-000000000002']::uuid[],
+  'retry: only the failed row is reclaimed once its backoff elapses');
+SELECT is((SELECT recipients FROM claim2), ARRAY['admin2@example.com', 'admin@example.com', 'pending@example.com'],
+  'retry: recipients are the ones frozen at the first attempt (admin2 was demoted since)');
+SELECT is((SELECT attempts FROM claim2), 2, 'retry: attempt counter increments');
+SELECT public.complete_notification('20000000-0000-0000-0000-000000000002', 'internal_server_error: boom', true);
+SELECT tests.as_owner();
+SELECT ok((SELECT ambiguous AND next_attempt_at BETWEEN now() + interval '9 minutes' AND now() + interval '11 minutes'
+             FROM public.notification_outbox WHERE id = '20000000-0000-0000-0000-000000000002'),
+  'uncertain failure: marked ambiguous; backoff doubles to ~10 minutes');
+
+-- A full batch of failures cannot exhaust attempts within one dispatcher run.
+DELETE FROM public.notification_outbox;
+INSERT INTO public.notification_outbox (kind, payload)
+  SELECT 'EVENT_CREATED', jsonb_build_object('name', 'E' || g) FROM generate_series(1, 20) g;
+SELECT tests.as_role('service_role');
+SELECT public.complete_notification(c.id, 'rate_limit_exceeded: slow down') FROM public.claim_notifications(20) c;
+SELECT is((SELECT count(*)::int FROM public.claim_notifications(20)), 0,
+  'outage: a full failed batch is not reclaimed in the next round');
+SELECT tests.as_owner();
+SELECT is((SELECT max(attempts) FROM public.notification_outbox), 1, 'outage: each row used only one attempt');
+
+-- Give-up after 5 attempts.
+DELETE FROM public.notification_outbox;
+INSERT INTO public.notification_outbox (id, kind, payload, attempts, first_attempt_at)
+  VALUES ('20000000-0000-0000-0000-000000000004', 'EVENT_CREATED', '{}', 5, now());
 SELECT tests.as_role('service_role');
 SELECT is((SELECT count(*)::int FROM public.claim_notifications(10)), 0, 'retry: gives up after 5 attempts');
 
+-- Expired lease (dispatcher crashed mid-send): reclaimed while Resend still
+-- deduplicates the key (<24h), and marked ambiguous.
 SELECT tests.as_owner();
-UPDATE public.notification_outbox SET attempts = 1, claimed_at = now() - interval '6 minutes' WHERE id = '20000000-0000-0000-0000-000000000002';
+DELETE FROM public.notification_outbox;
+INSERT INTO public.notification_outbox (id, kind, payload, attempts, recipients, first_attempt_at, claimed_at)
+  VALUES ('20000000-0000-0000-0000-000000000005', 'EVENT_CREATED', '{}', 1, ARRAY['x@example.com'],
+          now() - interval '6 minutes', now() - interval '6 minutes');
 SELECT tests.as_role('service_role');
-SELECT is((SELECT count(*)::int FROM public.claim_notifications(10)), 1, 'lease: an expired lease (crashed dispatcher) is reclaimed');
+SELECT is((SELECT count(*)::int FROM public.claim_notifications(10)), 1,
+  'lease: an expired lease (crashed dispatcher) is reclaimed within the dedupe window');
+SELECT tests.as_owner();
+SELECT ok((SELECT ambiguous FROM public.notification_outbox WHERE id = '20000000-0000-0000-0000-000000000005'),
+  'lease: the reclaimed row is flagged ambiguous');
+
+-- Outside Resend's 24h idempotency window an ambiguous row is never resent
+-- automatically (it might duplicate); it is left for review. A definite
+-- failure is still retried after 24h (nothing was delivered).
+DELETE FROM public.notification_outbox;
+INSERT INTO public.notification_outbox (id, kind, payload, attempts, first_attempt_at, claimed_at, ambiguous, last_error) VALUES
+  ('20000000-0000-0000-0000-000000000006', 'EVENT_CREATED', '{}', 1, now() - interval '25 hours', now() - interval '25 hours', false, NULL),
+  ('20000000-0000-0000-0000-000000000007', 'EVENT_CREATED', '{}', 1, now() - interval '25 hours', NULL, true, 'internal_server_error'),
+  ('20000000-0000-0000-0000-000000000008', 'EVENT_CREATED', '{}', 1, now() - interval '25 hours', NULL, false, 'rate_limit_exceeded');
+SELECT tests.as_role('service_role');
+SELECT is((SELECT array_agg(id) FROM public.claim_notifications(10)), ARRAY['20000000-0000-0000-0000-000000000008']::uuid[],
+  'dedupe window: ambiguous rows (lost lease or uncertain error) older than 23h are not resent; definite failures are');
 
 SELECT * FROM finish();
 ROLLBACK;

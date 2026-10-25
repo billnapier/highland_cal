@@ -15,7 +15,16 @@ CREATE TABLE public.notification_outbox (
   subject_id uuid,                -- user (registration/approval) or game id
   payload jsonb NOT NULL,         -- snapshot captured at write time (deletes still render)
   created_at timestamptz NOT NULL DEFAULT now(),
+  -- Frozen on the first claim, so every retry sends a byte-identical request
+  -- under the same Resend idempotency key (the outbox id).
+  recipients text[],
+  first_attempt_at timestamptz,
   claimed_at timestamptz,         -- lease held by a dispatcher
+  next_attempt_at timestamptz,    -- retry backoff after a failed attempt
+  -- An attempt whose outcome is unknown (network error / 5xx / lost lease):
+  -- the email may have been delivered. Only retried while Resend still
+  -- deduplicates the idempotency key (24h); after that it needs a human.
+  ambiguous boolean NOT NULL DEFAULT false,
   sent_at timestamptz,
   attempts integer NOT NULL DEFAULT 0,
   last_error text
@@ -116,9 +125,32 @@ $$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public;
 -- Delivery helpers (service_role only)
 -- -----------------------------------------------------------------------------
 
--- Claim up to `batch` deliverable rows with a 5-minute lease, resolving
--- recipients at send time from current membership. SKIP LOCKED lets several
--- dispatchers run concurrently without double-sending.
+-- Recipients for a notification, from current membership (used once, on the
+-- first claim). Byte order (COLLATE "C") keeps the list deterministic.
+CREATE OR REPLACE FUNCTION public.notification_recipients(kind text, subject_id uuid)
+RETURNS text[]
+LANGUAGE sql STABLE SECURITY DEFINER SET search_path = public
+AS $$
+  SELECT CASE
+    WHEN kind = 'NEW_REGISTRATION' THEN ARRAY(
+      SELECT p.email FROM public.profiles p JOIN public.user_roles r ON r.user_id = p.id
+       WHERE r.role = 'ADMIN' AND p.email IS NOT NULL ORDER BY p.email COLLATE "C")
+    WHEN kind = 'USER_APPROVED' THEN ARRAY(
+      SELECT p.email FROM public.profiles p WHERE p.id = subject_id AND p.email IS NOT NULL)
+    ELSE ARRAY(
+      SELECT p.email FROM public.profiles p JOIN public.user_roles r ON r.user_id = p.id
+       WHERE r.role IN ('APPROVED', 'ADMIN') AND p.email IS NOT NULL ORDER BY p.email COLLATE "C")
+  END
+$$;
+
+-- Claim up to `batch` deliverable rows with a 5-minute lease. SKIP LOCKED lets
+-- several dispatchers run concurrently without double-sending.
+--
+-- A row is deliverable when it is unsent, has attempts left, its retry
+-- backoff has elapsed, its lease (if any) has expired, and it is not an
+-- ambiguous attempt older than Resend's 24h idempotency window (resending
+-- those could deliver a duplicate, so they are left for an admin to review).
+-- A lease that expired without an outcome is itself ambiguous.
 CREATE OR REPLACE FUNCTION public.claim_notifications(batch integer DEFAULT 20)
 RETURNS TABLE (id uuid, kind text, subject_id uuid, payload jsonb, attempts integer, recipients text[])
 LANGUAGE plpgsql VOLATILE SECURITY DEFINER SET search_path = public
@@ -127,42 +159,46 @@ BEGIN
   RETURN QUERY
   WITH claimed AS (
     UPDATE public.notification_outbox o
-       SET claimed_at = now(), attempts = o.attempts + 1
+       SET claimed_at = now(),
+           attempts = o.attempts + 1,
+           first_attempt_at = coalesce(o.first_attempt_at, now()),
+           ambiguous = o.ambiguous OR o.claimed_at IS NOT NULL,
+           recipients = coalesce(o.recipients, public.notification_recipients(o.kind, o.subject_id))
      WHERE o.id IN (
        SELECT n.id FROM public.notification_outbox n
         WHERE n.sent_at IS NULL
           AND n.attempts < 5
+          AND (n.next_attempt_at IS NULL OR n.next_attempt_at <= now())
           AND (n.claimed_at IS NULL OR n.claimed_at < now() - interval '5 minutes')
+          AND NOT ((n.ambiguous OR n.claimed_at IS NOT NULL)
+                   AND n.first_attempt_at < now() - interval '23 hours')
         ORDER BY n.created_at
         LIMIT greatest(least(batch, 100), 1)
         FOR UPDATE SKIP LOCKED
      )
     RETURNING o.*
   )
-  SELECT c.id, c.kind, c.subject_id, c.payload, c.attempts,
-    CASE
-      WHEN c.kind = 'NEW_REGISTRATION' THEN ARRAY(
-        SELECT p.email FROM public.profiles p JOIN public.user_roles r ON r.user_id = p.id
-         WHERE r.role = 'ADMIN' AND p.email IS NOT NULL ORDER BY p.email)
-      WHEN c.kind = 'USER_APPROVED' THEN ARRAY(
-        SELECT p.email FROM public.profiles p WHERE p.id = c.subject_id AND p.email IS NOT NULL)
-      ELSE ARRAY(
-        SELECT p.email FROM public.profiles p JOIN public.user_roles r ON r.user_id = p.id
-         WHERE r.role IN ('APPROVED', 'ADMIN') AND p.email IS NOT NULL ORDER BY p.email)
-    END
+  SELECT c.id, c.kind, c.subject_id, c.payload, c.attempts, c.recipients
   FROM claimed c
   ORDER BY c.created_at;
 END;
 $$;
 
--- Record the outcome of a claimed row: NULL error = sent.
-CREATE OR REPLACE FUNCTION public.complete_notification(notification_id uuid, error text DEFAULT NULL)
+-- Record the outcome of a claimed row. NULL error = sent. On failure, release
+-- the lease and back off exponentially (5, 10, 20, 40 minutes), so a provider
+-- outage can't burn every attempt in one dispatcher run. `uncertain` marks an
+-- attempt that may have been delivered (network error / 5xx).
+CREATE OR REPLACE FUNCTION public.complete_notification(
+  notification_id uuid, error text DEFAULT NULL, uncertain boolean DEFAULT false)
 RETURNS void
 LANGUAGE sql VOLATILE SECURITY DEFINER SET search_path = public
 AS $$
   UPDATE public.notification_outbox
-     SET sent_at = CASE WHEN error IS NULL THEN now() ELSE sent_at END,
+     SET sent_at = CASE WHEN error IS NULL THEN now() ELSE NULL END,
          claimed_at = CASE WHEN error IS NULL THEN claimed_at ELSE NULL END,
+         next_attempt_at = CASE WHEN error IS NULL THEN NULL
+                                ELSE now() + interval '5 minutes' * power(2, greatest(attempts - 1, 0)) END,
+         ambiguous = ambiguous OR (error IS NOT NULL AND uncertain),
          last_error = error
    WHERE id = notification_id
 $$;
@@ -178,12 +214,13 @@ AS $$
 $$;
 
 REVOKE EXECUTE ON FUNCTION
+  public.notification_recipients(text, uuid),
   public.claim_notifications(integer),
-  public.complete_notification(uuid, text),
+  public.complete_notification(uuid, text, boolean),
   public.skip_notification(uuid, text)
 FROM PUBLIC, anon, authenticated;
 GRANT EXECUTE ON FUNCTION
   public.claim_notifications(integer),
-  public.complete_notification(uuid, text),
+  public.complete_notification(uuid, text, boolean),
   public.skip_notification(uuid, text)
 TO service_role;

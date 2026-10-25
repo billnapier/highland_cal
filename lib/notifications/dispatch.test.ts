@@ -41,25 +41,27 @@ describe('dispatchNotifications', () => {
     expect(send.mock.calls[0][1]).toBe('n1')
     expect(send.mock.calls[0][0]).toMatchObject({ from: 'club@example.com', subject: 'New Event: Event n1' })
     expect(calls.filter((c) => c.fn === 'complete_notification').map((c) => c.args)).toEqual([
-      { notification_id: 'n1', error: null },
-      { notification_id: 'n2', error: null },
+      { notification_id: 'n1', error: null, uncertain: false },
+      { notification_id: 'n2', error: null, uncertain: false },
     ])
   })
 
-  it('records a failed send (returned or thrown) so the row is retried', async () => {
-    const { client, calls } = fakeSupabase([[event('n1'), event('n2')]])
+  it('records failed sends so the row is retried; thrown/uncertain errors are flagged uncertain', async () => {
+    const { client, calls } = fakeSupabase([[event('n1'), event('n2'), event('n3')]])
     const send = vi
       .fn<SendEmail>()
       .mockResolvedValueOnce({ error: 'rate_limit_exceeded: slow down' })
+      .mockResolvedValueOnce({ error: 'internal_server_error: boom', uncertain: true })
       .mockRejectedValueOnce(new Error('network down'))
     const err = vi.spyOn(console, 'error').mockImplementation(() => {})
 
     const r = await dispatchNotifications({ ...base, supabase: client, send })
 
-    expect(r).toEqual({ sent: 0, failed: 2, skipped: 0 })
+    expect(r).toEqual({ sent: 0, failed: 3, skipped: 0 })
     expect(calls.filter((c) => c.fn === 'complete_notification').map((c) => c.args)).toEqual([
-      { notification_id: 'n1', error: 'rate_limit_exceeded: slow down' },
-      { notification_id: 'n2', error: 'network down' },
+      { notification_id: 'n1', error: 'rate_limit_exceeded: slow down', uncertain: false },
+      { notification_id: 'n2', error: 'internal_server_error: boom', uncertain: true },
+      { notification_id: 'n3', error: 'network down', uncertain: true },
     ])
     err.mockRestore()
   })

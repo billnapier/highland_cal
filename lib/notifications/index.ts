@@ -11,7 +11,16 @@ function resendSender(): SendEmail | null {
   const resend = new Resend(apiKey)
   return async (message, idempotencyKey) => {
     const { error } = await resend.emails.send(message, { idempotencyKey })
-    return { error: error ? `${error.name}: ${error.message}` : null }
+    if (!error) return { error: null }
+    return {
+      error: `${error.name}: ${error.message}`,
+      // No status (network) or 5xx: Resend may have accepted the email.
+      // concurrent_idempotent_requests: another attempt with this key is in flight.
+      uncertain:
+        error.statusCode == null ||
+        error.statusCode >= 500 ||
+        error.name === 'concurrent_idempotent_requests',
+    }
   }
 }
 
