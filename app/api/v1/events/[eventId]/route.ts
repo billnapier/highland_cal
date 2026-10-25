@@ -78,11 +78,11 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
 export async function DELETE(request: NextRequest, { params }: RouteParams) {
   try {
     const { eventId } = await params
-    const auth = await requireAuth(request,'write')
-    const { client,identity } = auth
+    const auth = await requireAuth(request, 'write')
+    const { client, identity } = auth
 
     const url = new URL(request.url)
-    const notify = url.searchParams.get('notify')  !== 'false'
+    const notify = url.searchParams.get('notify') !== 'false'
 
     await coreEvents.deleteEvent(client, eventId, { notify })
 

@@ -4,6 +4,26 @@ import { errorResponse, jsonResponse } from '@/lib/api/response'
 import { NotFoundError, CoreError } from '@/lib/core/errors'
 import * as coreUsers from '@/lib/core/users'
 
+/**
+ * Resolve a user identifier (UUID or vanity name) to a UUID.
+ * Returns the UUID if valid, or looks up the vanity name in profiles.
+ * Throws NotFoundError if the vanity name doesn't resolve.
+ */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+async function resolveUserId(db: any, userId: string): Promise<string> {
+  const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(userId)
+  if (isUuid) return userId
+
+  const { data: profile } = await db
+    .from('profiles')
+    .select('id')
+    .eq('vanity_name', userId)
+    .maybeSingle()
+
+  if (!profile) throw new NotFoundError('User not found')
+  return profile.id
+}
+
 interface RouteParams {
   params: Promise<{ userId: string }>
 }
@@ -88,11 +108,11 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
  */
 export async function DELETE(request: NextRequest, { params }: RouteParams) {
   try {
-    const { userId } = await params
     const auth = await requireAuth(request, 'write')
-    const { client } = auth
+    const rawId = (await params).userId
+    const userId = await resolveUserId(auth.client, rawId)
 
-    await coreUsers.deleteUser(client, userId)
+    await coreUsers.deleteUser(auth.client, userId)
 
     return new Response(null, { status: 204 })
   } catch (e) {

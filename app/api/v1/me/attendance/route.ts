@@ -1,6 +1,7 @@
 import type { NextRequest } from 'next/server'
 import { requireAuth } from '@/lib/api/auth'
 import { errorResponse, jsonResponse } from '@/lib/api/response'
+import { fromPostgrestError } from '@/lib/core/errors'
 
 /**
  * GET /api/v1/me/attendance
@@ -34,7 +35,7 @@ export async function GET(request: NextRequest) {
 
     if (error) {
       console.error('Error fetching my attendance:', error)
-      throw new Error('Failed to fetch attendance')
+      throw fromPostgrestError(error, 'Failed to fetch attendance')
     }
 
     return jsonResponse({ data: data || [] }, 200, identity.rate_limit)
