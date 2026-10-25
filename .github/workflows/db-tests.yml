@@ -19,8 +19,16 @@ permissions:
 
 jobs:
   pgtap:
+    name: pgtap (auto_expose_new_tables=${{ matrix.auto_expose_new_tables }})
     runs-on: ubuntu-latest
     timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        # Existing club projects expose new tables to the API by default;
+        # newer Supabase projects don't. Migrations must work under both, so
+        # they grant privileges explicitly instead of relying on defaults.
+        auto_expose_new_tables: ['true', 'false']
     steps:
       - uses: actions/checkout@v4
 
@@ -35,6 +43,8 @@ jobs:
           if [ ! -f supabase/config.toml ]; then
             supabase init --yes
           fi
+          sed -i -E 's/^#? *auto_expose_new_tables *=.*/auto_expose_new_tables = ${{ matrix.auto_expose_new_tables }}/' supabase/config.toml
+          grep -n 'auto_expose_new_tables' supabase/config.toml
 
       - name: Start local Postgres and apply migrations
         run: supabase db start
