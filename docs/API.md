@@ -64,7 +64,7 @@ Authorization: Bearer hcal_pat_<43 random base62 chars>
 | **Live role** | Role is checked on every request. If you are demoted to `PENDING`, all your tokens immediately lose write access. If your account is deleted, your tokens are deleted. |
 | **Shown once** | The server stores only a SHA-256 hash. Lost tokens cannot be recovered — revoke and create a new one. |
 | **Created in the UI only** | There is no "create token" API endpoint, so a leaked token can't mint more tokens. |
-| **Revocable** | Revoke from **Profile → API Tokens**, or `DELETE /tokens/{id}` (a token may revoke itself). |
+| **Revocable** | Revoke from **Profile → API Tokens**, or `DELETE /tokens/{id}` (a token may revoke itself). Revocation is permanent. |
 | **Optional expiry** | 30 / 90 / 365 days or never. |
 | **Identifiable** | The `hcal_pat_` prefix lets secret scanners (e.g. GitHub push protection) recognize leaked tokens. |
 
@@ -113,7 +113,7 @@ A request is allowed only if **both** the owner's **role** and the token's **sco
 - **Dates and times:** `start_date` is a local calendar date (`YYYY-MM-DD`). `start_time` / `end_time` are local wall-clock times (`HH:MM`) in the club's time zone — there is no time-zone conversion. Timestamps (`created_at`, `updated_at`) are ISO 8601 UTC.
 - **Lists** return `{ "data": [...], "next_cursor": "…" | null }`. Pass `?cursor=` to get the next page; `limit` defaults to 50 (max 200).
 - **Partial updates:** `PATCH` changes only the fields you send. Send `null` to clear an optional field.
-- **Idempotency:** `PUT` RSVPs are naturally idempotent. For `POST /events`, send an `Idempotency-Key` header (any unique string) so that a retried request doesn't create a duplicate event.
+- **Idempotency:** `PUT` RSVPs are naturally idempotent. For `POST /events`, send an `Idempotency-Key` header (any unique string) so that a retried request doesn't create a duplicate event (or a duplicate email). Keys are scoped to your token and remembered for 24 hours. Replaying a key with the same body returns the original response; reusing it with a different body returns `409 idempotency_conflict`.
 - **Emails:** Mutations send the same notification emails as the UI. Creating an event emails all members by default (`"notify": false` to suppress); edits email only when `"major_change": true`; deletes email unless `?notify=false`.
 
 ### Errors
@@ -137,6 +137,7 @@ Errors use real HTTP status codes and a consistent body:
 | 403 | `forbidden` | Valid token, but role or scopes don't allow this. |
 | 404 | `not_found` | No such event/user (or you haven't RSVP'd, for `/attendance/me`). |
 | 409 | `conflict` | State conflict, e.g. approving an already-approved user, or deleting yourself. |
+| 409 | `idempotency_conflict` | `Idempotency-Key` reused with a different body. Use a new key for a new request. |
 | 429 | `rate_limited` | Slow down; wait `Retry-After` seconds. |
 | 500 | `internal_error` | Server problem. Safe to retry `GET`/`PUT`; retry `POST` only with an `Idempotency-Key`. |
 

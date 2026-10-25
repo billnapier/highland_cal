@@ -79,6 +79,8 @@ paths:
                 $ref: '#/components/schemas/Me'
         '401':
           $ref: '#/components/responses/Unauthorized'
+        '429':
+          $ref: '#/components/responses/RateLimited'
 
   /events:
     get:
@@ -123,11 +125,13 @@ paths:
                   data:
                     type: array
                     items:
-                      $ref: '#/components/schemas/Event'
+                      $ref: '#/components/schemas/EventListItem'
                   next_cursor:
                     type: [string, 'null']
         '400':
           $ref: '#/components/responses/ValidationError'
+        '429':
+          $ref: '#/components/responses/RateLimited'
     post:
       tags: [Events]
       operationId: createEvent
@@ -161,6 +165,8 @@ paths:
           $ref: '#/components/responses/Forbidden'
         '429':
           $ref: '#/components/responses/RateLimited'
+        '409':
+          $ref: '#/components/responses/IdempotencyConflict'
 
   /events/{eventId}:
     parameters:
@@ -182,6 +188,8 @@ paths:
                 $ref: '#/components/schemas/EventWithAttendance'
         '404':
           $ref: '#/components/responses/NotFound'
+        '429':
+          $ref: '#/components/responses/RateLimited'
     patch:
       tags: [Events]
       operationId: updateEvent
@@ -268,6 +276,8 @@ paths:
                       $ref: '#/components/schemas/Attendance'
         '404':
           $ref: '#/components/responses/NotFound'
+        '429':
+          $ref: '#/components/responses/RateLimited'
 
   /events/{eventId}/attendance/me:
     parameters:
@@ -294,6 +304,8 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
+        '429':
+          $ref: '#/components/responses/RateLimited'
     put:
       tags: [Attendance]
       operationId: setMyAttendance
@@ -343,6 +355,8 @@ paths:
           $ref: '#/components/responses/Forbidden'
         '404':
           $ref: '#/components/responses/NotFound'
+        '429':
+          $ref: '#/components/responses/RateLimited'
 
   /me/attendance:
     get:
@@ -385,6 +399,8 @@ paths:
                               $ref: '#/components/schemas/Event'
         '401':
           $ref: '#/components/responses/Unauthorized'
+        '429':
+          $ref: '#/components/responses/RateLimited'
 
   /users:
     get:
@@ -424,6 +440,8 @@ paths:
                     type: [string, 'null']
         '400':
           $ref: '#/components/responses/ValidationError'
+        '429':
+          $ref: '#/components/responses/RateLimited'
 
   /users/{userId}:
     parameters:
@@ -445,6 +463,8 @@ paths:
                 $ref: '#/components/schemas/User'
         '404':
           $ref: '#/components/responses/NotFound'
+        '429':
+          $ref: '#/components/responses/RateLimited'
     delete:
       tags: [Users]
       operationId: deleteUser
@@ -466,6 +486,8 @@ paths:
           $ref: '#/components/responses/NotFound'
         '409':
           $ref: '#/components/responses/Conflict'
+        '429':
+          $ref: '#/components/responses/RateLimited'
 
   /users/{userId}/approve:
     parameters:
@@ -493,6 +515,8 @@ paths:
           $ref: '#/components/responses/NotFound'
         '409':
           $ref: '#/components/responses/Conflict'
+        '429':
+          $ref: '#/components/responses/RateLimited'
 
   /users/{userId}/promote:
     parameters:
@@ -520,6 +544,8 @@ paths:
           $ref: '#/components/responses/NotFound'
         '409':
           $ref: '#/components/responses/Conflict'
+        '429':
+          $ref: '#/components/responses/RateLimited'
 
   /tokens:
     get:
@@ -545,6 +571,8 @@ paths:
                       $ref: '#/components/schemas/Token'
         '401':
           $ref: '#/components/responses/Unauthorized'
+        '429':
+          $ref: '#/components/responses/RateLimited'
 
   /tokens/{tokenId}:
     parameters:
@@ -570,6 +598,8 @@ paths:
           $ref: '#/components/responses/Unauthorized'
         '404':
           $ref: '#/components/responses/NotFound'
+        '429':
+          $ref: '#/components/responses/RateLimited'
 
 components:
   securitySchemes:
@@ -651,8 +681,18 @@ components:
               details:
                 - path: [start_time]
                   message: 'Start time is required for practices'
+    IdempotencyConflict:
+      description: |
+        The `Idempotency-Key` was already used with a different request body.
+        Retry with the original body, or use a new key for a new request.
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+          example:
+            error: { code: idempotency_conflict, message: 'Idempotency-Key reused with a different request' }
     RateLimited:
-      description: Too many requests for this token. See `Retry-After`.
+      description: |
+        Too many requests (per token, or per IP for unauthenticated reads). See `Retry-After`.
       headers:
         Retry-After:
           schema: { type: integer }
@@ -697,6 +737,7 @@ components:
                 - forbidden
                 - not_found
                 - conflict
+                - idempotency_conflict
                 - validation_error
                 - rate_limited
                 - internal_error
@@ -764,6 +805,18 @@ components:
           format: uri
           description: Link to the event on the website.
 
+    EventListItem:
+      description: |
+        An event as returned by `GET /events`. `attendance` is present only when
+        the request includes `include=attendance`.
+      allOf:
+        - $ref: '#/components/schemas/Event'
+        - type: object
+          properties:
+            attendance:
+              type: array
+              items:
+                $ref: '#/components/schemas/Attendance'
     EventWithAttendance:
       allOf:
         - $ref: '#/components/schemas/Event'

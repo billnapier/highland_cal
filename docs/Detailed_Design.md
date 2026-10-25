@@ -115,9 +115,9 @@ Added in a new timestamped migration (`supabase/migrations/<timestamp>_api_token
 - `revoked_at` (timestamptz, nullable): Revocation is a soft delete so `last_used_at` history is kept for auditing.
 
 **RLS Policies & Grants (`Api_Tokens`):**
-- **Read:** Owner only (`user_id = (select current_actor_id())`), so both the profile page (session) and `GET /api/v1/tokens` (PAT) can list them. Tokens are *not* public, unlike the rest of the schema. Column grants exclude `token_hash` from `SELECT` for `anon`/`authenticated`.
-- **Insert:** Session only (`user_id = auth.uid()`). A PAT can never create a token, so a leaked token cannot mint more. Any role may create a token; a `PENDING` user's token is effectively read-only.
-- **Update:** Owner only (`user_id = (select current_actor_id())`). Column-level grants allow updating **only** `revoked_at` (`REVOKE UPDATE … ; GRANT UPDATE (revoked_at) …`), so `token_hash`, `user_id`, and `scopes` are immutable without needing a trigger.
+- **Read:** Owner only (`user_id = (select current_actor_id())`), so both the profile page (session) and `GET /api/v1/tokens` (PAT) can list them. Tokens are *not* public, unlike the rest of the schema. Table-level `SELECT` is revoked from `anon`/`authenticated` and re-granted only on the non-secret columns, so `token_hash` is never selectable.
+- **Insert:** `is_session() AND user_id = auth.uid()`. A PAT can never create a token, so a leaked token cannot mint more. Any role may create a token; a `PENDING` user's token is effectively read-only.
+- **Update:** **No `UPDATE` grant and no `UPDATE` policy.** Revocation goes only through the RPC `revoke_api_token(token_id uuid)` (`SECURITY DEFINER`). It runs `UPDATE … SET revoked_at = now() WHERE id = token_id AND user_id = current_actor_id() AND revoked_at IS NULL` and returns whether a row changed. Revocation is therefore **irreversible**: no caller can set `revoked_at` back to `NULL` or change `token_hash`, `user_id`, `scopes`, or `expires_at`. Revoking is allowed from a session or from any live token of the same owner, because it only ever reduces access.
 - **Delete:** No policy. Rows go away only by cascade when the user is deleted.
 
 **`Api_Rate_Limits` Table** (fixed-window counters; keeps the $0 budget by avoiding Redis/KV)
@@ -132,7 +132,14 @@ Added in a new timestamped migration (`supabase/migrations/<timestamp>_api_token
 - `request_hash` (text): SHA-256 of method + path + body, to reject reuse of a key with a different payload (`409`).
 - `status` (integer) and `response` (jsonb): The stored result to replay.
 - `created_at` (timestamptz). Primary Key `(token_id, key)`. Rows older than 24 hours are ignored and pruned opportunistically.
-- RLS enabled with **no** policies and no grants. Reachable only through `SECURITY DEFINER` functions `api_idempotency_get(key, request_hash)` / `api_idempotency_put(key, request_hash, status, response)`, which scope every row to the calling token.
+- RLS enabled. Policies allow `SELECT`/`INSERT`/`UPDATE` only where `token_id = (select (request_token()).id)`, so each token sees only its own keys. No `DELETE`; pruning happens inside `api_authenticate()`.
+
+**Atomic idempotent create (`api_create_event(payload jsonb, idem_key text, request_hash text)`):**
+`POST /events` with an `Idempotency-Key` calls this RPC instead of inserting into `Games` directly. It is **`SECURITY INVOKER`**, so the `Games` insert still runs under the caller's RLS. PostgREST runs each RPC in a single transaction, so these steps commit or roll back together:
+1. `INSERT INTO Api_Idempotency_Keys (token_id, key, request_hash) … ON CONFLICT DO NOTHING`. A concurrent retry with the same key **blocks** on the primary-key conflict until the first transaction commits or rolls back.
+2. If the key already existed: if `request_hash` differs, raise `idempotency_conflict` (→ `409`). Otherwise return the stored `status`/`response` without inserting anything.
+3. Otherwise insert the `Games` row (RLS-checked; a violation rolls back the key claim too), store the result in the key row, and return it.
+A crash after step 3 but before commit rolls back everything, including the key claim, so a retry starts clean. Because notifications are written to the outbox (§3.7) by a trigger **inside this same transaction**, a replayed request never creates a second notification. Requests without an `Idempotency-Key` insert directly.
 
 ### 3.6 Token-Aware Row Level Security (Milestone 14)
 **Principle: RLS is the single source of authorization for both the web UI and the Agent API.** The application never re-implements the permission model. App-side checks may exist only to produce friendlier error messages, and must never be the thing that grants access.
@@ -166,13 +173,46 @@ Added in a new timestamped migration (`supabase/migrations/<timestamp>_api_token
 
 For browser sessions every new predicate reduces exactly to today's behavior (`current_actor_id() = auth.uid()`, `has_scope() = true`), so **the web UI's permissions do not change**.
 
-**Policy invariant (drift guard):** Any policy that grants a write based on `is_admin()`, `is_approved_or_admin()`, or `current_actor_id()` **must** also include either `has_scope(…)` or `is_session()`. Otherwise, adding a new table later could silently give every token write access. A pgTAP test (§6.1) scans `pg_policies` and fails CI if any policy breaks this rule.
+**Policy invariant (drift guard):** Any policy that grants a write based on `is_admin()`, `is_approved_or_admin()`, or `current_actor_id()` **must** also include either `has_scope(…)` or `is_session()`. Otherwise, adding a new table later could silently give every token write access. A pgTAP test (§6.1) scans `pg_policies` and fails CI if any policy breaks this rule. All write policies defined in this milestone satisfy it, including `Api_Tokens` insert (`is_session()`). Token revocation is deliberately an RPC rather than an `UPDATE` policy (§3.5).
+
+**`SECURITY DEFINER` functions bypass RLS, so they get their own guard.** The same pgTAP suite lists every `SECURITY DEFINER` function in `public` that client roles can execute (from `pg_proc` + `has_function_privilege`) and compares it with an explicit allowlist in the test file:
+- the identity helpers
+- `api_authenticate`
+- `api_rate_limit_anonymous`
+- `revoke_api_token`
+- `authorize_user_deletion`
+- `get_user_private`
+- `vanity_name`/role trigger functions
+Adding a new one fails CI until it is reviewed and added to the list. Each allowlisted write function also has dedicated pgTAP cases.
 
 **Other API-support functions** (`SECURITY DEFINER`, `VOLATILE`):
 - `api_authenticate()` is called once at the start of every authenticated API request. It validates the header token (raising `invalid_token` → `401`), applies rate limits via `Api_Rate_Limits`, updates `last_used_at` (at most once per minute), and returns `{ user_id, role, scopes, token_id, rate_limit_remaining, rate_limit_reset }`. The route uses the result for `401`/`429`, for `/me`, and for friendly `403` messages. It does **not** use the result for authorization; RLS does that on the actual query.
 - `authorize_user_deletion(target uuid)` raises `insufficient_privilege` unless `is_admin() AND has_scope('users:admin') AND target <> current_actor_id()`. See §4.3.
 
 **Accepted consequence:** Because PATs are evaluated inside Postgres, a token holder could also call Supabase's PostgREST endpoint directly (the anon key is public by design) with the `x-hcal-token` header. That grants **no additional permissions**, because the same RLS applies. It does bypass the Next.js layer's rate limits and email notifications. That is acceptable for v1: a token can only do what its owner can already do. If it becomes a problem, add a PostgREST `db_pre_request` check.
+
+
+### 3.7 Notification Outbox (Milestone 14)
+Notifications are **recorded in the database in the same transaction as the change**, and **delivered by trusted server-only code**. Callers never need to read other members' email addresses, so recipient lookup does not weaken RLS, and retries or replays can't duplicate emails.
+
+**`Notification_Outbox` Table** (RLS enabled, **no** policies and **no** grants to `anon`/`authenticated`)
+- `id` (uuid PK), `kind` (`NEW_REGISTRATION` | `USER_APPROVED` | `EVENT_CREATED` | `EVENT_UPDATED` | `EVENT_DELETED`), `subject_id` (uuid: user or game), `payload` (jsonb: snapshot of the event/user fields needed for the email, captured at write time so deletes still render), `created_at`, `sent_at` (nullable), `attempts` (int), `last_error` (text).
+
+**Writers: `SECURITY DEFINER` triggers only.** They fire only on writes that RLS has already allowed:
+- `Games` `AFTER INSERT` → `EVENT_CREATED`, unless the request header `x-hcal-notify` is `false`.
+- `Games` `AFTER UPDATE` → `EVENT_UPDATED`, only if the request header `x-hcal-major-change` is `true`.
+- `Games` `AFTER DELETE` → `EVENT_DELETED`, unless `x-hcal-notify` is `false`.
+- `User_Roles` `AFTER UPDATE` where `role` changes `PENDING → APPROVED` → `USER_APPROVED`.
+- `handle_new_user()` (existing signup trigger) → `NEW_REGISTRATION`. This replaces the "created within the last 60 seconds" heuristic in the auth callback.
+The flags travel as headers so both entry points work the same way. Server Actions set them on their per-request session client, and API routes map `notify` / `major_change` from the request body onto them. A member calling PostgREST directly could set these headers too, but that only lets them do what the UI checkbox already allows for events they can edit.
+
+**Delivery: `lib/notifications/dispatch.ts` (server-only).**
+- Claims unsent rows with `SELECT … FOR UPDATE SKIP LOCKED`, resolves recipients (all `APPROVED`/`ADMIN` emails, or the `ADMIN` emails for registrations), sends via Resend, and sets `sent_at`. On failure it increments `attempts` and records `last_error`, giving up after 5 tries.
+- **It uses the service-role client, but takes no caller input.** It only drains the outbox, so it cannot be made to email arbitrary content or recipients. This is the second and final sanctioned service-role use, alongside `auth.admin.deleteUser()`.
+- **Triggered** right after every successful mutation (Server Actions and API routes) via Next.js `after()`, so emails go out promptly without delaying the response. A daily Vercel Cron job (`/api/cron/notifications`, protected by `CRON_SECRET`, within Hobby-plan limits) drains anything left over.
+- **Edge cases:**
+  - At-least-once delivery: a crash between Resend accepting a message and `sent_at` being written can cause one duplicate send. Pass the outbox `id` as Resend's idempotency key to prevent this.
+  - Server Actions keep the existing behavior: emails are sent only when the email env vars are configured. Otherwise rows are marked `sent_at` with `last_error = 'email disabled'`.
 
 ## 4. Application Logic & Workflows
 
@@ -224,7 +264,7 @@ A versioned JSON REST API under `/api/v1` lets AI agents, scripts, and cron jobs
 
 **Authorization lives in the database (RLS), not in the API.**
 The API does **not** re-implement the permission model. Every API request runs against the database as the token's owner through the token-aware RLS described in §3.6, the same policies that govern the web UI. Rules:
-1. **No service-role client in API routes**, with exactly one exception: the `auth.admin.deleteUser()` call, made only after the database has authorized it (§4.3).
+1. **No service-role client in API routes**, with two narrowly scoped exceptions, neither of which makes a permission decision: the `auth.admin.deleteUser()` call, made only after the database has authorized it (§4.3); and the notification dispatcher, which takes no caller input and only drains the outbox (§3.7).
 2. Routes build an anon-key client that sends the caller's token as `x-hcal-token` (`lib/api/supabase.ts`), and run every read and write through it.
 3. App code may *pre-check* (using the role/scopes returned by `api_authenticate()`) to return a precise message such as "Only admins can delete events". Pre-checks are advisory: if a pre-check and RLS disagree, RLS wins, and the drift shows up as a wrong error message, never a security hole.
 4. Writes are still scoped explicitly where natural (e.g. attendance upserts set `user_id` from `api_authenticate()`, never from the request body), but this is belt-and-braces: RLS would reject anything else.
@@ -234,18 +274,24 @@ The API does **not** re-implement the permission model. Every API request runs a
 - An `UPDATE`/`DELETE` that a policy filters out affects **0 rows** silently. Routes therefore use `.select()` on mutations (returning the affected rows) and, when nothing came back, re-read the row: if it exists (all event/attendance reads are public) → `403`; if not → `404`.
 - Errors raised by `api_authenticate()` → `401` (invalid token) or `429` (rate limited).
 
-**Shared request logic (no authorization):** `lib/core/*` holds the logic shared by Server Actions and API routes: Zod validation (`lib/schemas.ts`), building the DB payload, performing the query with **the client it is given** (session client from Server Actions, token client from the API), mapping RLS outcomes to typed errors (`ForbiddenError`, `NotFoundError`, `ValidationError`, `ConflictError`), and sending emails after a successful write. Server Actions and routes then handle `revalidatePath` and response formatting. `lib/core` contains no "is this user allowed?" logic of record.
+**Shared request logic (no authorization):** `lib/core/*` holds the logic shared by Server Actions and API routes: Zod validation (`lib/schemas.ts`), building the DB payload and notification headers, performing the query with **the client it is given** (session client from Server Actions, token client from the API), mapping RLS outcomes to typed errors (`ForbiddenError`, `NotFoundError`, `ValidationError`, `ConflictError`), and kicking the notification dispatcher via `after()`. Server Actions and routes then handle `revalidatePath` and response formatting. `lib/core` contains no "is this user allowed?" logic of record and never reads other users' private data.
 
 *(Alternatives considered: (a) the service-role client plus app-level checks. Rejected because it duplicates RLS in TypeScript and would drift. (b) Minting short-lived Supabase JWTs per request. Rejected because Supabase is moving projects to asymmetric signing keys the app can't sign with, and the HS256 legacy secret is deprecated.)*
 
 **Conventions** (detailed in `API.md` §4): `snake_case` fields matching the DB; `start_date` as local `YYYY-MM-DD`; `start_time`/`end_time` as local `HH:MM` (the DB `time` type's seconds are dropped on output); cursor pagination (`limit` ≤ 200); partial `PATCH`; idempotent `PUT` for RSVPs; optional `Idempotency-Key` on `POST /events`.
 
-**Notifications:** API mutations send the same Resend emails as the UI. Event creation emails by default (`notify: false` suppresses it, a new capability that is useful for routine practices); edits email only with `major_change: true`; deletes email unless `?notify=false`. The "suppress" options are also added to the core so the UI could expose them later.
+**Notifications:** API mutations produce the same emails as the UI via the notification outbox (§3.7). Rows are written by database triggers in the same transaction as the change, then delivered by the server-only dispatcher. Event creation emails by default (`notify: false` suppresses it, a new capability that is useful for routine practices); edits email only with `major_change: true`; deletes email unless `?notify=false`. These flags reach the triggers as the `x-hcal-notify` / `x-hcal-major-change` headers, and the UI could expose "suppress" later using the same headers.
 
 **Caching:** API mutations call the same `revalidatePath('/')` / `revalidatePath('/dashboard')` as the UI. `GET` responses for unauthenticated callers may set `Cache-Control: public, s-maxage=60`; authenticated responses are `private, no-store`.
 
 **Visibility rules for `/users`:** Unauthenticated and non-admin callers get the public roster (only `APPROVED`/`ADMIN` users, without `email` or `role`, consistent with the public roster page). Admin callers with `users:admin` get all users including `PENDING`, with `email` and `role`. A user always sees their own `email`/`role` via `/me`.
-> ⚠️ **Pre-existing gap:** today `Profiles` (including `email`) and `User_Roles` have public `SELECT` policies, so this filtering is presentation only: anyone can read emails directly from PostgREST with the public anon key. To make the API's visibility rule a real RLS rule (consistent with the "RLS is the only authority" principle), Milestone 14 should move `email` out of public reach, either by revoking column `SELECT` on `Profiles.email` from `anon`/`authenticated` and exposing it via a `SECURITY DEFINER` function gated on `is_admin() OR id = current_actor_id()`, or by moving it to a private table. The admin dashboard and email-sending code must then use that function.
+
+**Private profile fields (closes a pre-existing exposure):** Today `Profiles` has a public `SELECT` policy and the default table-level grant, so `email`, `throwing_experience`, and `attended_practice` (application answers) can be read by anyone through PostgREST with the public anon key. PostgreSQL privileges are additive, so revoking a single column is **not** enough while a table-level grant exists. The migration must therefore:
+1. `REVOKE SELECT ON public.Profiles FROM anon, authenticated;`
+2. `GRANT SELECT (id, display_name, class, outward_links, avatar_url, vanity_name, created_at) ON public.Profiles TO anon, authenticated;`, the explicit public column allowlist. Future public columns must be added to this grant.
+3. Expose private fields only through `get_user_private(ids uuid[])`, a `SECURITY DEFINER` function returning `id, email, throwing_experience, attended_practice` for rows where `id = current_actor_id()` (self), **or** for any row when `is_admin() AND has_scope('users:admin')`. An Admin's token without `users:admin` sees only its own private fields. Browser sessions satisfy `has_scope()`, so the admin dashboard works unchanged.
+4. App code that selects `*` or the private columns from `profiles` must switch to explicit public columns plus `get_user_private()`. Today that's the dashboard application status, the admin dashboard, and `lib/email.ts`. Email recipient lookup moves entirely into the server-only notification dispatcher (§3.7), which never runs with a caller's privileges.
+5. `User_Roles` stays publicly readable. Roles are already shown on the public roster.
 
 **Rate limiting:** Per token, 60 writes/min and 300 reads/min, enforced inside `api_authenticate()` (§3.6). Unauthenticated reads are limited to 120/min per IP (hashed) by a lightweight `api_rate_limit_anonymous()` RPC. Returns `429` with `Retry-After` and `RateLimit-*` headers. Rate limiting is traffic control, not authorization, so it is fine for it to live in the API layer.
 
@@ -275,7 +321,7 @@ There is deliberately **no API endpoint to create tokens**, so a leaked token ca
 
 The helper returns a discriminated union (`{ kind: 'pat', client, identity } | { kind: 'anonymous', client }`) so a future `{ kind: 'oauth', … }` (Milestone 15) can be added without changing route code. OAuth tokens are real Supabase JWTs, so they would be passed as the normal `Authorization` header and `auth.uid()` would work natively.
 
-**Revocation:** From the profile page (session) or `DELETE /api/v1/tokens/{id}` (a token may revoke itself or other tokens of the same owner, enforced by the `Api_Tokens` update policy). Sets `revoked_at`, and the very next request with that token fails inside `request_token()`. Deleting a user cascades and removes their tokens.
+**Revocation:** From the profile page (session) or `DELETE /api/v1/tokens/{id}` (a token may revoke itself or other tokens of the same owner). Both call the `revoke_api_token()` RPC (§3.5), which sets `revoked_at` irreversibly. The very next request with that token fails inside `request_token()`. Deleting a user cascades and removes their tokens.
 
 ### 4.8 Future: OAuth 2.1 & MCP (Milestone 15)
 - **Why not reuse Google OAuth tokens directly:** Google access tokens are issued for Google APIs, and the app never holds them — Supabase exchanges them for its own session JWT, which is what RLS understands. Validating Google tokens ourselves would mean a parallel auth system. Supabase session tokens could technically be reused, but they expire hourly and refresh-token rotation means an agent and a browser sharing a session log each other out.
