@@ -55,7 +55,11 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
       if (key in attendanceSummary) attendanceSummary[key]++
     }
 
-    return jsonResponse({ ...data, attendance_summary: attendanceSummary }, 200, identity?.rate_limit ?? null)
+    return jsonResponse(
+      { ...coreEvents.addEventUrl(data), attendance_summary: attendanceSummary },
+      200,
+      identity?.rate_limit ?? null,
+    )
   } catch (e) {
     return errorResponse(e)
   }
@@ -112,7 +116,7 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
     })
 
     return jsonResponse(
-      { ...event, attendance_summary: { REGISTERED: 0, INTERESTED: 0, WATCHING: 0, NOT_GOING: 0 } },
+      { ...coreEvents.addEventUrl(event), attendance_summary: { REGISTERED: 0, INTERESTED: 0, WATCHING: 0, NOT_GOING: 0 } },
       200,
       identity.rate_limit,
     )
