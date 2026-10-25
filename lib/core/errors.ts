@@ -14,6 +14,7 @@ export type CoreErrorCode =
   | 'not_found'
   | 'validation_failed'
   | 'conflict'
+  | 'rate_limited'
   | 'internal'
 
 export class CoreError extends Error {
