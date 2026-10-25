@@ -2,6 +2,7 @@ import type { NextRequest } from 'next/server'
 import { authenticateRequest } from '@/lib/api/auth'
 import { errorResponse, jsonResponse } from '@/lib/api/response'
 import { CoreError } from '@/lib/core/errors'
+import { addProfileUrl } from '@/lib/core/users'
 
 /**
  * GET /api/v1/users
@@ -72,12 +73,15 @@ export async function GET(request: NextRequest) {
         }
       }
 
+      // Add computed profile_url after all other fields are populated
+      const usersWithUrl = users.map((u: Record<string, unknown>) => addProfileUrl(u as Parameters<typeof addProfileUrl>[0]))
+
       let nextCursor: string | null = null
       if (hasMore && users.length > 0) {
         nextCursor = users[users.length - 1].display_name
       }
 
-      return jsonResponse({ data: users, next_cursor: nextCursor }, 200, rateLimit)
+return jsonResponse({ data: usersWithUrl, next_cursor: nextCursor }, 200, rateLimit)
     }
 
     // Public roster: only APPROVED/ADMIN users via join, public fields
@@ -107,12 +111,15 @@ export async function GET(request: NextRequest) {
       return rest
     })
 
+    // Add computed profile_url to public users
+    const publicUsersWithUrl = publicUsers.map((u: Record<string, unknown>) => addProfileUrl(u as Parameters<typeof addProfileUrl>[0]))
+
     let nextCursor: string | null = null
-    if (hasMore && publicUsers.length > 0) {
-      nextCursor = publicUsers[publicUsers.length - 1].display_name as string
+    if (hasMore && publicUsersWithUrl.length > 0) {
+      nextCursor = publicUsersWithUrl[publicUsersWithUrl.length - 1].display_name as string
     }
 
-    return jsonResponse({ data: publicUsers, next_cursor: nextCursor }, 200, rateLimit)
+return jsonResponse({ data: publicUsersWithUrl, next_cursor: nextCursor }, 200, rateLimit)
   } catch (e) {
     return errorResponse(e, rateLimit)
   }

@@ -79,3 +79,23 @@ export async function deleteUser(db: DbClient, userId: string): Promise<void> {
     throw new CoreError('internal', 'Failed to delete user')
   }
 }
+
+/**
+ * Build the public profile URL for a user on the website.
+ * Uses vanity_name when available, otherwise falls back to the UUID.
+ */
+export function profileUrl(vanityName: string | null, userId: string): string {
+  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
+  const slug = vanityName || userId
+  return `${baseUrl}/roster/${slug}`
+}
+
+/**
+ * Add computed `profile_url` field to a user row.
+ * Used by API route handlers to fulfil the User schema contract.
+ */
+export function addProfileUrl<T extends { vanity_name: string | null; id: string }>(
+  user: T,
+): T & { profile_url: string } {
+  return { ...user, profile_url: profileUrl(user.vanity_name, user.id) }
+}

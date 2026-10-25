@@ -183,3 +183,19 @@ export async function deleteEvent(
   // The delete trigger enqueued the "Event Canceled" email.
   if (notify) kickNotifications()
 }
+
+/**
+ * Build the public URL for an event on the website.
+ */
+export function eventUrl(eventId: string): string {
+  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
+  return `${baseUrl}/events/${eventId}`
+}
+
+/**
+ * Add computed `url` field to an event row.
+ * Used by API route handlers to fulfil the Event schema contract.
+ */
+export function addEventUrl<T extends { id: string }>(event: T): T & { url: string } {
+  return { ...event, url: eventUrl(event.id) }
+}
