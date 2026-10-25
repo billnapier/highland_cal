@@ -2,8 +2,8 @@
 
 import { useState } from 'react'
 import { Button } from '@/components/ui/button'
-import { approveUser, promoteToAdmin, deleteUser } from '@/app/actions/admin'
-import { Loader2, Check, ShieldAlert, Trash2 } from 'lucide-react'
+import { approveUser, promoteToAdmin, demoteFromAdmin, deleteUser } from '@/app/actions/admin'
+import { Loader2, Check, ShieldAlert, ShieldMinus, Trash2 } from 'lucide-react'
 
 export function ApproveButton({ userId }: { userId: string }) {
   const [loading, setLoading] = useState(false)
@@ -61,6 +61,37 @@ export function PromoteButton({ userId }: { userId: string }) {
         <ShieldAlert className="mr-2 h-4 w-4" />
       )}
       {loading ? 'Promoting...' : 'Promote to Admin'}
+    </Button>
+  )
+}
+
+export function DemoteButton({ userId }: { userId: string }) {
+  const [loading, setLoading] = useState(false)
+
+  const handleDemote = async () => {
+    if (!confirm('Are you sure you want to demote this admin to APPROVED? They will lose admin access.')) return
+    
+    setLoading(true)
+    try {
+      const res = await demoteFromAdmin(userId)
+      if (!res.success) {
+        alert(res.error)
+      }
+    } catch (err) {
+      alert(err instanceof Error ? err.message : 'An unexpected error occurred')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  return (
+    <Button variant="outline" size="sm" onClick={handleDemote} disabled={loading} className="border-amber-500 text-amber-600 hover:bg-amber-50">
+      {loading ? (
+        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+      ) : (
+        <ShieldMinus className="mr-2 h-4 w-4" />
+      )}
+      {loading ? 'Demoting...' : 'Demote to Member'}
     </Button>
   )
 }

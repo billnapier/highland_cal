@@ -8,7 +8,7 @@ vi.mock('@/lib/supabase/admin', () => ({
 
 import { kickNotifications } from '@/lib/notifications'
 import { setAttendance } from './attendance'
-import { approveUser, deleteUser, promoteToAdmin } from './users'
+import { approveUser, deleteUser, demoteFromAdmin, promoteToAdmin } from './users'
 import { ConflictError, ForbiddenError, NotFoundError, ValidationError } from './errors'
 import { arg, fakeDb } from './test-utils'
 
@@ -96,6 +96,24 @@ describe('promoteToAdmin', () => {
     const err = await promoteToAdmin(db, UID).catch((e) => e)
     expect(err).toBeInstanceOf(ConflictError)
     expect(err.message).toBe('User is not approved')
+  })
+})
+
+describe('demoteFromAdmin', () => {
+  it('updates an ADMIN row to APPROVED and kicks notifications', async () => {
+    const saved = { user_id: UID, role: 'APPROVED' }
+    const { db, log } = fakeDb({ user_roles: [{ data: [saved] }] })
+    await demoteFromAdmin(db, UID)
+    expect(arg(log[0], 'update')).toMatchObject({ role: 'APPROVED' })
+    expect(log[0].calls.filter((c) => c[0] === 'eq')).toEqual([['eq', 'user_id', UID], ['eq', 'role', 'ADMIN']])
+    expect(kick).toHaveBeenCalled()
+  })
+
+  it('rejects a user who is not currently ADMIN', async () => {
+    const { db } = fakeDb({ user_roles: [{ data: [] }, { data: { role: 'APPROVED' } }] })
+    const err = await demoteFromAdmin(db, UID).catch((e) => e)
+    expect(err).toBeInstanceOf(ConflictError)
+    expect(err.message).toBe('User is not admin')
   })
 })
 
