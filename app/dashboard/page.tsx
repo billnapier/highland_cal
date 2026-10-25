@@ -39,13 +39,16 @@ export default async function DashboardPage() {
   // Fetch the user's profile, role, and upcoming events concurrently to reduce latency
   const [
     { data: profileData },
+    { data: privateRows },
     { data: games, error: gamesError }
   ] = await Promise.all([
     supabase
       .from('profiles')
-      .select('display_name, email, throwing_experience, attended_practice, avatar_url, vanity_name, user_roles(role)')
+      .select('display_name, avatar_url, vanity_name, user_roles(role)')
       .eq('id', user.id)
       .single(),
+    // Application answers are private fields; read your own via get_user_private().
+    supabase.rpc('get_user_private', { ids: [user.id] }),
     supabase
       .from('games')
       .select('*, attendance(*, profiles(display_name))')
@@ -56,7 +59,8 @@ export default async function DashboardPage() {
   const roleRecord = (profileData as unknown as { user_roles: { role: string } | { role: string }[] | null })?.user_roles
   const role = (Array.isArray(roleRecord) ? roleRecord[0]?.role : roleRecord?.role) || 'UNKNOWN'
   
-  const hasSubmittedApplication = !!profileData?.throwing_experience || typeof profileData?.attended_practice === 'boolean'
+  const privateData = (privateRows as { throwing_experience: string | null; attended_practice: boolean | null }[] | null)?.[0]
+  const hasSubmittedApplication = !!privateData?.throwing_experience || typeof privateData?.attended_practice === 'boolean'
 
   return (
     <main className="flex flex-1 flex-col p-4 md:p-8 bg-gradient-to-br from-slate-50 via-blue-50/50 to-indigo-50/80 dark:from-slate-950 dark:via-blue-950/20 dark:to-indigo-950/30 min-h-[calc(100vh-4rem)]">

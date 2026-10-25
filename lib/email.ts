@@ -1,5 +1,5 @@
 import { Resend } from 'resend'
-import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 import NewRegistrationEmail from '@/emails/NewRegistrationEmail'
 import UserApprovedEmail from '@/emails/UserApprovedEmail'
 import EventNotificationEmail from '@/emails/EventNotificationEmail'
@@ -8,9 +8,14 @@ const resend = new Resend(process.env.RESEND_API_KEY)
 
 const FROM_EMAIL = process.env.RESEND_FROM_EMAIL || 'onboarding@resend.dev'
 
-// Fetch emails for users with specific roles
+// Fetch emails for users with specific roles.
+// Emails are no longer readable by clients (see the agent_api_foundation
+// migration), so recipient lookup uses the server-only service-role client.
+// It is only called after a mutation has already succeeded under RLS, and takes
+// no caller-controlled input beyond fixed role names. Replaced by the
+// notification outbox dispatcher in Milestone 14 part 2.
 async function getEmailsByRoles(roles: string[]): Promise<string[]> {
-  const supabase = await createClient()
+  const supabase = createAdminClient()
 
   // To get the emails we need to join Profiles and User_Roles
   const { data, error } = await supabase

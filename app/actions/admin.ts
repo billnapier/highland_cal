@@ -40,14 +40,16 @@ export async function approveUser(userId: string) {
     return { success: false, error: 'Failed to approve user' }
   }
 
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('email, display_name')
-    .eq('id', userId)
-    .single()
+  // Email is a private field: read it via get_user_private(), which RLS-style
+  // gates on admin (+ users:admin scope for tokens) or self.
+  const [{ data: profile }, { data: privateRows }] = await Promise.all([
+    supabase.from('profiles').select('display_name').eq('id', userId).single(),
+    supabase.rpc('get_user_private', { ids: [userId] }),
+  ])
+  const email = (privateRows as { email: string | null }[] | null)?.[0]?.email
 
-  if (profile?.email && profile?.display_name) {
-    await sendUserApprovedNotification(profile.display_name, profile.email)
+  if (email && profile?.display_name) {
+    await sendUserApprovedNotification(profile.display_name, email)
   }
 
   revalidatePath('/dashboard/admin')
@@ -83,7 +85,16 @@ export async function deleteUser(userId: string) {
     return { success: false, error: 'Cannot delete your own account' }
   }
 
-  // Use the admin client to bypass RLS and delete the auth identity
+  // The database is the authority: authorize_user_deletion() raises unless the
+  // caller is an admin (with users:admin for tokens) deleting someone else.
+  const { error: authzError } = await supabase.rpc('authorize_user_deletion', { target: userId })
+  if (authzError) {
+    console.error('User deletion not authorized:', authzError)
+    return { success: false, error: 'Not authorized to delete this user' }
+  }
+
+  // Only after the database has authorized it: use the admin client to delete
+  // the auth identity (Supabase Auth has no RLS-governed delete).
   const adminClient = createAdminClient()
   const { error } = await adminClient.auth.admin.deleteUser(userId)
 
