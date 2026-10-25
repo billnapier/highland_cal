@@ -1,0 +1,43 @@
+name: Database Tests
+
+# Applies every migration to a real local Supabase stack and runs the pgTAP
+# suite in supabase/tests/. This suite is the authorization test suite: RLS is
+# the only authorization of record (see AGENTS.md).
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'supabase/**'
+      - '.github/workflows/db-tests.yml'
+  pull_request:
+    paths:
+      - 'supabase/**'
+      - '.github/workflows/db-tests.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  pgtap:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: supabase/setup-cli@v1
+        with:
+          version: 2.122.0
+
+      # The repo intentionally ships no supabase/config.toml (clubs deploy via
+      # the Supabase GitHub integration). Generate a throwaway one for CI only.
+      - name: Init local Supabase config
+        run: |
+          if [ ! -f supabase/config.toml ]; then
+            supabase init --yes
+          fi
+
+      - name: Start local Postgres and apply migrations
+        run: supabase db start
+
+      - name: Run pgTAP tests
+        run: supabase test db

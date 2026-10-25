@@ -37,7 +37,6 @@ export default async function AdminDashboardPage() {
       .select(`
         id,
         display_name,
-        email,
         class,
         created_at,
         user_roles (
@@ -53,6 +52,19 @@ export default async function AdminDashboardPage() {
   if (error) {
     console.error('Error fetching users:', error)
   }
+
+  // Emails are private: fetch them via get_user_private(), which only returns
+  // other users' fields to admins.
+  const { data: privateRows, error: privateError } = users?.length
+    ? await supabase.rpc('get_user_private', { ids: users.map((u: { id: string }) => u.id) })
+    : { data: [], error: null }
+  if (privateError) {
+    console.error('Error fetching user emails:', privateError)
+  }
+  const emailById = new Map(
+    ((privateRows as { id: string; email: string | null }[] | null) ?? []).map((r) => [r.id, r.email])
+  )
+  const usersWithEmail = users?.map((u) => ({ ...u, email: emailById.get(u.id) ?? null }))
 
   const settingsMap = settingsData?.reduce((acc: Record<string, string>, setting: { key: string, value: string }) => {
     acc[setting.key] = setting.value
@@ -96,7 +108,7 @@ export default async function AdminDashboardPage() {
                 </tr>
               </thead>
               <tbody>
-                {users?.map((u: { id: string, display_name: string | null, email: string | null, class: string | null, created_at: string, user_roles: { role: string }[] | { role: string } | null }) => {
+                {usersWithEmail?.map((u: { id: string, display_name: string | null, email: string | null, class: string | null, created_at: string, user_roles: { role: string }[] | { role: string } | null }) => {
                   const roleObj = u.user_roles;
                   const role = Array.isArray(roleObj) 
                     ? (roleObj.length > 0 ? roleObj[0].role : 'UNKNOWN') 
@@ -131,7 +143,7 @@ export default async function AdminDashboardPage() {
                     </tr>
                   )
                 })}
-                {users?.length === 0 && (
+                {usersWithEmail?.length === 0 && (
                   <tr>
                     <td colSpan={4} className="px-6 py-8 text-center text-muted-foreground">
                       No users found.
