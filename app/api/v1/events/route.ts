@@ -4,6 +4,9 @@ import { errorResponse, jsonResponse } from '@/lib/api/response'
 import * as core from '@/lib/core/events'
 import { CoreError, IdempotencyConflictError } from '@/lib/core/errors'
 
+/** Interest-level labels used in attendance_summary. */
+const INTEREST_LEVELS = ['REGISTERED', 'INTERESTED', 'WATCHING', 'NOT_GOING'] as const
+
 /**
  * GET /api/v1/events
  * Public. Returns events sorted by start_date ascending.
@@ -58,14 +61,34 @@ export async function GET(request: NextRequest) {
     const hasMore = items.length > limit
     const events = hasMore ? items.slice(0, limit) : items
 
+    // Batch-fetch attendance counts for every returned event
+    const eventIds = events.map((e: { id: string }) => e.id)
+    const { data: attendanceRows } = eventIds.length > 0
+      ? await db.from('attendance').select('event_id, interest_level').in('event_id', eventIds)
+      : { data: [] }
+    const countsByEvent: Record<string, Record<string, number>> = {}
+    for (const a of (attendanceRows || []) as Array<{ event_id: string; interest_level: string }>) {
+      if (!countsByEvent[a.event_id]) {
+        countsByEvent[a.event_id] = { REGISTERED: 0, INTERESTED: 0, WATCHING: 0, NOT_GOING: 0 }
+      }
+      const key = a.interest_level
+      if (INTEREST_LEVELS.includes(key as typeof INTEREST_LEVELS[number])) {
+        countsByEvent[a.event_id][key]++
+      }
+    }
+    const eventsWithSummary = events.map((e: Record<string, unknown>) => ({
+      ...e,
+      attendance_summary: countsByEvent[e.id as string] || { REGISTERED: 0, INTERESTED: 0, WATCHING: 0, NOT_GOING: 0 },
+    }))
+
     // Build next_cursor from the last event's start_date
     let nextCursor: string | null = null
-    if (hasMore && events.length > 0) {
-      nextCursor = events[events.length - 1].start_date
+    if (hasMore && eventsWithSummary.length > 0) {
+      nextCursor = eventsWithSummary[eventsWithSummary.length - 1].start_date as string
     }
 
     return jsonResponse(
-      { data: events, next_cursor: nextCursor },
+      { data: eventsWithSummary, next_cursor: nextCursor },
       200,
       identity?.rate_limit ?? null,
     )
@@ -115,12 +138,20 @@ export async function POST(request: NextRequest) {
 
       // api_create_event() returns { status, replayed, response }; the spec's
       // 201 body is the Event object itself (replayed or not — same shape).
-      return jsonResponse(data.response, data.status, identity.rate_limit)
+      return jsonResponse(
+        { ...data.response, attendance_summary: { REGISTERED: 0, INTERESTED: 0, WATCHING: 0, NOT_GOING: 0 } },
+        data.status,
+        identity.rate_limit,
+      )
     }
 
     // No idempotency key-> regular insert through core
     const event = await core.createEvent(client, identity.user_id, body)
-    return jsonResponse(event, 201, identity.rate_limit)
+    return jsonResponse(
+      { ...event, attendance_summary: { REGISTERED: 0, INTERESTED: 0, WATCHING: 0, NOT_GOING: 0 } },
+      201,
+      identity.rate_limit,
+    )
   } catch (e) {
     return errorResponse(e)
   }

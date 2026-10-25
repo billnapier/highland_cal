@@ -42,7 +42,20 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
       return errorResponse(new NotFoundError('Event not found'))
     }
 
-    return jsonResponse(data, 200, identity?.rate_limit ?? null)
+    // Compute attendance_summary from the attendance records
+    const attendance: Array<{ interest_level: string }> = data.attendance || []
+    const attendanceSummary = {
+      REGISTERED: 0,
+      INTERESTED: 0,
+      WATCHING: 0,
+      NOT_GOING: 0,
+    }
+    for (const a of attendance) {
+      const key = a.interest_level as keyof typeof attendanceSummary
+      if (key in attendanceSummary) attendanceSummary[key]++
+    }
+
+    return jsonResponse({ ...data, attendance_summary: attendanceSummary }, 200, identity?.rate_limit ?? null)
   } catch (e) {
     return errorResponse(e)
   }
@@ -98,7 +111,11 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
       expectedRow: current,
     })
 
-    return jsonResponse(event, 200, identity.rate_limit)
+    return jsonResponse(
+      { ...event, attendance_summary: { REGISTERED: 0, INTERESTED: 0, WATCHING: 0, NOT_GOING: 0 } },
+      200,
+      identity.rate_limit,
+    )
   } catch (e) {
     return errorResponse(e)
   }
