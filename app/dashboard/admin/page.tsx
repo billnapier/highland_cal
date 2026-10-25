@@ -1,9 +1,13 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
-import { ApproveButton, PromoteButton, DeleteUserButton } from '@/components/UserManagementButtons'
+import { ApproveButton, PromoteButton, DemoteButton, DeleteUserButton } from '@/components/UserManagementButtons'
 import { AdminSettings } from '@/components/AdminSettings'
+import { AdminUserFilter } from './filter'
 
-export default async function AdminDashboardPage() {
+export default async function AdminDashboardPage(props: {
+  searchParams: Promise<{ role?: string }>
+}) {
+  const searchParams = await props.searchParams
   const supabase = await createClient()
 
   const { data, error: authError } = await supabase.auth.getUser()
@@ -27,23 +31,30 @@ export default async function AdminDashboardPage() {
     redirect('/dashboard')
   }
 
+  // Role filter from URL
+  const filterRole = searchParams.role?.toUpperCase()
+  const validRoles = ['PENDING', 'APPROVED', 'ADMIN'] as const
+  const activeFilter: string | null = validRoles.includes(filterRole as typeof validRoles[number]) ? (filterRole ?? null) : null
+
   // Fetch all users with their roles (joined query) and settings concurrently
-  const [
-    { data: users, error },
-    { data: settingsData }
-  ] = await Promise.all([
-    supabase
-      .from('profiles')
-      .select(`
-        id,
-        display_name,
-        class,
-        created_at,
-        user_roles (
-          role
-        )
-      `)
-      .order('created_at', { ascending: false }),
+  let query = supabase
+    .from('profiles')
+    .select(`
+      id,
+      display_name,
+      class,
+      created_at,
+      user_roles (
+        role
+      )
+    `)
+
+  if (activeFilter) {
+    query = query.eq('user_roles.role', activeFilter)
+  }
+
+  const [{ data: users, error }, { data: settingsData }] = await Promise.all([
+    query.order('created_at', { ascending: false }),
     supabase
       .from('settings')
       .select('key, value')
@@ -65,6 +76,16 @@ export default async function AdminDashboardPage() {
     ((privateRows as { id: string; email: string | null }[] | null) ?? []).map((r) => [r.id, r.email])
   )
   const usersWithEmail = users?.map((u) => ({ ...u, email: emailById.get(u.id) ?? null }))
+
+  // Sort: pending users first, then admins, then approved
+  const roleOrder: Record<string, number> = { PENDING: 0, ADMIN: 1, APPROVED: 2, UNKNOWN: 3 }
+  const sortedUsers = [...(usersWithEmail || [])].sort((a, b) => {
+    const roleA = getRole(a)
+    const roleB = getRole(b)
+    return (roleOrder[roleA] ?? 99) - (roleOrder[roleB] ?? 99)
+  })
+
+  const pendingCount = sortedUsers.filter((u) => getRole(u) === 'PENDING').length
 
   const settingsMap = settingsData?.reduce((acc: Record<string, string>, setting: { key: string, value: string }) => {
     acc[setting.key] = setting.value
@@ -91,7 +112,17 @@ export default async function AdminDashboardPage() {
         </section>
         
         <section className="space-y-4">
-          <h2 className="text-3xl font-extrabold tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-blue-600 to-indigo-600 dark:from-blue-400 dark:to-indigo-400 drop-shadow-sm">User Management</h2>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <h2 className="text-3xl font-extrabold tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-blue-600 to-indigo-600 dark:from-blue-400 dark:to-indigo-400 drop-shadow-sm">User Management</h2>
+              {pendingCount > 0 && (
+                <span className="inline-flex items-center rounded-full bg-amber-100 dark:bg-amber-900/50 px-3 py-1 text-xs font-bold text-amber-700 dark:text-amber-300 shadow-sm">
+                  {pendingCount} pending
+                </span>
+              )}
+            </div>
+            <AdminUserFilter currentFilter={activeFilter} />
+          </div>
           <div className="rounded-2xl border border-slate-200/60 dark:border-slate-800/60 bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl text-card-foreground shadow-xl overflow-hidden">
             {error ? (
               <div className="p-6 text-center text-red-500">
@@ -108,14 +139,19 @@ export default async function AdminDashboardPage() {
                 </tr>
               </thead>
               <tbody>
-                {usersWithEmail?.map((u: { id: string, display_name: string | null, email: string | null, class: string | null, created_at: string, user_roles: { role: string }[] | { role: string } | null }) => {
-                  const roleObj = u.user_roles;
-                  const role = Array.isArray(roleObj) 
-                    ? (roleObj.length > 0 ? roleObj[0].role : 'UNKNOWN') 
-                    : (roleObj?.role || 'UNKNOWN')
+                {sortedUsers.map((u: {
+                  id: string
+                  display_name: string | null
+                  email: string | null
+                  class: string | null
+                  created_at: string
+                  user_roles: { role: string }[] | { role: string } | null
+                }) => {
+                  const userRole = getRole(u)
+                  const isPending = userRole === 'PENDING'
                   
                   return (
-                    <tr key={u.id} className="border-b last:border-b-0 hover:bg-muted/30">
+                    <tr key={u.id} className={`border-b last:border-b-0 hover:bg-muted/30 ${isPending ? 'bg-amber-50/60 dark:bg-amber-900/10' : ''}`}>
                       <td className="px-6 py-4">
                         <div className="font-medium text-foreground">{u.display_name}</div>
                         <div className="text-muted-foreground">{u.email}</div>
@@ -125,28 +161,29 @@ export default async function AdminDashboardPage() {
                       </td>
                       <td className="px-6 py-4">
                         <span className={`inline-flex items-center rounded-full px-3 py-1 text-xs font-bold text-white shadow-sm ring-1 ring-inset ring-white/20
-                          ${role === 'ADMIN' ? 'bg-gradient-to-r from-fuchsia-500 to-purple-600' : ''}
-                          ${role === 'APPROVED' ? 'bg-gradient-to-r from-emerald-400 to-teal-500' : ''}
-                          ${role === 'PENDING' ? 'bg-gradient-to-r from-amber-400 to-orange-500' : ''}
-                          ${role === 'UNKNOWN' ? 'bg-gradient-to-r from-slate-400 to-slate-500' : ''}
+                          ${userRole === 'ADMIN' ? 'bg-gradient-to-r from-fuchsia-500 to-purple-600' : ''}
+                          ${userRole === 'APPROVED' ? 'bg-gradient-to-r from-emerald-400 to-teal-500' : ''}
+                          ${userRole === 'PENDING' ? 'bg-gradient-to-r from-amber-400 to-orange-500' : ''}
+                          ${userRole === 'UNKNOWN' ? 'bg-gradient-to-r from-slate-400 to-slate-500' : ''}
                         `}>
-                          {role}
+                          {userRole}
                         </span>
                       </td>
                       <td className="px-6 py-4 text-right">
                         <div className="flex justify-end gap-2">
-                          {role === 'PENDING' && <ApproveButton userId={u.id} />}
-                          {role === 'APPROVED' && <PromoteButton userId={u.id} />}
+                          {userRole === 'PENDING' && <ApproveButton userId={u.id} />}
+                          {userRole === 'APPROVED' && <PromoteButton userId={u.id} />}
+                          {userRole === 'ADMIN' && u.id !== user.id && <DemoteButton userId={u.id} />}
                           {u.id !== user.id && <DeleteUserButton userId={u.id} />}
                         </div>
                       </td>
                     </tr>
                   )
                 })}
-                {usersWithEmail?.length === 0 && (
+                {sortedUsers.length === 0 && (
                   <tr>
                     <td colSpan={4} className="px-6 py-8 text-center text-muted-foreground">
-                      No users found.
+                      {activeFilter ? `No users with role "${activeFilter}".` : 'No users found.'}
                     </td>
                   </tr>
                 )}
@@ -158,4 +195,11 @@ export default async function AdminDashboardPage() {
       </div>
     </main>
   )
+}
+
+function getRole(u: { user_roles: { role: string }[] | { role: string } | null }): string {
+  const roleObj = u.user_roles
+  return Array.isArray(roleObj)
+    ? (roleObj.length > 0 ? roleObj[0].role : 'UNKNOWN')
+    : (roleObj?.role || 'UNKNOWN')
 }

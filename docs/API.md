@@ -166,6 +166,7 @@ Per token: **60 write requests/minute** and **300 read requests/minute**. Unauth
 | `GET` | `/users/{id-or-vanity}` | public | One user |
 | `POST` | `/users/{id}/approve` | `users:admin` | Approve a pending user |
 | `POST` | `/users/{id}/promote` | `users:admin` | Promote to Admin |
+| `POST` | `/users/{id}/demote` | `users:admin` | Demote Admin to Member |
 | `DELETE` | `/users/{id}` | `users:admin` | Permanently delete a user |
 | `GET` | `/tokens` | token | List your tokens (metadata only) |
 | `DELETE` | `/tokens/{id}` | token | Revoke one of your tokens |

@@ -29,6 +29,10 @@ export async function promoteToAdmin(userId: string) {
   return run(core.promoteToAdmin, userId)
 }
 
+export async function demoteFromAdmin(userId: string) {
+  return run(core.demoteFromAdmin, userId)
+}
+
 export async function deleteUser(userId: string) {
   return run(core.deleteUser, userId)
 }

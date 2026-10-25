@@ -547,6 +547,35 @@ paths:
         '429':
           $ref: '#/components/responses/RateLimited'
 
+  /users/{userId}/demote:
+    parameters:
+      - $ref: '#/components/parameters/UserId'
+    post:
+      tags: [Users]
+      operationId: demoteUser
+      summary: Demote an admin to approved member
+      description: '`ADMIN` only; scope `users:admin`.'
+      security:
+        - personalAccessToken: []
+      x-scopes: ['users:admin']
+      responses:
+        '200':
+          description: The updated user.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+
   /tokens:
     get:
       tags: [Tokens]

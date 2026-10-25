@@ -51,6 +51,12 @@ export async function promoteToAdmin(db: DbClient, userId: string): Promise<void
   await setRole(db, userId, 'ADMIN', 'APPROVED')
 }
 
+/** ADMIN → APPROVED. Reduces an admin back to regular member. */
+export async function demoteFromAdmin(db: DbClient, userId: string): Promise<void> {
+  await setRole(db, userId, 'APPROVED', 'ADMIN')
+  kickNotifications()
+}
+
 /**
  * Delete a user's account. The database authorizes first
  * (`authorize_user_deletion()`: caller is an admin with `users:admin`, target
