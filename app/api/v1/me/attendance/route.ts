@@ -2,6 +2,7 @@ import type { NextRequest } from 'next/server'
 import { requireAuth } from '@/lib/api/auth'
 import { errorResponse, jsonResponse } from '@/lib/api/response'
 import { fromPostgrestError } from '@/lib/core/errors'
+import { addEventUrl } from '@/lib/core/events'
 
 /**
  * GET /api/v1/me/attendance
@@ -38,7 +39,15 @@ export async function GET(request: NextRequest) {
       throw fromPostgrestError(error, 'Failed to fetch attendance')
     }
 
-    return jsonResponse({ data: data || [] }, 200, identity.rate_limit)
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const dataWithUrl = (data || []).map((record: any) => {
+      if (record.event) {
+        record.event = addEventUrl(record.event)
+      }
+      return record
+    })
+
+    return jsonResponse({ data: dataWithUrl }, 200, identity.rate_limit)
   } catch (e) {
     return errorResponse(e)
   }
