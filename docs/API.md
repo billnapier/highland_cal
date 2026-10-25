@@ -271,7 +271,7 @@ pipx run openapi-python-client generate --url https://your-club.vercel.app/api/v
 
 1. Create a dedicated token per agent (e.g. `Hermes agent`, `Claude Code`) with the minimum scopes. This way you can revoke one without breaking the others, and `last_used_at` shows which agent is active.
 2. Store the token in the agent's secret store or environment (e.g. `HCAL_TOKEN` in `~/.hermes/.env`) — **never** in a prompt, chat message, or committed file.
-3. Give the agent a short instruction file (a "skill") like the one below.
+3. Give the agent a short instruction file (a "skill"). A ready-made one ships in this repo at [`hermes-skill/SKILL.md`](../hermes-skill/SKILL.md) — point your agent's skill loader at it, or copy the example below.
 
 ### Example agent skill
 

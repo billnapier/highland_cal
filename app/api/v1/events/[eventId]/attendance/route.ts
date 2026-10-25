@@ -38,7 +38,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
     const { data, error } = await db
       .from('attendance')
       .select(`
-        event_id, interest_level, attend_day, updated_at,
+        event_id:game_id, interest_level, attend_day, updated_at,
         user:profiles!attendance_user_id_fkey(id, display_name, vanity_name)
       `)
       .eq('game_id', eventId)

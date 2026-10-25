@@ -65,6 +65,9 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
     const isAdminView = identity?.scopes.includes('users:admin')
     const isSelf = identity?.user_id === profile.id
 
+    // Flatten the joined role:user_roles!inner(role) shape to a plain string.
+    const roleValue = (profile.role as { role?: string } | undefined)?.role ?? null
+
     const result: Record<string, unknown> = {
       id: profile.id,
       display_name: profile.display_name,
@@ -77,22 +80,13 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
 
     // Include email and role for admins with users:admin, or for self
     if (isAdminView || isSelf) {
-      result.role = profile.role
+      result.role = roleValue
 
-      // Get email from get_user_private (since profiles.email is no longer public)
-      if (isAdminView) {
-        const { data: privateData } = await db.rpc('get_user_private', { ids: [profile.id] })
-        if (privateData && Array.isArray(privateData) && privateData.length > 0) {
-          result.email = privateData[0].email || null
-        }
-      } else if (isSelf) {
-        // For self, we can get email from the profiles join (self sees own email via column grant)
-        const { data: selfProfile } = await db
-          .from('profiles')
-          .select('email')
-          .eq('id', profile.id)
-          .maybeSingle()
-        result.email = selfProfile?.email || null
+      // email is not grantable at the column level; always resolve it via
+      // get_user_private() (self or admin-with-scope, both permitted there).
+      const { data: privateData } = await db.rpc('get_user_private', { ids: [profile.id] })
+      if (privateData && Array.isArray(privateData) && privateData.length > 0) {
+        result.email = privateData[0].email || null
       }
     }
 

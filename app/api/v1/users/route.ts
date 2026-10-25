@@ -51,6 +51,12 @@ export async function GET(request: NextRequest) {
       const hasMore = items.length > limit
       const users = hasMore ? items.slice(0, limit) : items
 
+      // Flatten the joined role:user_roles!inner(role) shape to a plain string.
+      for (const user of users) {
+        const joined = user.role as { role?: string } | undefined
+        user.role = joined?.role ?? null
+      }
+
       // Get private fields (email) for these users
       if (users.length > 0) {
         const userIds = users.map((u: Record<string, unknown>) => u.id)

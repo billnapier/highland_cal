@@ -113,7 +113,9 @@ export async function POST(request: NextRequest) {
         return errorResponse(new CoreError('internal', 'Failed to create event'))
       }
 
-      return jsonResponse(data, 201, identity.rate_limit)
+      // api_create_event() returns { status, replayed, response }; the spec's
+      // 201 body is the Event object itself (replayed or not — same shape).
+      return jsonResponse(data.response, data.status, identity.rate_limit)
     }
 
     // No idempotency key-> regular insert through core
