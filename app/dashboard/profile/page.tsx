@@ -1,6 +1,8 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import ProfileForm from '@/components/ProfileForm'
+import ApiTokens from '@/components/ApiTokens'
+import { listTokens, type TokenRow } from '@/lib/core/tokens'
 
 export default async function ProfilePage() {
   const supabase = await createClient()
@@ -31,6 +33,15 @@ export default async function ProfilePage() {
   const role = (Array.isArray(roleRecord) ? roleRecord[0]?.role : roleRecord?.role) || 'UNKNOWN';
   const canHaveVanity = role === 'APPROVED' || role === 'ADMIN';
 
+  // RLS returns only the caller's own tokens (metadata only; never the hash).
+  const renderedAt = new Date().getTime();
+  let tokens: TokenRow[] = [];
+  try {
+    tokens = await listTokens(supabase);
+  } catch {
+    // Non-fatal: the profile form still works; the section shows no tokens.
+  }
+
   return (
     <main className="flex flex-1 flex-col p-8 bg-gradient-to-br from-slate-50 via-blue-50/50 to-indigo-50/80 dark:from-slate-950 dark:via-blue-950/20 dark:to-indigo-950/30 min-h-[calc(100vh-4rem)]">
       <div className="mx-auto w-full max-w-2xl space-y-8">
@@ -43,6 +54,10 @@ export default async function ProfilePage() {
 
         <div className="rounded-2xl border border-slate-200/60 dark:border-slate-800/60 bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl text-card-foreground shadow-xl p-6">
           <ProfileForm initialData={profileData || {}} canHaveVanity={canHaveVanity} />
+        </div>
+
+        <div className="rounded-2xl border border-slate-200/60 dark:border-slate-800/60 bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl text-card-foreground shadow-xl p-6">
+          <ApiTokens tokens={tokens} isAdmin={role === 'ADMIN'} now={renderedAt} />
         </div>
       </div>
     </main>
