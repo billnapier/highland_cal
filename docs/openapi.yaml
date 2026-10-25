@@ -939,13 +939,13 @@ components:
               properties:
                 instagram: { type: string }
                 facebook: { type: string }
-                custom_links:
+                customLinks:
                   type: array
                   maxItems: 5
                   items:
                     type: object
                     properties:
-                      label: { type: string }
+                      title: { type: string }
                       url: { type: string, format: uri }
             profile_url: { type: string, format: uri }
             created_at: { type: string, format: date-time }

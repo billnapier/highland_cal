@@ -24,7 +24,7 @@ User data is split into two tables to enable standard Row Level Security without
 - `display_name` (text): Athlete's name.
 - `email` (text): Athlete's email address (synced from auth. Note: this is a point-in-time snapshot unless an `AFTER UPDATE` trigger on `auth.users` is also implemented).
 - `class` (text): Competition class (e.g., A-Class, Masters, Women).
-- `outward_links` (jsonb): Social media and external profile links. The JSON structure should explicitly support `"instagram"` and `"facebook"` keys, and a `"custom_links"` array containing up to 5 objects with `"label"` and `"url"`.
+- `outward_links` (jsonb): Social media and external profile links. The JSON structure should explicitly support `"instagram"` and `"facebook"` keys, and a `"customLinks"` array containing up to 5 objects with `"title"` and `"url"`.
 - `vanity_name` (text, unique, nullable): Unique, custom slug for the athlete profile URL.
 - `created_at` (timestamptz): Default `now()`.
 
