@@ -39,6 +39,7 @@ export async function GET(request: NextRequest) {
       throw fromPostgrestError(error, 'Failed to fetch attendance')
     }
 
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const dataWithUrl = (data || []).map((record: any) => {
       if (record.event) {
         record.event = addEventUrl(record.event)
