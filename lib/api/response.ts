@@ -105,3 +105,29 @@ export function jsonResponse(
 export function rateLimitHeaders(identity: { rate_limit: { limit: number; remaining: number; reset: number } } | null) {
   return identity?.rate_limit ?? null
 }
+
+/**
+ * Create a 204 No Content response with optional rate-limit headers.
+ */
+export function noContentResponse(
+  rateLimit?: { limit: number; remaining: number; reset: number } | null,
+): NextResponse {
+  const headers: Record<string, string> = {}
+  if (rateLimit) {
+    headers['RateLimit-Limit'] = String(rateLimit.limit)
+    headers['RateLimit-Remaining'] = String(rateLimit.remaining)
+    headers['RateLimit-Reset'] = String(rateLimit.reset)
+  }
+  return new NextResponse(null, { status: 204, headers })
+}
+
+/**
+ * Extract rate-limit info from any auth result (PAT or anonymous).
+ */
+export function rateLimitFromAuth(
+  auth: { kind: string; identity?: { rate_limit?: { limit: number; remaining: number; reset: number } | null }; rate_limit?: { limit: number; remaining: number; reset: number } | null } | null,
+): { limit: number; remaining: number; reset: number } | null {
+  if (!auth) return null
+  if (auth.kind === 'pat' && auth.identity) return auth.identity.rate_limit ?? null
+  return auth.rate_limit ?? null
+}

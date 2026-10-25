@@ -9,9 +9,11 @@ import { addEventUrl } from '@/lib/core/events'
  * List the caller's RSVPs across upcoming events, with event details embedded.
  */
 export async function GET(request: NextRequest) {
+  let rateLimit: { limit: number; remaining: number; reset: number } | null = null
   try {
     const auth = await requireAuth(request, 'read')
     const { client, identity } = auth
+    rateLimit = identity.rate_limit
 
     const url = new URL(request.url)
     const from = url.searchParams.get('from')
@@ -39,7 +41,7 @@ export async function GET(request: NextRequest) {
       throw fromPostgrestError(error, 'Failed to fetch attendance')
     }
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
     const dataWithUrl = (data || []).map((record: any) => {
       if (record.event) {
         record.event = addEventUrl(record.event)
@@ -47,8 +49,8 @@ export async function GET(request: NextRequest) {
       return record
     })
 
-    return jsonResponse({ data: dataWithUrl }, 200, identity.rate_limit)
+    return jsonResponse({ data: dataWithUrl }, 200, rateLimit)
   } catch (e) {
-    return errorResponse(e)
+    return errorResponse(e, rateLimit)
   }
 }

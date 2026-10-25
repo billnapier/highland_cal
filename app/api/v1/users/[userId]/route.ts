@@ -1,6 +1,6 @@
 import type { NextRequest } from 'next/server'
 import { authenticateRequest, requireAuth } from '@/lib/api/auth'
-import { errorResponse, jsonResponse } from '@/lib/api/response'
+import { errorResponse, jsonResponse, noContentResponse } from '@/lib/api/response'
 import { NotFoundError, CoreError } from '@/lib/core/errors'
 import * as coreUsers from '@/lib/core/users'
 
@@ -35,10 +35,12 @@ interface RouteParams {
  * Handles both UUIDs and vanity names in the path.
  */
 export async function GET(request: NextRequest, { params }: RouteParams) {
+  let rateLimit: { limit: number; remaining: number; reset: number } | null = null
   try {
     const { userId } = await params
     const auth = await authenticateRequest(request, 'read')
     const { client } = auth
+    rateLimit = auth.kind === 'pat' ? auth.identity.rate_limit : auth.rate_limit
     const identity = auth.kind === 'pat' ? auth.identity : null
 
     // Resolve userId: it could be a UUID or a vanity name
@@ -56,10 +58,10 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
 
     if (error) {
       console.error('Error fetching user:', error)
-      return errorResponse(new CoreError('internal', 'Failed to fetch user'))
+      return errorResponse(new CoreError('internal', 'Failed to fetch user'), rateLimit)
     }
     if (!profile) {
-      return errorResponse(new NotFoundError('User not found'))
+      return errorResponse(new NotFoundError('User not found'), rateLimit)
     }
 
     const isAdminView = identity?.scopes.includes('users:admin')
@@ -89,9 +91,9 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
       result.email = (privateData as Array<{ email: string }> | null)?.[0]?.email ?? null
     }
 
-    return jsonResponse(result, 200, identity?.rate_limit ?? null)
+    return jsonResponse(result, 200, rateLimit)
   } catch (e) {
-    return errorResponse(e)
+    return errorResponse(e, rateLimit)
   }
 }
 
@@ -100,15 +102,18 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
  * Permanently delete a user. ADMIN only; scope users:admin.
  */
 export async function DELETE(request: NextRequest, { params }: RouteParams) {
+  let rateLimit: { limit: number; remaining: number; reset: number } | null = null
   try {
     const auth = await requireAuth(request, 'write')
+    const { client, identity } = auth
+    rateLimit = identity.rate_limit
     const rawId = (await params).userId
     const userId = await resolveUserId(auth.client, rawId)
 
     await coreUsers.deleteUser(auth.client, userId)
 
-    return new Response(null, { status: 204 })
+    return noContentResponse(rateLimit)
   } catch (e) {
-    return errorResponse(e)
+    return errorResponse(e, rateLimit)
   }
 }

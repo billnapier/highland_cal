@@ -1,6 +1,6 @@
 import type { NextRequest } from 'next/server'
 import { requireAuth } from '@/lib/api/auth'
-import { errorResponse, jsonResponse } from '@/lib/api/response'
+import { errorResponse, jsonResponse, noContentResponse } from '@/lib/api/response'
 import * as coreAttendance from '@/lib/core/attendance'
 import { NotFoundError, CoreError } from '@/lib/core/errors'
 
@@ -16,10 +16,12 @@ const ATTENDANCE_SELECT =
  * Get the caller's RSVP for an event.
  */
 export async function GET(request: NextRequest, { params }: RouteParams) {
+  let rateLimit: { limit: number; remaining: number; reset: number } | null = null
   try {
     const { eventId } = await params
     const auth = await requireAuth(request, 'read')
     const { client, identity } = auth
+    rateLimit = identity.rate_limit
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const db = client as any
@@ -32,15 +34,15 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
       .maybeSingle()
 
     if (error) {
-      return errorResponse(new CoreError('internal', 'Failed to fetch attendance'))
+      return errorResponse(new CoreError('internal', 'Failed to fetch attendance'), rateLimit)
     }
     if (!data) {
-      return errorResponse(new NotFoundError('Attendance not found'))
+      return errorResponse(new NotFoundError('Attendance not found'), rateLimit)
     }
 
-    return jsonResponse(data, 200, identity.rate_limit)
+    return jsonResponse(data, 200, rateLimit)
   } catch (e) {
-    return errorResponse(e)
+    return errorResponse(e, rateLimit)
   }
 }
 
@@ -50,10 +52,12 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
  * Requires role APPROVED/ADMIN and scope attendance:write.
  */
 export async function PUT(request: NextRequest, { params }: RouteParams) {
+  let rateLimit: { limit: number; remaining: number; reset: number } | null = null
   try {
     const { eventId } = await params
     const auth = await requireAuth(request, 'write')
     const { client, identity } = auth
+    rateLimit = identity.rate_limit
 
     const body = await request.json()
     await coreAttendance.setAttendance(client, identity.user_id, eventId, body)
@@ -71,12 +75,12 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
       .single()
     if (error) {
       console.error('Error re-fetching attendance after upsert:', error)
-      return errorResponse(new CoreError('internal', 'Failed to fetch saved attendance'))
+      return errorResponse(new CoreError('internal', 'Failed to fetch saved attendance'), rateLimit)
     }
 
-    return jsonResponse(data, 200, identity.rate_limit)
+    return jsonResponse(data, 200, rateLimit)
   } catch (e) {
-    return errorResponse(e)
+    return errorResponse(e, rateLimit)
   }
 }
 
@@ -86,10 +90,12 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
  * Returns 204 even if there was nothing to remove.
  */
 export async function DELETE(request: NextRequest, { params }: RouteParams) {
+  let rateLimit: { limit: number; remaining: number; reset: number } | null = null
   try {
     const { eventId } = await params
     const auth = await requireAuth(request, 'write')
     const { client, identity } = auth
+    rateLimit = identity.rate_limit
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const db = client as any
@@ -104,13 +110,13 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
       console.error('Error deleting attendance:', error)
       // RLS deny -> 403
       if (error.code === '42501') {
-        return errorResponse(new CoreError('forbidden', 'Not authorized to clear RSVP'))
+        return errorResponse(new CoreError('forbidden', 'Not authorized to clear RSVP'), rateLimit)
       }
-      return errorResponse(new CoreError('internal', 'Failed to clear RSVP'))
+      return errorResponse(new CoreError('internal', 'Failed to clear RSVP'), rateLimit)
     }
 
-    return new Response(null, { status: 204 })
+    return noContentResponse(rateLimit)
   } catch (e) {
-    return errorResponse(e)
+    return errorResponse(e, rateLimit)
   }
 }

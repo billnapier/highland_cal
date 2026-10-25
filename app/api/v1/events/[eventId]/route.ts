@@ -1,6 +1,6 @@
 import type { NextRequest } from 'next/server'
 import { authenticateRequest, requireAuth } from '@/lib/api/auth'
-import { errorResponse, jsonResponse } from '@/lib/api/response'
+import { errorResponse, jsonResponse, noContentResponse } from '@/lib/api/response'
 import * as coreEvents from '@/lib/core/events'
 import { NotFoundError, CoreError } from '@/lib/core/errors'
 
@@ -13,11 +13,12 @@ interface RouteParams {
  * Public. Get one event, always including its attendance list.
  */
 export async function GET(request: NextRequest, { params }: RouteParams) {
+  let rateLimit: { limit: number; remaining: number; reset: number } | null = null
   try {
     const { eventId } = await params
     const auth = await authenticateRequest(request, 'read')
     const { client } = auth
-    const identity = auth.kind === 'pat' ? auth.identity : null
+    rateLimit = auth.kind === 'pat' ? auth.identity.rate_limit : auth.rate_limit
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const db = client as any
@@ -36,13 +37,13 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
 
     if (error) {
       console.error('Error fetching event:', error)
-      return errorResponse(new CoreError('internal', 'Failed to fetch event'))
+      return errorResponse(new CoreError('internal', 'Failed to fetch event'), rateLimit)
     }
     if (!data) {
-      return errorResponse(new NotFoundError('Event not found'))
+      return errorResponse(new NotFoundError('Event not found'), rateLimit)
     }
 
-    // Compute attendance_summary from the attendance records
+// Compute attendance_summary from the attendance records
     const attendance: Array<{ interest_level: string }> = data.attendance || []
     const attendanceSummary = {
       REGISTERED: 0,
@@ -58,10 +59,10 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
     return jsonResponse(
       { ...coreEvents.addEventUrl(data), attendance_summary: attendanceSummary },
       200,
-      identity?.rate_limit ?? null,
+      rateLimit,
     )
   } catch (e) {
-    return errorResponse(e)
+    return errorResponse(e, rateLimit)
   }
 }
 
@@ -76,10 +77,12 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
  * (visible via the public read policy) before calling it.
  */
 export async function PATCH(request: NextRequest, { params }: RouteParams) {
+  let rateLimit: { limit: number; remaining: number; reset: number } | null = null
   try {
     const { eventId } = await params
     const auth = await requireAuth(request, 'write')
     const { client, identity } = auth
+    rateLimit = identity.rate_limit
 
     const patch = await request.json()
 
@@ -92,9 +95,9 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
       .maybeSingle()
     if (fetchError) {
       console.error('Error fetching event for patch:', fetchError)
-      return errorResponse(new CoreError('internal', 'Failed to update event'))
+      return errorResponse(new CoreError('internal', 'Failed to update event'), rateLimit)
     }
-    if (!current) return errorResponse(new NotFoundError('Event not found'))
+    if (!current) return errorResponse(new NotFoundError('Event not found'), rateLimit)
 
     // eventSchema's optional string fields reject `null` (only `undefined`
     // passes `.optional()`), but the DB stores unset values as null. Drop
@@ -118,10 +121,10 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
     return jsonResponse(
       { ...coreEvents.addEventUrl(event), attendance_summary: { REGISTERED: 0, INTERESTED: 0, WATCHING: 0, NOT_GOING: 0 } },
       200,
-      identity.rate_limit,
+      rateLimit,
     )
   } catch (e) {
-    return errorResponse(e)
+    return errorResponse(e, rateLimit)
   }
 }
 
@@ -131,18 +134,20 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
  * Supports ?notify=false to suppress the cancellation emai.
  */
 export async function DELETE(request: NextRequest, { params }: RouteParams) {
+  let rateLimit: { limit: number; remaining: number; reset: number } | null = null
   try {
     const { eventId } = await params
     const auth = await requireAuth(request, 'write')
     const { client, identity } = auth
+    rateLimit = identity.rate_limit
 
     const url = new URL(request.url)
     const notify = url.searchParams.get('notify') !== 'false'
 
     await coreEvents.deleteEvent(client, eventId, { notify })
 
-    return new Response(null, { status: 204 })
+    return noContentResponse(rateLimit)
   } catch (e) {
-    return errorResponse(e)
+    return errorResponse(e, rateLimit)
   }
 }

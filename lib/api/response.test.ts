@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { errorResponse, jsonResponse } from './response'
+import { errorResponse, jsonResponse, noContentResponse, rateLimitFromAuth } from './response'
 import { CoreError } from '@/lib/core/errors'
 
 async function body(res: Response): Promise<Record<string, unknown>> {
@@ -75,5 +75,49 @@ describe('jsonResponse', () => {
 
   it('sets Content-Type header', () => {
     expect(jsonResponse({ ok: true }).headers.get('Content-Type')).toMatch(/^application\/json/)
+  })
+
+  it('returns rate-limit headers even at zero remaining on success', () => {
+    const res = jsonResponse({ ok: true }, 200, { limit: 60, remaining: 0, reset: 9999999999 })
+    expect(res.headers.get('RateLimit-Limit')).toBe('60')
+    expect(res.headers.get('RateLimit-Remaining')).toBe('0')
+    expect(res.headers.get('RateLimit-Reset')).toBe('9999999999')
+  })
+})
+
+describe('noContentResponse', () => {
+  it('returns 204 with no body', () => {
+    const res = noContentResponse()
+    expect(res.status).toBe(204)
+    expect(res.body).toBeNull()
+  })
+
+  it('includes rate-limit headers when provided', () => {
+    const res = noContentResponse({ limit: 60, remaining: 42, reset: 1234567890 })
+    expect(res.status).toBe(204)
+    expect(res.headers.get('RateLimit-Limit')).toBe('60')
+    expect(res.headers.get('RateLimit-Remaining')).toBe('42')
+    expect(res.headers.get('RateLimit-Reset')).toBe('1234567890')
+  })
+
+  it('omits rate-limit headers when not provided', () => {
+    const res = noContentResponse(null)
+    expect(res.headers.get('RateLimit-Limit')).toBeNull()
+  })
+})
+
+describe('rateLimitFromAuth', () => {
+  it('extracts rate_limit from PAT auth', () => {
+    const auth = { kind: 'pat', identity: { rate_limit: { limit: 300, remaining: 299, reset: 123 } } }
+    expect(rateLimitFromAuth(auth)).toEqual({ limit: 300, remaining: 299, reset: 123 })
+  })
+
+  it('extracts rate_limit from anonymous auth', () => {
+    const auth = { kind: 'anonymous', rate_limit: { limit: 120, remaining: 119, reset: 456 } }
+    expect(rateLimitFromAuth(auth)).toEqual({ limit: 120, remaining: 119, reset: 456 })
+  })
+
+  it('returns null for null input', () => {
+    expect(rateLimitFromAuth(null)).toBeNull()
   })
 })
