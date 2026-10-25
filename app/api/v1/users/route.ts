@@ -58,9 +58,6 @@ export async function GET(request: NextRequest) {
         user.role = joined?.role ?? null
       }
 
-      // Add computed profile_url
-      const usersWithUrl = users.map((u: Record<string, unknown>) => addProfileUrl(u as Parameters<typeof addProfileUrl>[0]))
-
       // Get private fields (email) for these users
       if (users.length > 0) {
         const userIds = users.map((u: Record<string, unknown>) => u.id)
@@ -73,6 +70,9 @@ export async function GET(request: NextRequest) {
           }
         }
       }
+
+      // Add computed profile_url after all other fields are populated
+      const usersWithUrl = users.map((u: Record<string, unknown>) => addProfileUrl(u as Parameters<typeof addProfileUrl>[0]))
 
       let nextCursor: string | null = null
       if (hasMore && users.length > 0) {
