@@ -1,16 +1,20 @@
 name: API Spec
 
-# Lint the Agent API OpenAPI spec on every push and PR that touches it.
+# Lint the Agent API OpenAPI spec and check spec-to-route drift.
 on:
   push:
     paths:
       - 'docs/openapi.yaml'
       - 'redocly.yaml'
+      - 'app/api/v1/**'
+      - 'lib/api/**'
       - '.github/workflows/api-spec.yml'
   pull_request:
     paths:
       - 'docs/openapi.yaml'
       - 'redocly.yaml'
+      - 'app/api/v1/**'
+      - 'lib/api/**'
       - '.github/workflows/api-spec.yml'
 
 permissions:
@@ -25,5 +29,9 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '20'
+          cache: 'npm'
+      - run: npm ci
       - name: Lint OpenAPI spec
         run: npx --yes @redocly/cli@2.71.0 lint docs/openapi.yaml --format=github-actions
+      - name: Check spec-to-route drift
+        run: npx vitest run lib/api/api-v1.test.ts --reporter=verbose
