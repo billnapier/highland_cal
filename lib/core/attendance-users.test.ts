@@ -10,7 +10,7 @@ import { kickNotifications } from '@/lib/notifications'
 import { setAttendance } from './attendance'
 import { approveUser, deleteUser, promoteToAdmin } from './users'
 import { ConflictError, ForbiddenError, NotFoundError, ValidationError } from './errors'
-import { arg, fakeDb, methods } from './test-utils'
+import { arg, fakeDb } from './test-utils'
 
 const kick = vi.mocked(kickNotifications)
 const UID = '22222222-2222-4222-8222-222222222222'
@@ -48,9 +48,11 @@ describe('setAttendance', () => {
     expect(err.message).toBe('Forbidden: You do not have permission to RSVP')
   })
 
-  it('unknown event (FK violation) → NotFoundError', async () => {
+  it('unknown event (FK violation) → NotFoundError("Event not found")', async () => {
     const { db } = fakeDb({ attendance: [{ error: { code: '23503', message: 'fk' } }] })
-    await expect(setAttendance(db, 'actor', 'nope', { interest_level: 'WATCHING' })).rejects.toBeInstanceOf(NotFoundError)
+    const err = await setAttendance(db, 'actor', 'nope', { interest_level: 'WATCHING' }).catch((e) => e)
+    expect(err).toBeInstanceOf(NotFoundError)
+    expect(err.message).toBe('Event not found')
   })
 })
 
@@ -81,11 +83,19 @@ describe('approveUser', () => {
 })
 
 describe('promoteToAdmin', () => {
-  it('sets ADMIN with no state precondition and sends no email', async () => {
+  it('updates only an APPROVED row and sends no email', async () => {
     const { db, log } = fakeDb({ user_roles: [{ data: [{ user_id: UID }] }] })
     await promoteToAdmin(db, UID)
-    expect(methods(log[0])).toEqual(['update', 'eq', 'select'])
+    expect(arg(log[0], 'update')).toEqual({ role: 'ADMIN' })
+    expect(log[0].calls.filter((c) => c[0] === 'eq')).toEqual([['eq', 'user_id', UID], ['eq', 'role', 'APPROVED']])
     expect(kick).not.toHaveBeenCalled()
+  })
+
+  it('a PENDING user cannot skip approval → ConflictError', async () => {
+    const { db } = fakeDb({ user_roles: [{ data: [] }, { data: { role: 'PENDING' } }] })
+    const err = await promoteToAdmin(db, UID).catch((e) => e)
+    expect(err).toBeInstanceOf(ConflictError)
+    expect(err.message).toBe('User is not approved')
   })
 })
 

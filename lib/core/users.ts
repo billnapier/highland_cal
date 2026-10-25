@@ -15,7 +15,7 @@ type Role = 'PENDING' | 'APPROVED' | 'ADMIN'
 async function deniedOrMissing(db: DbClient, userId: string): Promise<CoreError> {
   // user_roles is publicly readable, so a visible row means the write was denied.
   const { data, error } = await db.from('user_roles').select('role').eq('user_id', userId).maybeSingle()
-  if (error) return fromPostgrestError(error)
+  if (error) return fromPostgrestError(error, 'Failed to update user')
   return data ? new ForbiddenError('Not authorized') : new NotFoundError('User not found')
 }
 
@@ -46,8 +46,9 @@ export async function approveUser(db: DbClient, userId: string): Promise<void> {
   kickNotifications()
 }
 
+/** APPROVED → ADMIN. Pending users must be approved first (so they get the approval email). */
 export async function promoteToAdmin(db: DbClient, userId: string): Promise<void> {
-  await setRole(db, userId, 'ADMIN')
+  await setRole(db, userId, 'ADMIN', 'APPROVED')
 }
 
 /**
@@ -62,6 +63,7 @@ export async function deleteUser(db: DbClient, userId: string): Promise<void> {
   if (authzError) {
     console.error('User deletion not authorized:', authzError)
     if (authzError.code === '42501') throw new ForbiddenError('Not authorized to delete this user')
+    if (authzError.code === 'PT404') throw new NotFoundError('User not found')
     throw fromPostgrestError(authzError, 'Not authorized to delete this user')
   }
 

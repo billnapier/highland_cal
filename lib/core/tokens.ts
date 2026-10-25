@@ -73,7 +73,7 @@ export async function createToken(
 ): Promise<{ token: string; row: TokenRow }> {
   const parsed = createTokenSchema.safeParse(raw)
   if (!parsed.success) {
-    throw new ValidationError('Invalid data', parsed.error.flatten())
+    throw new ValidationError('Invalid data', z.flattenError(parsed.error))
   }
   const { name, scopes, expires_in_days } = parsed.data
 

@@ -33,9 +33,10 @@ const EXPIRY_OPTIONS = [
   { value: 'never', label: 'Never' },
 ] as const
 
+// Fixed locale and time zone so the server render and hydration agree.
 function formatDate(iso: string | null): string {
   if (!iso) return '—'
-  return new Date(iso).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })
+  return new Date(iso).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric', timeZone: 'UTC' })
 }
 
 function CreateTokenDialog({ isAdmin }: { isAdmin: boolean }) {
@@ -153,7 +154,7 @@ function CreateTokenDialog({ isAdmin }: { isAdmin: boolean }) {
               <Label htmlFor="token-expiry">Expires</Label>
               <Select value={expiry} onValueChange={(v) => setExpiry(String(v))}>
                 <SelectTrigger id="token-expiry">
-                  <SelectValue />
+                  <SelectValue>{EXPIRY_OPTIONS.find((o) => o.value === expiry)?.label}</SelectValue>
                 </SelectTrigger>
                 <SelectContent>
                   {EXPIRY_OPTIONS.map((o) => (
@@ -195,7 +196,17 @@ function RevokeButton({ token }: { token: TokenRow }) {
   )
 }
 
-export default function ApiTokens({ tokens, isAdmin, now }: { tokens: TokenRow[]; isAdmin: boolean; now: number }) {
+export default function ApiTokens({
+  tokens,
+  isAdmin,
+  now,
+  loadError = false,
+}: {
+  tokens: TokenRow[]
+  isAdmin: boolean
+  now: number
+  loadError?: boolean
+}) {
   return (
     <div className="space-y-4">
       <div className="flex items-start justify-between gap-4">
@@ -211,7 +222,9 @@ export default function ApiTokens({ tokens, isAdmin, now }: { tokens: TokenRow[]
         <CreateTokenDialog isAdmin={isAdmin} />
       </div>
 
-      {tokens.length === 0 ? (
+      {loadError ? (
+        <p className="text-sm text-red-500">Couldn&apos;t load your tokens. Refresh the page to try again.</p>
+      ) : tokens.length === 0 ? (
         <p className="text-sm text-muted-foreground">You have no API tokens.</p>
       ) : (
         <ul className="divide-y divide-slate-200/60 dark:divide-slate-800/60">

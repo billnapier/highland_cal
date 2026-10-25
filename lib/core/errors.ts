@@ -78,6 +78,9 @@ export function isCoreError(e: unknown): e is CoreError {
  *   missing), `23514` check_violation, `22P02` invalid text representation
  *   (e.g. a malformed uuid).
  *
+ * PT409 messages are passed through to users, so every `RAISE ... USING
+ * ERRCODE = 'PT409'` must use a hand-written, user-safe message.
+ *
  * The original error is logged by the caller, never returned to the client:
  * DB messages can leak schema details.
  */

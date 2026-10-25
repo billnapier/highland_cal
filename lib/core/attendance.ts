@@ -1,6 +1,6 @@
 import * as z from 'zod'
 import type { DbClient } from './client'
-import { ForbiddenError, ValidationError, fromPostgrestError } from './errors'
+import { ForbiddenError, NotFoundError, ValidationError, fromPostgrestError } from './errors'
 
 /** RSVP operations shared by Server Actions and the Agent API. RLS authorizes. */
 
@@ -38,7 +38,7 @@ export async function setAttendance(
 ): Promise<AttendanceRow> {
   const parsed = attendanceSchema.safeParse(raw)
   if (!parsed.success) {
-    throw new ValidationError('Invalid data', parsed.error.flatten())
+    throw new ValidationError('Invalid data', z.flattenError(parsed.error))
   }
 
   const { data, error } = await db
@@ -60,6 +60,7 @@ export async function setAttendance(
     if (error.code === '42501') {
       throw new ForbiddenError('Forbidden: You do not have permission to RSVP')
     }
+    if (error.code === '23503') throw new NotFoundError('Event not found')
     throw fromPostgrestError(error, 'Failed to update attendance. Please try again later.')
   }
   return data as AttendanceRow

@@ -36,10 +36,12 @@ export default async function ProfilePage() {
   // RLS returns only the caller's own tokens (metadata only; never the hash).
   const renderedAt = new Date().getTime();
   let tokens: TokenRow[] = [];
+  let tokensLoadError = false;
   try {
     tokens = await listTokens(supabase);
   } catch {
-    // Non-fatal: the profile form still works; the section shows no tokens.
+    // Non-fatal: the profile form still works; the section shows an error.
+    tokensLoadError = true;
   }
 
   return (
@@ -57,7 +59,7 @@ export default async function ProfilePage() {
         </div>
 
         <div className="rounded-2xl border border-slate-200/60 dark:border-slate-800/60 bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl text-card-foreground shadow-xl p-6">
-          <ApiTokens tokens={tokens} isAdmin={role === 'ADMIN'} now={renderedAt} />
+          <ApiTokens tokens={tokens} isAdmin={role === 'ADMIN'} now={renderedAt} loadError={tokensLoadError} />
         </div>
       </div>
     </main>

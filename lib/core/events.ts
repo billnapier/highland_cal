@@ -1,3 +1,4 @@
+import * as z from 'zod'
 import { eventSchema, type EventFormData } from '@/lib/schemas'
 import { kickNotifications } from '@/lib/notifications'
 import { type DbClient, MAJOR_CHANGE_HEADER, NOTIFY_HEADER } from './client'
@@ -31,7 +32,7 @@ export interface EventRow {
 function parseEvent(raw: unknown): EventFormData {
   const parsed = eventSchema.safeParse(raw)
   if (!parsed.success) {
-    throw new ValidationError('Invalid data', parsed.error.flatten())
+    throw new ValidationError('Invalid data', z.flattenError(parsed.error))
   }
   return parsed.data
 }
@@ -56,7 +57,7 @@ function toPayload(data: EventFormData) {
  */
 async function deniedOrMissing(db: DbClient, eventId: string, forbidden: string): Promise<CoreError> {
   const { data, error } = await db.from('games').select('id').eq('id', eventId).maybeSingle()
-  if (error) return fromPostgrestError(error)
+  if (error) return fromPostgrestError(error, 'Failed to load event')
   return data ? new ForbiddenError(forbidden) : new NotFoundError('Event not found')
 }
 
