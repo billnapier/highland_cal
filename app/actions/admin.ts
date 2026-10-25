@@ -3,7 +3,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { revalidatePath } from 'next/cache'
-import { sendUserApprovedNotification } from '@/lib/email'
+import { kickNotifications } from '@/lib/notifications'
 
 import { SupabaseClient } from '@supabase/supabase-js'
 
@@ -40,17 +40,8 @@ export async function approveUser(userId: string) {
     return { success: false, error: 'Failed to approve user' }
   }
 
-  // Email is a private field: read it via get_user_private(), which RLS-style
-  // gates on admin (+ users:admin scope for tokens) or self.
-  const [{ data: profile }, { data: privateRows }] = await Promise.all([
-    supabase.from('profiles').select('display_name').eq('id', userId).single(),
-    supabase.rpc('get_user_private', { ids: [userId] }),
-  ])
-  const email = (privateRows as { email: string | null }[] | null)?.[0]?.email
-
-  if (email && profile?.display_name) {
-    await sendUserApprovedNotification(profile.display_name, email)
-  }
+  // The PENDING -> APPROVED trigger enqueued the approval email.
+  kickNotifications()
 
   revalidatePath('/dashboard/admin')
   return { success: true }

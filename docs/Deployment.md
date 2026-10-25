@@ -133,6 +133,7 @@ If you want your site to live at a professional domain (e.g., `myclub.com`) and 
    - Verify your custom domain in Resend by adding their TXT/MX records to your DNS settings.
    - Generate a Resend API Key.
    - In Vercel, go to Settings > Environment Variables, and add `RESEND_API_KEY` with your new key, and `RESEND_FROM_EMAIL` (e.g., `notifications@myclub.com`).
+   - *(Recommended)* Add `CRON_SECRET` set to a long random string (e.g., `openssl rand -hex 32`). Emails normally go out immediately; a daily Vercel Cron job uses this secret to retry any that failed (e.g., during a Resend outage). Without it, the retry job is disabled and a failed email is retried only on the next action that sends one.
 5. Redeploy your app in Vercel to apply the new environment variables.
 
 ---
@@ -144,5 +145,5 @@ Once Milestone 14 is deployed, your site automatically includes the Agent API â€
 - Members create tokens at **Profile â†’ API Tokens** and use them with AI assistants or scripts.
 - Your instance's API reference is at `https://<your-site>/api/v1/docs`.
 - Full instructions: [API.md](./API.md).
-- The API runs on the public anon key and enforces permissions through the database's Row Level Security, so it needs no new secrets. The existing `SUPABASE_SERVICE_ROLE_KEY` is still used only for deleting user accounts. Never expose that key publicly or prefix it with `NEXT_PUBLIC_`.
+- The API runs on the public anon key and enforces permissions through the database's Row Level Security, so it needs no new secrets. The existing `SUPABASE_SERVICE_ROLE_KEY` is still used only for deleting user accounts and by the server-only email dispatcher. Never expose that key publicly or prefix it with `NEXT_PUBLIC_`.
 

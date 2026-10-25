@@ -91,6 +91,15 @@ SELECT ok(NOT has_function_privilege('authenticated', 'public.api_rate_limit_hit
 SELECT ok(NOT has_function_privilege(r, 'public.request_token()', 'EXECUTE'), r || ' cannot call request_token() (returns token_hash)')
   FROM unnest(ARRAY['anon', 'authenticated']) r;
 
+-- Notification outbox: server-only (service_role). Clients can neither read it
+-- (it resolves member emails) nor write to it (arbitrary emails).
+SELECT ok(NOT has_table_privilege(r, 'public.notification_outbox', p), r || ' has no ' || p || ' on notification_outbox')
+  FROM unnest(ARRAY['anon', 'authenticated']) r, unnest(ARRAY['SELECT', 'INSERT', 'UPDATE', 'DELETE']) p;
+SELECT ok(NOT has_function_privilege(r, f, 'EXECUTE'), r || ' cannot execute ' || f)
+  FROM unnest(ARRAY['anon', 'authenticated']) r,
+       unnest(ARRAY['public.claim_notifications(integer)', 'public.complete_notification(uuid, text)',
+                    'public.skip_notification(uuid, text)', 'public.request_header(text)']) f;
+
 -- 6. api_create_event must run with the caller's privileges (RLS applies).
 SELECT is((SELECT prosecdef FROM pg_proc WHERE proname = 'api_create_event'), false,
   'api_create_event is SECURITY INVOKER');
