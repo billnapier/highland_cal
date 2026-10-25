@@ -14,6 +14,7 @@ export type CoreErrorCode =
   | 'not_found'
   | 'validation_failed'
   | 'conflict'
+  | 'idempotency_conflict'
   | 'rate_limited'
   | 'internal'
 
@@ -61,6 +62,13 @@ export class ConflictError extends CoreError {
   constructor(message = 'Conflict') {
     super('conflict', message)
     this.name = 'ConflictError'
+  }
+}
+
+export class IdempotencyConflictError extends CoreError {
+  constructor(message = 'Idempotency-Key reused with a different request') {
+    super('idempotency_conflict', message)
+    this.name = 'IdempotencyConflictError'
   }
 }
 

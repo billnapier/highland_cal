@@ -2,7 +2,7 @@ import type { NextRequest } from 'next/server'
 import { authenticateRequest, requireAuth } from '@/lib/api/auth'
 import { errorResponse, jsonResponse } from '@/lib/api/response'
 import * as core from '@/lib/core/events'
-import { CoreError } from '@/lib/core/errors'
+import { CoreError, IdempotencyConflictError } from '@/lib/core/errors'
 
 /**
  * GET /api/v1/events
@@ -107,7 +107,7 @@ export async function POST(request: NextRequest) {
 
       if (error) {
         if (error.code === 'PT409') {
-          return errorResponse(new CoreError('conflict', error.message || 'Idempotency-Key reused with a different request'))
+          return errorResponse(new IdempotencyConflictError(error.message || 'Idempotency-Key reused with a different request'))
         }
         console.error('Error creating event (idempotent):', error)
         return errorResponse(new CoreError('internal', 'Failed to create event'))

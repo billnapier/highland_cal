@@ -85,9 +85,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
       // email is not grantable at the column level; always resolve it via
       // get_user_private() (self or admin-with-scope, both permitted there).
       const { data: privateData } = await db.rpc('get_user_private', { ids: [profile.id] })
-      if (privateData && Array.isArray(privateData) && privateData.length > 0) {
-        result.email = privateData[0].email || null
-      }
+      result.email = (privateData as Array<{ email: string }> | null)?.[0]?.email ?? null
     }
 
     return jsonResponse(result, 200, identity?.rate_limit ?? null)

@@ -95,6 +95,7 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
     }
     const event = await coreEvents.updateEvent(client, eventId, merged, {
       majorChange: patch.major_change === true,
+      expectedRow: current,
     })
 
     return jsonResponse(event, 200, identity.rate_limit)

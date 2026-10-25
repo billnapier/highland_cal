@@ -97,25 +97,60 @@ export async function createEvent(
 export interface UpdateEventOptions {
   /** Email approved members about the change. */
   majorChange?: boolean
+  /**
+   * Snapshot of the row as last read by the caller (e.g. the API's merge-
+   * then-validate PATCH). When set, the UPDATE only applies if every listed
+   * column still matches — optimistic concurrency without a dedicated
+   * version column, so two concurrent PATCHes against stale snapshots can't
+   * silently stomp each other's unrelated field changes.
+   */
+  expectedRow?: Partial<EventRow>
 }
 
 export async function updateEvent(
   db: DbClient,
   eventId: string,
   raw: unknown,
-  { majorChange = false }: UpdateEventOptions = {},
+  { majorChange = false, expectedRow }: UpdateEventOptions = {},
 ): Promise<EventRow> {
   const data = parseEvent(raw)
 
-  let query = db.from('games').update(toPayload(data)).eq('id', eventId).select(EVENT_COLUMNS)
-  if (majorChange) query = query.setHeader(MAJOR_CHANGE_HEADER, 'true')
+  let query = db.from('games').update(toPayload(data)).eq('id', eventId)
+  if (expectedRow) {
+    for (const [key, value] of Object.entries(expectedRow)) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      query = (value === null ? (query as any).is(key, value) : (query as any).eq(key, value))
+    }
+  }
+  let selectQuery = query.select(EVENT_COLUMNS)
+  if (majorChange) selectQuery = selectQuery.setHeader(MAJOR_CHANGE_HEADER, 'true')
 
-  const { data: rows, error } = await query
+  const { data: rows, error } = await selectQuery
   if (error) {
     console.error('Error updating event:', error)
     throw fromPostgrestError(error, 'Failed to update event. Please try again later.')
   }
   if (!rows || rows.length === 0) {
+    if (expectedRow) {
+      // Zero rows with a snapshot match condition means either: the event
+      // is gone/RLS-hidden, RLS denied the write outright, or someone else
+      // changed it between our read and this write (a real race, not a
+      // permission problem) — tell those apart before raising.
+      const { data: nowRow, error: nowError } = await db
+        .from('games')
+        .select(EVENT_COLUMNS)
+        .eq('id', eventId)
+        .maybeSingle()
+      if (nowError) throw fromPostgrestError(nowError, 'Failed to update event')
+      if (!nowRow) throw new NotFoundError('Event not found')
+      const stillMatchesSnapshot = Object.entries(expectedRow).every(
+        ([key, value]) => (nowRow as Record<string, unknown>)[key] === value,
+      )
+      if (stillMatchesSnapshot) {
+        throw new ForbiddenError('Forbidden: You do not have permission to edit this event')
+      }
+      throw new CoreError('conflict', 'Event was modified by someone else since you last read it; refetch and retry')
+    }
     throw await deniedOrMissing(db, eventId, 'Forbidden: You do not have permission to edit this event')
   }
 

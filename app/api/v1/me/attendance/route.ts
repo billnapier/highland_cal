@@ -28,7 +28,7 @@ export async function GET(request: NextRequest) {
       query = query.eq('interest_level', interestLevel)
     }
 
-    query = query.order('start_date', { ascending: false, referencedTable: 'games' })
+    query = query.order('start_date', { ascending: false, referencedTable: 'event' })
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const { data, error } = await query as unknown as { data: any; error: any }
