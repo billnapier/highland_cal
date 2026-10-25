@@ -27,7 +27,7 @@ export async function GET(request: NextRequest) {
     // Build the select query
     let selectFields = core.EVENT_COLUMNS
     if (include === 'attendance') {
-      selectFields += ', attendance:attendance(user_id, interest_level, attend_day, updated_at)'
+      selectFields += ', attendance:attendance(event_id:game_id, user_id, interest_level, attend_day, updated_at)'
     }
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
