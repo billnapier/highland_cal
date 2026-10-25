@@ -1,0 +1,29 @@
+name: API Spec
+
+# Lint the Agent API OpenAPI spec on every push and PR that touches it.
+on:
+  push:
+    paths:
+      - 'docs/openapi.yaml'
+      - 'redocly.yaml'
+      - '.github/workflows/api-spec.yml'
+  pull_request:
+    paths:
+      - 'docs/openapi.yaml'
+      - 'redocly.yaml'
+      - '.github/workflows/api-spec.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Use Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Lint OpenAPI spec
+        run: npx --yes @redocly/cli@2.71.0 lint docs/openapi.yaml --format=github-actions
