@@ -1,0 +1,948 @@
+openapi: 3.1.0
+info:
+  title: Highland Cal Agent API
+  version: 1.0.0
+  summary: REST API for agents, scripts, and integrations to manage a Highland Cal instance.
+  description: |
+    The Highland Cal Agent API exposes the same capabilities as the web UI over a stable JSON
+    contract so that AI agents (Hermes, Claude, ChatGPT, etc.), scripts, and cron jobs can read the
+    schedule, manage events, RSVP, and administer users.
+
+    **This file is the single source of truth for the API contract.** The human-readable guide
+    lives in [`docs/API.md`](./API.md); the rendered reference is served by each instance at
+    `/api/v1/docs` and the raw spec at `/api/v1/openapi.yaml`.
+
+    ## Authentication
+    Send a Personal Access Token (PAT) in the `Authorization` header:
+
+    ```
+    Authorization: Bearer hcal_pat_<random>
+    ```
+
+    A PAT acts **as the user who created it**. It inherits that user's current role
+    (`PENDING`, `APPROVED`, `ADMIN`) — role changes take effect immediately, and a token can
+    never do more than its owner could do in the web UI. Tokens may be further narrowed with
+    scopes (see `x-scopes` on each operation).
+
+    Public read endpoints (events, attendance, roster) work without a token, mirroring the
+    public website.
+
+    ## Errors
+    All non-2xx responses use the `Error` schema with a stable machine-readable `code`.
+  license:
+    name: See LICENSE
+    url: https://github.com/billnapier/highland_cal/blob/main/LICENSE
+servers:
+  - url: https://{instance}/api/v1
+    description: A club's Highland Cal deployment
+    variables:
+      instance:
+        default: your-club.vercel.app
+        description: Hostname of the club's deployment (custom domain or *.vercel.app)
+  - url: http://localhost:3000/api/v1
+    description: Local development
+
+security:
+  - personalAccessToken: []
+  - {}
+
+tags:
+  - name: Identity
+    description: Who am I and what can I do?
+  - name: Events
+    description: Games (competitions) and practices on the club calendar.
+  - name: Attendance
+    description: RSVPs / interest levels for events.
+  - name: Users
+    description: Roster and admin user management.
+  - name: Tokens
+    description: Personal Access Token management.
+
+paths:
+  /me:
+    get:
+      tags: [Identity]
+      operationId: getMe
+      summary: Get the authenticated user, role, and token scopes
+      description: |
+        Agents should call this first to confirm which user the token belongs to and what it is
+        allowed to do. `capabilities` is derived from role ∩ token scopes.
+      security:
+        - personalAccessToken: []
+      x-scopes: []
+      responses:
+        '200':
+          description: The caller's identity.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Me'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+
+  /events:
+    get:
+      tags: [Events]
+      operationId: listEvents
+      summary: List events
+      description: Public. Returns events sorted by `start_date` ascending.
+      security:
+        - personalAccessToken: []
+        - {}
+      x-scopes: []
+      parameters:
+        - name: from
+          in: query
+          description: Inclusive lower bound on `start_date` (YYYY-MM-DD). Defaults to yesterday, matching the iCal feed.
+          schema: { type: string, format: date }
+        - name: to
+          in: query
+          description: Inclusive upper bound on `start_date` (YYYY-MM-DD).
+          schema: { type: string, format: date }
+        - name: type
+          in: query
+          schema:
+            $ref: '#/components/schemas/EventType'
+        - name: include
+          in: query
+          description: Set to `attendance` to embed each event's attendance list.
+          schema:
+            type: string
+            enum: [attendance]
+        - $ref: '#/components/parameters/Limit'
+        - $ref: '#/components/parameters/Cursor'
+      responses:
+        '200':
+          description: A page of events.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data, next_cursor]
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/EventListItem'
+                  next_cursor:
+                    type: [string, 'null']
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+    post:
+      tags: [Events]
+      operationId: createEvent
+      summary: Create an event
+      description: |
+        Requires role `APPROVED` or `ADMIN` and scope `events:write`.
+        Sends the "New Event" email to all approved members unless `notify` is `false`.
+      security:
+        - personalAccessToken: []
+      x-scopes: ['events:write']
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EventCreate'
+      responses:
+        '201':
+          description: Created.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Event'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '409':
+          $ref: '#/components/responses/IdempotencyConflict'
+
+  /events/{eventId}:
+    parameters:
+      - $ref: '#/components/parameters/EventId'
+    get:
+      tags: [Events]
+      operationId: getEvent
+      summary: Get one event (with attendance)
+      security:
+        - personalAccessToken: []
+        - {}
+      x-scopes: []
+      responses:
+        '200':
+          description: The event, always including its attendance list.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EventWithAttendance'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+    patch:
+      tags: [Events]
+      operationId: updateEvent
+      summary: Update an event
+      description: |
+        Partial update — only supplied fields change. `ADMIN` may edit any event; `APPROVED` may
+        edit only events they created. Requires scope `events:write`.
+        Set `major_change: true` to email all approved members (same as the UI checkbox).
+      security:
+        - personalAccessToken: []
+      x-scopes: ['events:write']
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EventUpdate'
+      responses:
+        '200':
+          description: The updated event.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Event'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+    delete:
+      tags: [Events]
+      operationId: deleteEvent
+      summary: Delete an event
+      description: |
+        `ADMIN` only; requires scope `events:delete`. Cascades to attendance. Sends the
+        "Event Deleted" email unless `notify=false`.
+      security:
+        - personalAccessToken: []
+      x-scopes: ['events:delete']
+      parameters:
+        - name: notify
+          in: query
+          schema: { type: boolean, default: true }
+      responses:
+        '204':
+          description: Deleted.
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+
+  /events/{eventId}/attendance:
+    parameters:
+      - $ref: '#/components/parameters/EventId'
+    get:
+      tags: [Attendance]
+      operationId: listEventAttendance
+      summary: List everyone's RSVP for an event
+      security:
+        - personalAccessToken: []
+        - {}
+      x-scopes: []
+      responses:
+        '200':
+          description: Attendance entries for this event.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Attendance'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+
+  /events/{eventId}/attendance/me:
+    parameters:
+      - $ref: '#/components/parameters/EventId'
+    get:
+      tags: [Attendance]
+      operationId: getMyAttendance
+      summary: Get the caller's RSVP for an event
+      security:
+        - personalAccessToken: []
+      x-scopes: []
+      responses:
+        '200':
+          description: The caller's attendance entry.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Attendance'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          description: Event not found, or the caller has not RSVP'd.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+    put:
+      tags: [Attendance]
+      operationId: setMyAttendance
+      summary: Set (upsert) the caller's RSVP for an event
+      description: |
+        Idempotent. Requires role `APPROVED`/`ADMIN` and scope `attendance:write`.
+        Agents can only set the RSVP of the token's owner — never another user.
+      security:
+        - personalAccessToken: []
+      x-scopes: ['attendance:write']
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AttendanceInput'
+      responses:
+        '200':
+          description: The saved attendance entry.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Attendance'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+    delete:
+      tags: [Attendance]
+      operationId: clearMyAttendance
+      summary: Remove the caller's RSVP for an event
+      security:
+        - personalAccessToken: []
+      x-scopes: ['attendance:write']
+      responses:
+        '204':
+          description: Removed (also returned if there was nothing to remove).
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+
+  /me/attendance:
+    get:
+      tags: [Attendance]
+      operationId: listMyAttendance
+      summary: List the caller's RSVPs across upcoming events
+      security:
+        - personalAccessToken: []
+      x-scopes: []
+      parameters:
+        - name: from
+          in: query
+          schema: { type: string, format: date }
+        - name: interest_level
+          in: query
+          description: Filter; may be repeated.
+          schema:
+            type: array
+            items:
+              $ref: '#/components/schemas/InterestLevel'
+          style: form
+          explode: true
+      responses:
+        '200':
+          description: The caller's attendance, each with its event embedded.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    type: array
+                    items:
+                      allOf:
+                        - $ref: '#/components/schemas/Attendance'
+                        - type: object
+                          properties:
+                            event:
+                              $ref: '#/components/schemas/Event'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+
+  /users:
+    get:
+      tags: [Users]
+      operationId: listUsers
+      summary: List users
+      description: |
+        Without a token (or as a non-admin) returns the **public roster** fields only, and only
+        `APPROVED`/`ADMIN` users. As an `ADMIN` with scope `users:admin`, returns all users
+        including `PENDING`, with `email` and `role`.
+      security:
+        - personalAccessToken: []
+        - {}
+      x-scopes: []
+      parameters:
+        - name: role
+          in: query
+          description: Admin only. Filter by role.
+          schema:
+            $ref: '#/components/schemas/Role'
+        - $ref: '#/components/parameters/Limit'
+        - $ref: '#/components/parameters/Cursor'
+      responses:
+        '200':
+          description: A page of users.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data, next_cursor]
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/User'
+                  next_cursor:
+                    type: [string, 'null']
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+
+  /users/{userId}:
+    parameters:
+      - $ref: '#/components/parameters/UserId'
+    get:
+      tags: [Users]
+      operationId: getUser
+      summary: Get a user by UUID or vanity name
+      security:
+        - personalAccessToken: []
+        - {}
+      x-scopes: []
+      responses:
+        '200':
+          description: The user (admin-only fields included for admins).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+    delete:
+      tags: [Users]
+      operationId: deleteUser
+      summary: Permanently delete a user
+      description: |
+        `ADMIN` only; scope `users:admin`. Removes the auth identity and cascades to profile,
+        role, attendance, and tokens. An admin cannot delete themselves.
+      security:
+        - personalAccessToken: []
+      x-scopes: ['users:admin']
+      responses:
+        '204':
+          description: Deleted.
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+
+  /users/{userId}/approve:
+    parameters:
+      - $ref: '#/components/parameters/UserId'
+    post:
+      tags: [Users]
+      operationId: approveUser
+      summary: Approve a pending user
+      description: '`ADMIN` only; scope `users:admin`. Sends the "Account Approved" email.'
+      security:
+        - personalAccessToken: []
+      x-scopes: ['users:admin']
+      responses:
+        '200':
+          description: The updated user.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+
+  /users/{userId}/promote:
+    parameters:
+      - $ref: '#/components/parameters/UserId'
+    post:
+      tags: [Users]
+      operationId: promoteUser
+      summary: Promote an approved user to admin
+      description: '`ADMIN` only; scope `users:admin`.'
+      security:
+        - personalAccessToken: []
+      x-scopes: ['users:admin']
+      responses:
+        '200':
+          description: The updated user.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+
+  /tokens:
+    get:
+      tags: [Tokens]
+      operationId: listTokens
+      summary: List the caller's tokens
+      description: Metadata only — the secret value is never returned after creation.
+      security:
+        - personalAccessToken: []
+      x-scopes: []
+      responses:
+        '200':
+          description: The caller's tokens.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Token'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+
+  /tokens/{tokenId}:
+    parameters:
+      - name: tokenId
+        in: path
+        required: true
+        schema: { type: string, format: uuid }
+    delete:
+      tags: [Tokens]
+      operationId: revokeToken
+      summary: Revoke one of the caller's tokens
+      description: |
+        A token may revoke itself (useful for an agent cleaning up after a leak). Tokens are
+        **created** only in the web UI (Profile → API Tokens), never via the API, so a leaked
+        token cannot mint more tokens.
+      security:
+        - personalAccessToken: []
+      x-scopes: []
+      responses:
+        '204':
+          description: Revoked.
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+
+components:
+  securitySchemes:
+    personalAccessToken:
+      type: http
+      scheme: bearer
+      bearerFormat: hcal_pat
+      description: |
+        Personal Access Token created at **Profile → API Tokens**. Format `hcal_pat_` followed by
+        43 base62 characters. Shown once at creation; stored server-side only as a SHA-256 hash.
+
+  parameters:
+    EventId:
+      name: eventId
+      in: path
+      required: true
+      schema: { type: string, format: uuid }
+    UserId:
+      name: userId
+      in: path
+      required: true
+      description: Profile UUID or vanity name.
+      schema: { type: string }
+    Limit:
+      name: limit
+      in: query
+      schema: { type: integer, minimum: 1, maximum: 200, default: 50 }
+    Cursor:
+      name: cursor
+      in: query
+      description: Opaque cursor from a previous response's `next_cursor`.
+      schema: { type: string }
+    IdempotencyKey:
+      name: Idempotency-Key
+      in: header
+      required: false
+      description: |
+        Optional client-generated key (≤ 255 chars). Retrying a create with the same key within
+        24 hours returns the original result instead of creating a duplicate event — recommended
+        for agents, which may retry on timeouts.
+      schema: { type: string, maxLength: 255 }
+
+  responses:
+    Unauthorized:
+      description: Missing, malformed, expired, or revoked token.
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+          example:
+            error: { code: unauthorized, message: 'Invalid or revoked token' }
+    Forbidden:
+      description: Authenticated, but the role or token scopes do not allow this.
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+          example:
+            error: { code: forbidden, message: 'Only admins can delete events' }
+    NotFound:
+      description: Resource does not exist.
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+          example:
+            error: { code: not_found, message: 'Event not found' }
+    Conflict:
+      description: The request conflicts with current state (e.g. approving an already-approved user).
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+    ValidationError:
+      description: Request body or parameters failed validation.
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+          example:
+            error:
+              code: validation_error
+              message: 'Invalid request'
+              details:
+                - path: [start_time]
+                  message: 'Start time is required for practices'
+    IdempotencyConflict:
+      description: |
+        The `Idempotency-Key` was already used with a different request body.
+        Retry with the original body, or use a new key for a new request.
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+          example:
+            error: { code: idempotency_conflict, message: 'Idempotency-Key reused with a different request' }
+    RateLimited:
+      description: |
+        Too many requests (per token, or per IP for unauthenticated reads). See `Retry-After`.
+      headers:
+        Retry-After:
+          schema: { type: integer }
+          description: Seconds until the window resets.
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+
+  schemas:
+    Role:
+      type: string
+      enum: [PENDING, APPROVED, ADMIN]
+    EventType:
+      type: string
+      enum: [EVENT, PRACTICE]
+    InterestLevel:
+      type: string
+      enum: [REGISTERED, INTERESTED, WATCHING, NOT_GOING]
+    AttendDay:
+      type: [string, 'null']
+      enum: [DAY_1, DAY_2, BOTH, null]
+      description: Only meaningful for two-day events.
+    Scope:
+      type: string
+      enum: [events:write, events:delete, attendance:write, users:admin]
+      description: |
+        Read access to public data and to the caller's own data is implicit for every token.
+        `events:delete` and `users:admin` are effective only if the owner is an `ADMIN`.
+
+    Error:
+      type: object
+      required: [error]
+      properties:
+        error:
+          type: object
+          required: [code, message]
+          properties:
+            code:
+              type: string
+              enum:
+                - unauthorized
+                - forbidden
+                - not_found
+                - conflict
+                - idempotency_conflict
+                - validation_error
+                - rate_limited
+                - internal_error
+            message:
+              type: string
+            details:
+              type: array
+              items:
+                type: object
+                properties:
+                  path:
+                    type: array
+                    items: { type: [string, integer] }
+                  message: { type: string }
+
+    Me:
+      type: object
+      required: [user, role, token, capabilities]
+      properties:
+        user:
+          $ref: '#/components/schemas/User'
+        role:
+          $ref: '#/components/schemas/Role'
+        token:
+          $ref: '#/components/schemas/Token'
+        capabilities:
+          type: array
+          description: Effective permissions (role ∩ scopes).
+          items:
+            $ref: '#/components/schemas/Scope'
+
+    Event:
+      type: object
+      required: [id, name, type, start_date, is_two_day]
+      properties:
+        id: { type: string, format: uuid }
+        name: { type: string }
+        type: { $ref: '#/components/schemas/EventType' }
+        start_date:
+          type: string
+          format: date
+          description: Local date of the event (YYYY-MM-DD).
+        is_two_day: { type: boolean }
+        start_time:
+          type: [string, 'null']
+          pattern: '^\d{2}:\d{2}$'
+          description: Local wall-clock time (HH:MM). Required for practices.
+        end_time:
+          type: [string, 'null']
+          pattern: '^\d{2}:\d{2}$'
+        location: { type: [string, 'null'] }
+        registration_url: { type: [string, 'null'], format: uri }
+        created_by: { type: [string, 'null'], format: uuid }
+        created_at: { type: string, format: date-time }
+        attendance_summary:
+          type: object
+          description: Counts by interest level.
+          properties:
+            REGISTERED: { type: integer }
+            INTERESTED: { type: integer }
+            WATCHING: { type: integer }
+            NOT_GOING: { type: integer }
+        url:
+          type: string
+          format: uri
+          description: Link to the event on the website.
+
+    EventListItem:
+      description: |
+        An event as returned by `GET /events`. `attendance` is present only when
+        the request includes `include=attendance`.
+      allOf:
+        - $ref: '#/components/schemas/Event'
+        - type: object
+          properties:
+            attendance:
+              type: array
+              items:
+                $ref: '#/components/schemas/Attendance'
+    EventWithAttendance:
+      allOf:
+        - $ref: '#/components/schemas/Event'
+        - type: object
+          required: [attendance]
+          properties:
+            attendance:
+              type: array
+              items:
+                $ref: '#/components/schemas/Attendance'
+
+    EventCreate:
+      type: object
+      required: [name, start_date]
+      additionalProperties: false
+      properties:
+        name: { type: string, minLength: 1 }
+        type:
+          $ref: '#/components/schemas/EventType'
+        start_date: { type: string, format: date }
+        is_two_day: { type: boolean, default: false }
+        start_time: { type: string, pattern: '^\d{2}:\d{2}$', description: Required when type is PRACTICE }
+        end_time: { type: string, pattern: '^\d{2}:\d{2}$', description: Required when type is PRACTICE }
+        location: { type: string }
+        registration_url:
+          type: string
+          description: http(s) only. A bare domain is normalized to https://.
+        notify:
+          type: boolean
+          default: true
+          description: Send the "New Event" email to approved members.
+
+    EventUpdate:
+      type: object
+      additionalProperties: false
+      minProperties: 1
+      properties:
+        name: { type: string, minLength: 1 }
+        type: { $ref: '#/components/schemas/EventType' }
+        start_date: { type: string, format: date }
+        is_two_day: { type: boolean }
+        start_time: { type: [string, 'null'], pattern: '^\d{2}:\d{2}$' }
+        end_time: { type: [string, 'null'], pattern: '^\d{2}:\d{2}$' }
+        location: { type: [string, 'null'] }
+        registration_url: { type: [string, 'null'] }
+        major_change:
+          type: boolean
+          default: false
+          description: Email all approved members about this change.
+
+    Attendance:
+      type: object
+      required: [event_id, user, interest_level]
+      properties:
+        event_id: { type: string, format: uuid }
+        user:
+          $ref: '#/components/schemas/UserSummary'
+        interest_level:
+          $ref: '#/components/schemas/InterestLevel'
+        attend_day:
+          $ref: '#/components/schemas/AttendDay'
+        updated_at: { type: string, format: date-time }
+
+    AttendanceInput:
+      type: object
+      required: [interest_level]
+      additionalProperties: false
+      properties:
+        interest_level:
+          $ref: '#/components/schemas/InterestLevel'
+        attend_day:
+          $ref: '#/components/schemas/AttendDay'
+
+    UserSummary:
+      type: object
+      required: [id, display_name]
+      properties:
+        id: { type: string, format: uuid }
+        display_name: { type: [string, 'null'] }
+        vanity_name: { type: [string, 'null'] }
+
+    User:
+      allOf:
+        - $ref: '#/components/schemas/UserSummary'
+        - type: object
+          properties:
+            class: { type: [string, 'null'] }
+            avatar_url: { type: [string, 'null'], format: uri }
+            outward_links:
+              type: [object, 'null']
+              properties:
+                instagram: { type: string }
+                facebook: { type: string }
+                custom_links:
+                  type: array
+                  maxItems: 5
+                  items:
+                    type: object
+                    properties:
+                      label: { type: string }
+                      url: { type: string, format: uri }
+            profile_url: { type: string, format: uri }
+            created_at: { type: string, format: date-time }
+            email:
+              type: string
+              format: email
+              description: Admin callers, or the user themselves, only.
+            role:
+              allOf:
+                - $ref: '#/components/schemas/Role'
+              description: Admin callers, or the user themselves, only.
+
+    Token:
+      type: object
+      required: [id, name, prefix, scopes, created_at]
+      properties:
+        id: { type: string, format: uuid }
+        name:
+          type: string
+          description: Human label, e.g. "Hermes agent".
+        prefix:
+          type: string
+          description: First 12 characters of the token (e.g. `hcal_pat_Ab3`) for identification.
+        scopes:
+          type: array
+          items: { $ref: '#/components/schemas/Scope' }
+        created_at: { type: string, format: date-time }
+        expires_at: { type: [string, 'null'], format: date-time }
+        last_used_at: { type: [string, 'null'], format: date-time }

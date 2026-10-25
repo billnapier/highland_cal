@@ -210,3 +210,54 @@ This document serves as the guide for the LLM developer. The LLM should implemen
 - [x] Verify if any design docs need updates related to this deployment feature.
 **Runnable State:**
 - The documentation is complete and accessible for any club looking to reuse the codebase.
+
+---
+
+## Milestone 14: Agent API (REST + Personal Access Tokens)
+**Goal:** Expose event management, RSVPs, and admin user management over a versioned JSON REST API so AI agents, scripts, and cron jobs can operate the club calendar on a member's behalf.
+**References:**
+- `API.md` (usage guide) and `openapi.yaml` (contract — the source of truth for every route, field, and error)
+- `Detailed_Design.md` > 3.5 Agent API Tables, 3.6 Token-Aware Row Level Security, 3.7 Notification Outbox, 4.3 User Deletion, 4.6 Agent API, 4.7 Personal Access Tokens
+- `User_Journeys.md` > Journey 11: Connecting an AI Agent, Journey 12: Agent-Assisted Club Administration
+**Tasks:**
+- [ ] **Migration** `supabase/migrations/<timestamp>_api_tokens.sql` (see `Detailed_Design.md` §3.5–3.6):
+  - Create `Api_Tokens` (RLS + column grants), `Api_Rate_Limits`, and `Api_Idempotency_Keys`.
+  - Create `request_token()`, `current_actor_id()`, `is_session()`, `has_scope()`, `api_authenticate()`, `api_rate_limit_anonymous()`, `revoke_api_token()` (irreversible; no `UPDATE` grant/policy on `Api_Tokens`), `api_create_event()` (atomic idempotent create, `SECURITY INVOKER`), `get_user_private()`, and `authorize_user_deletion()`.
+  - Redefine `is_admin()` / `is_approved_or_admin()` on `current_actor_id()`.
+  - Drop and recreate the write policies on `Games`, `Attendance`, `User_Roles`, `Settings`, and storage to the token-aware form, using the `(select fn())` pattern.
+  - Close the pre-existing private-field exposure (`Detailed_Design.md` §4.6, "Private profile fields"): `REVOKE SELECT ON Profiles FROM anon, authenticated`, then `GRANT SELECT (<public column allowlist>)`. Revoking only the `email` column would leave the table-level grant in place. Expose `email`/application answers via `get_user_private()`, gated on self **or** `is_admin() AND has_scope('users:admin')`. Switch the dashboard and admin pages to it.
+  - Create `Notification_Outbox` and its `SECURITY DEFINER` triggers on `Games`, `User_Roles`, and `handle_new_user()` (`Detailed_Design.md` §3.7).
+- [ ] **Notification dispatcher** `lib/notifications/dispatch.ts`: server-only, service-role, no caller input. It drains the outbox with `FOR UPDATE SKIP LOCKED`, resolves recipients, and sends via Resend, using the outbox `id` as the Resend idempotency key. Kick it with `after()` from every mutation, and add a daily Vercel Cron fallback (`/api/cron/notifications`, `CRON_SECRET`). Remove recipient lookup from `lib/email.ts` and the 60-second "new user" heuristic from the auth callback. Emails must be unchanged from the user's point of view.
+- [ ] **RLS tests (pgTAP)** in `supabase/tests/`: the full authorization matrix (anonymous / session / PAT × role × scopes × ownership × operation), expired/revoked tokens, revocation cannot be undone, session-takes-precedence, `token_hash` and private profile columns not selectable by `anon`/`authenticated`, `get_user_private()` requires `users:admin` for other users, idempotent create (replay, `409` on hash mismatch, no duplicate outbox rows), the **policy invariant** check over `pg_policies`, and the **`SECURITY DEFINER` allowlist** check. Run in CI with `supabase start` + `supabase test db`. **This suite is the authorization test suite; there is no separate app-level permission matrix.**
+- [ ] **Refactor to shared request logic.** Move the duplicated logic of `app/actions/events.ts`, `attendance.ts`, and `admin.ts` into `lib/core/` functions that take a Supabase client (session or token-bound), validate with Zod, run the query, map RLS outcomes (`42501`, 0 rows affected) to typed errors, set the notification headers, and kick the dispatcher. Existing hand-written role checks in Server Actions are kept only as advisory pre-checks for error messages; RLS is the authority. `deleteUser` switches to calling `authorize_user_deletion()` before using the service-role client. UI behavior must not change.
+- [ ] **Token management UI** on `/dashboard/profile`: an "API Tokens" section to create (name, scopes, expiry), list (name, prefix, scopes, created, last used, expires), and revoke tokens. The plaintext token is shown exactly once in a copy-to-clipboard dialog. Admin-only scopes are offered only to Admins.
+- [ ] **Auth helper** `lib/api/auth.ts`: read `Authorization: Bearer`, build an **anon-key** client with the `x-hcal-token` header (never the service role), and call `rpc('api_authenticate')` → `401`/`429` or `{ client, identity }`. Designed so a second credential type (Supabase OAuth JWT, Milestone 15) can be added without touching routes.
+- [ ] **API routes** under `app/api/v1/` implementing every operation in `openapi.yaml`: `/me`, `/me/attendance`, `/events`, `/events/{id}`, `/events/{id}/attendance`, `/events/{id}/attendance/me`, `/users`, `/users/{id}`, `/users/{id}/approve`, `/users/{id}/promote`, `/tokens`, `/tokens/{id}`. All queries go through the token-bound client from the auth helper, so RLS enforces permissions. Use real HTTP status codes and the standard error envelope. Mutations produce the same notifications (via the outbox) and `revalidatePath` calls as the UI. `POST /events` with `Idempotency-Key` goes through `api_create_event()`.
+- [ ] **Docs routes:** serve the spec at `/api/v1/openapi.yaml` and a rendered interactive reference at `/api/v1/docs` (static HTML page loading Scalar or Redoc from a CDN — no new runtime dependency).
+- [ ] **Tests** (add Vitest and wire it into CI): API route behavior (status-code mapping incl. 0-rows → 403/404, error envelope, idempotency, rate-limit headers) and contract tests asserting each route's responses validate against `openapi.yaml`. Permissions are covered by the pgTAP suite, not re-tested here.
+- [ ] **CI: API spec lint** (`.github/workflows/api-spec.yml`) runs `@redocly/cli lint` (config in `redocly.yaml`) on every push and PR that touches the spec.
+- [ ] **CI:** add the pgTAP suite (`supabase start` + `supabase test db`), and the Vitest suite to `.github/workflows/ci.yml`. Extend `api-spec.yml` to also fail on spec ↔ route drift once routes exist.
+- [ ] Verify `API.md` examples work end-to-end against a preview deployment; update docs for anything that changed during implementation.
+**Runnable State:**
+- A member can create a token in their profile, and `curl -H "Authorization: Bearer hcal_pat_…" https://<site>/api/v1/me` returns their identity and capabilities.
+- An Approved member's token can create/edit their events and RSVP; an Admin's token can delete events and approve/promote/delete users; a Pending member's token is read-only; revoked or expired tokens return `401`.
+- `/api/v1/docs` renders the API reference, and the web UI behaves exactly as before (the pgTAP suite proves session permissions are unchanged).
+- No API route uses the service-role key except the database-authorized `auth.admin.deleteUser()` call.
+- No new manual setup steps for clubs: "Sync fork" applies the migration automatically.
+
+---
+
+## Milestone 15: OAuth & Hosted MCP Endpoint (Future)
+**Goal:** Let non-technical members connect MCP-native apps (Claude.ai, Claude Desktop, ChatGPT connectors) with a "Sign in with Google" consent flow instead of copying a token.
+**Prerequisites:** Milestone 14 complete; re-evaluate the status of Supabase Auth's OAuth 2.1 server (public beta as of this writing) and its scope support before starting.
+**References:**
+- `Detailed_Design.md` > 4.8 Future: OAuth 2.1 & MCP
+- Supabase docs: OAuth 2.1 Server and MCP Authentication
+**Tasks:**
+- [ ] Document the opt-in Supabase dashboard steps in `Deployment.md` (enable OAuth 2.1 server, asymmetric JWT signing keys, dynamic client registration). This must remain **optional** — instances that skip it keep working with PATs only.
+- [ ] Build the OAuth consent page (`/oauth/consent`) reusing the existing Google login.
+- [ ] Extend `has_scope()` (and `request_token()` precedence rules) to handle Supabase-issued OAuth access tokens. They are real Supabase JWTs, so `auth.uid()` works natively. Extend `lib/api/auth.ts` to pass them through as the standard `Authorization` header. Add pgTAP cases for OAuth callers.
+- [ ] Add a hosted MCP endpoint at `/api/mcp` (e.g. using Vercel's `mcp-handler`) exposing the same `lib/core` operations as MCP tools, accepting either a PAT or an OAuth token, and publishing OAuth protected-resource metadata.
+- [ ] Add "Connected apps" to the profile page to list and revoke OAuth grants.
+**Runnable State:**
+- A member can add `https://<site>/api/mcp` as a custom connector in Claude.ai, sign in with Google, approve consent, and ask Claude to RSVP for them.

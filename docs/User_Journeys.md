@@ -53,6 +53,17 @@ The journeys are broken down by the two main personas: **Athletes (End Users)** 
 7. **System Warning:** If the user updates an existing vanity name, the UI displays a prominent warning: *"Changing your vanity name will break any profile links and iCal subscription feeds you have previously shared."*
 8. **System:** Profiles are publicly viewable on the main roster page. For navigation and links, the system always uses the vanity name (if configured) instead of the UUID; if no vanity name is set, the system falls back to the UUID. Athletes have a dedicated public profile page (accessible via either `/roster/[uuid]` or `/roster/[vanity_name]`) that they can share with others, displaying their info and the events they are attending.
 
+### Journey 11: Connecting an AI Agent (Personal Access Tokens)
+**Goal:** Let a personal AI assistant (e.g. Hermes, Claude Code, a script, or a cron job) check the schedule and RSVP on the athlete's behalf.
+1. **Trigger:** An *approved* athlete wants to tell their assistant "sign me up as interested for every competition in September" instead of clicking through the site.
+2. **Action:** They navigate to their "Profile" page and open the **API Tokens** section.
+3. **Action:** They click **"Create token"**, name it (e.g. "Hermes agent"), choose scopes (e.g. only `attendance:write`), and optionally pick an expiry.
+4. **System:** The system generates a token (`hcal_pat_…`), stores only its hash, and shows the plaintext **once** with a copy button and a warning that it won't be shown again.
+5. **Action:** The athlete stores the token in their agent's secret configuration and points the agent at `docs/API.md` / `/api/v1/openapi.yaml` (or installs a ready-made skill).
+6. **System:** The agent calls `GET /api/v1/me` to confirm identity and capabilities, then calls `PUT /api/v1/events/{id}/attendance/me` for each event. The same rules as the UI apply: the token can only change the owner's own RSVP, and only while the owner is `APPROVED` or `ADMIN`. *(As with UI RSVPs, no emails are sent.)*
+7. **Ongoing:** The token list shows when each token was last used. The athlete can revoke a token at any time; revocation is immediate.
+8. **Edge Case:** If the athlete's role is changed to `PENDING` or the account is deleted, all their tokens immediately stop working for writes (or entirely, on deletion).
+
 ---
 
 ## 2. Admin Users (Site Operators)
@@ -95,4 +106,12 @@ The journeys are broken down by the two main personas: **Athletes (End Users)** 
 3. **Action:** They update the "Club Name" or "Home Page Blurb" in the Site Settings section and click "Save Settings".
 4. **System:** A Next.js Server Action updates the `settings` table in the database and revalidates the cache for the home page.
 5. **Result:** The new club name and blurb are immediately visible on the public landing page.
+
+### Journey 12: Agent-Assisted Club Administration
+**Goal:** Let an Admin delegate routine schedule and membership chores to an AI agent.
+1. **Trigger:** The Admin wants their assistant to enter next season's competitions from a published league schedule, keep weekly practices up to date, and flag new sign-ups.
+2. **Action:** The Admin creates a token (Journey 11) with `events:write`, and only if needed `events:delete` and/or `users:admin`. Admin-only scopes are offered only to Admin accounts.
+3. **System (Events):** The agent calls `POST /api/v1/events` for each competition, using an `Idempotency-Key` so retries never create duplicates. New events trigger the usual "New Event" email; for routine practices the agent can pass `"notify": false`. Edits use `PATCH` with `"major_change": true` only when the date or location materially changes, matching the UI checkbox.
+4. **System (Users):** The agent can list `PENDING` users (`GET /api/v1/users?role=PENDING`) and summarize them for the Admin. After the Admin confirms, it calls `POST /api/v1/users/{id}/approve`, which sends the usual "Account Approved" email.
+5. **Safeguards:** Destructive actions (deleting events or users) require the matching admin-only scope and are expected to be confirmed by the human (see the agent guidance in `API.md`). The API refuses anything the Admin couldn't do in the UI (e.g. deleting their own account), and per-token rate limits stop a misbehaving agent from flooding the club with changes or emails.
 

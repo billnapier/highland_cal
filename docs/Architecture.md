@@ -21,6 +21,7 @@ This document outlines the architecture for a web application designed to coordi
 | **Authentication** | Federated Google Auth | Identity management via Google OAuth 2.0. No local credentials stored. |
 | **Infrastructure** | Vercel | Automated provisioning for diverse technical backgrounds. |
 | **Email** | Resend | Transactional emails for notifications (e.g., pending user approvals). Fits well within free tier. |
+| **Agent API** | Next.js Route Handlers (`/api/v1`) + OpenAPI 3.1 | Versioned REST API so AI agents and scripts can manage events, RSVPs, and users. Authenticated with Personal Access Tokens. |
 
 ---
 
@@ -66,12 +67,19 @@ To eliminate the security overhead and user friction of local credential managem
 While identity is handled externally, **Authorization is managed internally via Row Level Security (RLS) and Application Logic.**
 - **Public Reads:** The calendar, practice schedule, and profiles are public. Unauthenticated users can view this data, allowing the application to serve as a marketing/recruiting tool for the club.
 - **RLS Gatekeeper:** Write operations (RSVPing, adding events) require the user to be authenticated and have an "APPROVED" or "ADMIN" role in the `User_Roles` table.
-- **High-Trust Writes:** Any approved member can add or edit games/practices. Admins retain the ability to delete events. RLS policies verify `auth.uid()` against records where users modify their own attendance.
+- **High-Trust Writes:** Any approved member can add or edit games/practices. Admins retain the ability to delete events. RLS policies verify the acting user (`auth.uid()` for browser sessions, or the owner of a Personal Access Token for API calls) against records where users modify their own attendance.
 - **Admin Role:** The initial Admin user is explicitly defined during the instance deployment (e.g., via an environment variable). The Next.js application bootstraps this admin on their first login.
 
-### 4.3 Notifications (Next.js Server Actions)
-The application relies strictly on **Next.js Server Actions** to perform database mutations and dispatch transactional emails (via Resend). 
-While database webhooks might seem appealing, they lack the context of frontend state (e.g., an athlete checking an optional "This is a major change" box) and cannot dynamically route to Vercel Preview Deployment URLs. Server Actions solve both problems by executing the mutation, checking the UI state, and sending the email all within the correct environment context.
+### 4.3 Notifications (Server-Side Mutations)
+The application performs database mutations and dispatches transactional emails (via Resend) in **server-side application code**, never in database webhooks. Both entry points — **Next.js Server Actions** (the web UI) and the **Agent API route handlers** (§4.4) — call the same shared business-logic layer (`lib/core`), so a mutation sends the same emails no matter where it came from.
+While database webhooks might seem appealing, they lack the context of the request (e.g., an athlete checking an optional "This is a major change" box, or an agent passing `major_change: true`) and cannot dynamically route to Vercel Preview Deployment URLs. Server-side mutations solve both problems by executing the mutation, checking the request state, and sending the email all within the correct environment context.
+
+### 4.4 Agent API & Machine Identity
+To let AI agents, scripts, and scheduled jobs act on a member's behalf, the application exposes a versioned REST API at `/api/v1`, documented by an OpenAPI 3.1 spec (`docs/openapi.yaml`) with a usage guide in `docs/API.md`.
+- **Personal Access Tokens (PATs):** Members create tokens in their profile. A token acts **as its owner**, re-checks the owner's current role on every request, and can be narrowed with scopes. Only a SHA-256 hash is stored. This preserves the Zero Password Policy: tokens are revocable delegated credentials created from a Google-authenticated session, not login credentials.
+- **Same rules as the UI, enforced in one place:** PATs are validated **inside Postgres**. The API forwards the token to Supabase in a header, and the existing Row Level Security policies, extended to recognize tokens and their scopes, decide what is allowed. There is no second copy of the permission model in application code, so the UI and API can't drift apart. An agent can never do more than its owner could do by clicking.
+- **Why not Google OAuth tokens:** Google tokens are issued for Google's APIs and are exchanged by Supabase for its own session; the app never holds them. Supabase session tokens are short-lived and rotate, which makes them unsuitable for unattended agents.
+- **Future:** An opt-in OAuth 2.1 flow (via Supabase Auth's OAuth server) and a hosted MCP endpoint for MCP-native clients such as Claude.ai and ChatGPT (Roadmap Milestone 15).
 
 ---
 
@@ -109,4 +117,5 @@ To maintain the "zero-code" deployment philosophy, this project explicitly avoid
 
 ## 7. Future Extensibility
 - **Cross-Club Coordination:** Optional opt-in to share "public" interest levels with other clubs.
-- **Automated Game Scrapers:** Serverless functions to automatically update the `Games` table from known independent league schedules.
+- **Automated Game Scrapers:** Serverless functions to automatically update the `Games` table from known independent league schedules. These can be built as external clients of the Agent API rather than inside the app.
+- **OAuth & MCP:** Opt-in OAuth 2.1 sign-in for third-party agents and a hosted MCP endpoint (see §4.4).

@@ -1,0 +1,6 @@
+# Redocly CLI config for linting docs/openapi.yaml (see .github/workflows/api-spec.yml).
+extends:
+  - recommended
+rules:
+  # The spec intentionally lists a localhost server for local development.
+  no-server-example.com: off
