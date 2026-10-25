@@ -50,6 +50,9 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
       return errorResponse(new NotFoundError('User not found'))
     }
 
+    // Flatten the joined role:user_roles!inner(role) shape to a plain string.
+    user.role = (user.role as { role?: string } | undefined)?.role ?? null
+
     return jsonResponse(user, 200, auth.identity.rate_limit)
   } catch (e) {
     return errorResponse(e)

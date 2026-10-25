@@ -18,7 +18,7 @@ export async function GET(request: NextRequest) {
 
     let query = client
       .from('attendance')
-      .select('event_id, interest_level, attend_day, updated_at, event:games!inner(id, name, type, start_date, is_two_day, start_time, end_time, location, registration_url, created_by, created_at)')
+      .select('event_id:game_id, interest_level, attend_day, updated_at, user:profiles!attendance_user_id_fkey(id, display_name, vanity_name), event:games!inner(id, name, type, start_date, is_two_day, start_time, end_time, location, registration_url, created_by, created_at)')
       .eq('user_id', identity.user_id)
 
     if (from) {
@@ -28,7 +28,7 @@ export async function GET(request: NextRequest) {
       query = query.eq('interest_level', interestLevel)
     }
 
-    query = query.order('event.start_date', { ascending: false })
+    query = query.order('start_date', { ascending: false, referencedTable: 'event' })
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const { data, error } = await query as unknown as { data: any; error: any }

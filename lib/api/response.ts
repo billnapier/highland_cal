@@ -12,6 +12,7 @@ function errorStatus(code: string): number {
     case 'not_found': return 404
     case 'validation_failed': return 400
     case 'conflict': return 409
+    case 'idempotency_conflict': return 409
     case 'rate_limited': return 429
     default: return 500
   }
@@ -28,6 +29,7 @@ function apiCode(code: string): string {
     case 'forbidden': return 'forbidden'
     case 'not_found': return 'not_found'
     case 'conflict': return 'conflict'
+    case 'idempotency_conflict': return 'idempotency_conflict'
     case 'internal': return 'internal_error'
     default: return 'internal_error'
   }
