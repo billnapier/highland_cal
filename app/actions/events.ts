@@ -3,7 +3,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
 import { eventSchema, EventFormData } from '@/lib/schemas'
-import { sendEventNotification } from '@/lib/email'
+import { kickNotifications, MAJOR_CHANGE_HEADER } from '@/lib/notifications'
 
 
 export async function deleteEvent(eventId: string) {
@@ -40,15 +40,8 @@ export async function deleteEvent(eventId: string) {
       return { success: false, message: 'Forbidden: Only admins can delete events' }
     }
 
-    // Fetch event name before deleting
-    const { data: eventData } = await supabase
-      .from('games')
-      .select('name')
-      .eq('id', eventId)
-      .single()
-    const eventName = eventData?.name || 'Unknown Event'
-
-    // Delete the event
+    // Delete the event. The "Event Canceled" email is enqueued by a database
+    // trigger in the same transaction (see the notification_outbox migration).
     const { error: deleteError } = await supabase
       .from('games')
       .delete()
@@ -58,7 +51,7 @@ export async function deleteEvent(eventId: string) {
       return { success: false, message: `Failed to delete event: ${deleteError.message}` }
     }
 
-    await sendEventNotification('DELETE', { name: eventName })
+    kickNotifications()
 
     // Revalidate paths to update the UI
     revalidatePath('/')
@@ -124,17 +117,9 @@ export async function createEvent(rawData: EventFormData) {
       return { success: false, message: 'Failed to create event. Please try again later.' }
     }
 
-    // Send notifications to APPROVED and ADMIN users
-    await sendEventNotification('CREATE', {
-      name: data.name,
-      startDate: data.start_date,
-      isTwoDay: data.is_two_day,
-      type: data.type,
-      startTime: data.start_time,
-      endTime: data.end_time,
-      location: data.location,
-      registrationUrl: data.registration_url,
-    });
+    // The "New Event" email to APPROVED and ADMIN users was enqueued by the
+    // insert's trigger; deliver it after the response.
+    kickNotifications()
 
     // Revalidate paths to update the UI
     revalidatePath('/')
@@ -157,7 +142,10 @@ export async function updateEvent(eventId: string, rawData: EventFormData, major
     }
     const data = parsed.data
 
-    const supabase = await createClient()
+    // A major change asks the outbox trigger to email all approved members.
+    const supabase = await createClient(
+      majorChange ? { headers: { [MAJOR_CHANGE_HEADER]: 'true' } } : {}
+    )
 
     const {
       data: { user },
@@ -214,16 +202,7 @@ export async function updateEvent(eventId: string, rawData: EventFormData, major
     }
 
     if (majorChange) {
-      await sendEventNotification('UPDATE', {
-        name: data.name,
-        startDate: data.start_date,
-        isTwoDay: data.is_two_day,
-        type: data.type,
-        startTime: data.start_time,
-        endTime: data.end_time,
-        location: data.location,
-        registrationUrl: data.registration_url,
-      })
+      kickNotifications()
     }
 
     // Revalidate paths to update the UI

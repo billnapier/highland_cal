@@ -70,9 +70,13 @@ While identity is handled externally, **Authorization is managed internally via 
 - **High-Trust Writes:** Any approved member can add or edit games/practices. Admins retain the ability to delete events. RLS policies verify the acting user (`auth.uid()` for browser sessions, or the owner of a Personal Access Token for API calls) against records where users modify their own attendance.
 - **Admin Role:** The initial Admin user is explicitly defined during the instance deployment (e.g., via an environment variable). The Next.js application bootstraps this admin on their first login.
 
-### 4.3 Notifications (Server-Side Mutations)
-The application performs database mutations and dispatches transactional emails (via Resend) in **server-side application code**, never in database webhooks. Both entry points — **Next.js Server Actions** (the web UI) and the **Agent API route handlers** (§4.4) — call the same shared business-logic layer (`lib/core`), so a mutation sends the same emails no matter where it came from.
-While database webhooks might seem appealing, they lack the context of the request (e.g., an athlete checking an optional "This is a major change" box, or an agent passing `major_change: true`) and cannot dynamically route to Vercel Preview Deployment URLs. Server-side mutations solve both problems by executing the mutation, checking the request state, and sending the email all within the correct environment context.
+### 4.3 Notifications (Transactional Outbox)
+Emails are **recorded by the database in the same transaction as the change** and **sent by server-side application code** (via Resend). Database triggers on events, roles, and signups write a row to a private `Notification_Outbox` table, but only for writes that Row Level Security already allowed. A server-only dispatcher then delivers it right after the response (Next.js `after()`), with a daily Vercel Cron job as a safety net.
+- **Same emails from every entry point.** Server Actions (the web UI), the Agent API (§4.4), and even direct PostgREST calls all go through the same triggers.
+- **Request context still matters.** The "This is a major change" checkbox (or an agent's `major_change: true`) and `notify: false` travel to the triggers as request headers.
+- **Privacy.** Callers never read other members' email addresses. The dispatcher resolves recipients itself and takes no caller input.
+- **Reliability.** A failed send is retried (up to 5 times). The outbox row id is used as Resend's idempotency key, so a retry never sends a duplicate.
+Plain database webhooks were rejected because they can't see request context and can't target Vercel Preview Deployment URLs. The outbox keeps the trigger's atomicity while sending from the app's own environment.
 
 ### 4.4 Agent API & Machine Identity
 To let AI agents, scripts, and scheduled jobs act on a member's behalf, the application exposes a versioned REST API at `/api/v1`, documented by an OpenAPI 3.1 spec (`docs/openapi.yaml`) with a usage guide in `docs/API.md`.
