@@ -309,7 +309,7 @@ description: Use when managing the Highland Cal club calendar — list events, R
 - **Treat tokens like passwords.** Anyone with your token can act as you within its scopes.
 - **Leaked a token?** Revoke it immediately at **Profile → API Tokens** (or `DELETE /tokens/{id}` with the token itself). Revocation is instant.
 - **Audit:** each token records `last_used_at`. Admin-scoped tokens are a good candidate for an expiry.
-- **Server-side:** tokens are stored as SHA-256 hashes, never logged, and checked against the owner's current role on every request. API routes and the UI's Server Actions share one implementation (`lib/core`), so the authorization rules are identical; see `Detailed_Design.md` §4.6 for how this is enforced.
+- **Server-side:** tokens are stored as SHA-256 hashes and never logged. They are validated **inside the database**: the API passes your token to Postgres, and the same Row Level Security policies that protect the website decide what it may do, re-checking your current role on every request. There is no separate permission system for the API that could drift from the website's. See `Detailed_Design.md` §3.6.
 - **CORS:** the API does not allow browser cross-origin requests with credentials. It is meant for server-side agents and scripts.
 
 ---

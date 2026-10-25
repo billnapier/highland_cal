@@ -217,22 +217,29 @@ This document serves as the guide for the LLM developer. The LLM should implemen
 **Goal:** Expose event management, RSVPs, and admin user management over a versioned JSON REST API so AI agents, scripts, and cron jobs can operate the club calendar on a member's behalf.
 **References:**
 - `API.md` (usage guide) and `openapi.yaml` (contract — the source of truth for every route, field, and error)
-- `Detailed_Design.md` > 3.5 `Api_Tokens` Table, 4.6 Agent API, 4.7 Personal Access Tokens
+- `Detailed_Design.md` > 3.5 Agent API Tables, 3.6 Token-Aware Row Level Security, 4.3 User Deletion, 4.6 Agent API, 4.7 Personal Access Tokens
 - `User_Journeys.md` > Journey 11: Connecting an AI Agent, Journey 12: Agent-Assisted Club Administration
 **Tasks:**
-- [ ] **Refactor to a shared core.** Move the business logic of `app/actions/events.ts`, `attendance.ts`, and `admin.ts` into framework-agnostic functions in `lib/core/` that take an explicit `Actor` (`{ userId, role, scopes }`). The existing Server Actions become thin wrappers (resolve session → build Actor → call core → `revalidatePath`). UI behavior must not change.
-- [ ] **Migration** `supabase/migrations/<timestamp>_api_tokens.sql`: create `Api_Tokens` (with RLS), `Api_Rate_Limits`, and `Api_Idempotency_Keys` tables and the `api_rate_limit_hit()` function as specified in `Detailed_Design.md` §3.5.
+- [ ] **Migration** `supabase/migrations/<timestamp>_api_tokens.sql` (see `Detailed_Design.md` §3.5–3.6):
+  - Create `Api_Tokens` (RLS + column grants), `Api_Rate_Limits`, and `Api_Idempotency_Keys`.
+  - Create `request_token()`, `current_actor_id()`, `is_session()`, `has_scope()`, `api_authenticate()`, `api_rate_limit_anonymous()`, `api_idempotency_get/put()`, and `authorize_user_deletion()`.
+  - Redefine `is_admin()` / `is_approved_or_admin()` on `current_actor_id()`.
+  - Drop and recreate the write policies on `Games`, `Attendance`, `User_Roles`, `Settings`, and storage to the token-aware form, using the `(select fn())` pattern.
+  - Close the pre-existing email exposure: revoke public column `SELECT` on `Profiles.email` and expose it via a `SECURITY DEFINER` function gated on `is_admin() OR id = current_actor_id()` (`Detailed_Design.md` §4.6, "Visibility rules"). Update the admin dashboard and email-sending code to use it.
+- [ ] **RLS tests (pgTAP)** in `supabase/tests/`: the full authorization matrix (anonymous / session / PAT × role × scopes × ownership × operation), expired/revoked tokens, session-takes-precedence, `token_hash` not selectable, and the **policy invariant** check over `pg_policies`. Run in CI with `supabase start` + `supabase test db`. **This suite is the authorization test suite; there is no separate app-level permission matrix.**
+- [ ] **Refactor to shared request logic.** Move the duplicated logic of `app/actions/events.ts`, `attendance.ts`, and `admin.ts` into `lib/core/` functions that take a Supabase client (session or token-bound), validate with Zod, run the query, map RLS outcomes (`42501`, 0 rows affected) to typed errors, and send emails. Existing hand-written role checks in Server Actions are kept only as advisory pre-checks for error messages; RLS is the authority. `deleteUser` switches to calling `authorize_user_deletion()` before using the service-role client. UI behavior must not change.
 - [ ] **Token management UI** on `/dashboard/profile`: an "API Tokens" section to create (name, scopes, expiry), list (name, prefix, scopes, created, last used, expires), and revoke tokens. The plaintext token is shown exactly once in a copy-to-clipboard dialog. Admin-only scopes are offered only to Admins.
-- [ ] **Auth helper** `lib/api/auth.ts`: parse `Authorization: Bearer`, hash, look up the token, reject expired/revoked, load the owner's **current** role, build the Actor, update `last_used_at` (throttled), apply rate limits. Designed so a second credential type (Supabase OAuth JWT, Milestone 15) can be added without touching routes.
-- [ ] **API routes** under `app/api/v1/` implementing every operation in `openapi.yaml`: `/me`, `/me/attendance`, `/events`, `/events/{id}`, `/events/{id}/attendance`, `/events/{id}/attendance/me`, `/users`, `/users/{id}`, `/users/{id}/approve`, `/users/{id}/promote`, `/tokens`, `/tokens/{id}`. Use the shared Zod schemas from `lib/schemas.ts`, real HTTP status codes, and the standard error envelope. Mutations trigger the same emails and `revalidatePath` calls as the UI.
+- [ ] **Auth helper** `lib/api/auth.ts`: read `Authorization: Bearer`, build an **anon-key** client with the `x-hcal-token` header (never the service role), and call `rpc('api_authenticate')` → `401`/`429` or `{ client, identity }`. Designed so a second credential type (Supabase OAuth JWT, Milestone 15) can be added without touching routes.
+- [ ] **API routes** under `app/api/v1/` implementing every operation in `openapi.yaml`: `/me`, `/me/attendance`, `/events`, `/events/{id}`, `/events/{id}/attendance`, `/events/{id}/attendance/me`, `/users`, `/users/{id}`, `/users/{id}/approve`, `/users/{id}/promote`, `/tokens`, `/tokens/{id}`. All queries go through the token-bound client from the auth helper, so RLS enforces permissions. Use real HTTP status codes and the standard error envelope. Mutations trigger the same emails and `revalidatePath` calls as the UI.
 - [ ] **Docs routes:** serve the spec at `/api/v1/openapi.yaml` and a rendered interactive reference at `/api/v1/docs` (static HTML page loading Scalar or Redoc from a CDN — no new runtime dependency).
-- [ ] **Tests** (add a test runner, e.g. Vitest, and wire it into CI): core authorization matrix (role × scope × action), token hashing/expiry/revocation, and contract tests asserting each route's responses validate against `openapi.yaml`.
-- [ ] **CI:** add `npx @redocly/cli lint docs/openapi.yaml` and the test suite to `.github/workflows/ci.yml`.
+- [ ] **Tests** (add Vitest and wire it into CI): API route behavior (status-code mapping incl. 0-rows → 403/404, error envelope, idempotency, rate-limit headers) and contract tests asserting each route's responses validate against `openapi.yaml`. Permissions are covered by the pgTAP suite, not re-tested here.
+- [ ] **CI:** add `npx @redocly/cli lint docs/openapi.yaml`, the pgTAP suite (`supabase start` + `supabase test db`), and the Vitest suite to `.github/workflows/ci.yml`.
 - [ ] Verify `API.md` examples work end-to-end against a preview deployment; update docs for anything that changed during implementation.
 **Runnable State:**
 - A member can create a token in their profile, and `curl -H "Authorization: Bearer hcal_pat_…" https://<site>/api/v1/me` returns their identity and capabilities.
 - An Approved member's token can create/edit their events and RSVP; an Admin's token can delete events and approve/promote/delete users; a Pending member's token is read-only; revoked or expired tokens return `401`.
-- `/api/v1/docs` renders the API reference, and the web UI behaves exactly as before.
+- `/api/v1/docs` renders the API reference, and the web UI behaves exactly as before (the pgTAP suite proves session permissions are unchanged).
+- No API route uses the service-role key except the database-authorized `auth.admin.deleteUser()` call.
 - No new manual setup steps for clubs: "Sync fork" applies the migration automatically.
 
 ---
@@ -246,7 +253,7 @@ This document serves as the guide for the LLM developer. The LLM should implemen
 **Tasks:**
 - [ ] Document the opt-in Supabase dashboard steps in `Deployment.md` (enable OAuth 2.1 server, asymmetric JWT signing keys, dynamic client registration). This must remain **optional** — instances that skip it keep working with PATs only.
 - [ ] Build the OAuth consent page (`/oauth/consent`) reusing the existing Google login.
-- [ ] Extend `lib/api/auth.ts` to accept Supabase-issued OAuth access tokens (verify via JWKS; map to an Actor; apply scopes once Supabase supports them).
+- [ ] Extend `has_scope()` (and `request_token()` precedence rules) to handle Supabase-issued OAuth access tokens. They are real Supabase JWTs, so `auth.uid()` works natively. Extend `lib/api/auth.ts` to pass them through as the standard `Authorization` header. Add pgTAP cases for OAuth callers.
 - [ ] Add a hosted MCP endpoint at `/api/mcp` (e.g. using Vercel's `mcp-handler`) exposing the same `lib/core` operations as MCP tools, accepting either a PAT or an OAuth token, and publishing OAuth protected-resource metadata.
 - [ ] Add "Connected apps" to the profile page to list and revoke OAuth grants.
 **Runnable State:**

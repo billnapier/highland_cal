@@ -144,5 +144,5 @@ Once Milestone 14 is deployed, your site automatically includes the Agent API â€
 - Members create tokens at **Profile â†’ API Tokens** and use them with AI assistants or scripts.
 - Your instance's API reference is at `https://<your-site>/api/v1/docs`.
 - Full instructions: [API.md](./API.md).
-- The API uses the existing `SUPABASE_SERVICE_ROLE_KEY` (already set by the Vercel Supabase integration). Never expose this key publicly or prefix it with `NEXT_PUBLIC_`.
+- The API runs on the public anon key and enforces permissions through the database's Row Level Security, so it needs no new secrets. The existing `SUPABASE_SERVICE_ROLE_KEY` is still used only for deleting user accounts. Never expose that key publicly or prefix it with `NEXT_PUBLIC_`.
 
