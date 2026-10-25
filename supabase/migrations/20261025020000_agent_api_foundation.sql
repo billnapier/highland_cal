@@ -81,6 +81,16 @@ BEGIN
 END;
 $$;
 
+-- Narrow, client-safe accessors. request_token() returns the full row
+-- (including token_hash), so it is internal; policies and invoker functions
+-- use these instead.
+CREATE OR REPLACE FUNCTION public.current_token_id()
+RETURNS uuid
+LANGUAGE sql STABLE SECURITY DEFINER SET search_path = public
+AS $$
+  SELECT (public.request_token()).id
+$$;
+
 -- The user this request acts as: the session user, else the token's owner.
 CREATE OR REPLACE FUNCTION public.current_actor_id()
 RETURNS uuid
@@ -410,11 +420,11 @@ REVOKE ALL ON public.api_idempotency_keys FROM anon, authenticated;
 GRANT SELECT, INSERT, UPDATE ON public.api_idempotency_keys TO anon;
 
 CREATE POLICY "Tokens can read their own idempotency keys" ON public.api_idempotency_keys
-  FOR SELECT USING (token_id = (SELECT (public.request_token()).id));
+  FOR SELECT USING (token_id = (SELECT public.current_token_id()));
 CREATE POLICY "Tokens can claim their own idempotency keys" ON public.api_idempotency_keys
-  FOR INSERT WITH CHECK (token_id = (SELECT (public.request_token()).id));
+  FOR INSERT WITH CHECK (token_id = (SELECT public.current_token_id()));
 CREATE POLICY "Tokens can update their own idempotency keys" ON public.api_idempotency_keys
-  FOR UPDATE USING (token_id = (SELECT (public.request_token()).id));
+  FOR UPDATE USING (token_id = (SELECT public.current_token_id()));
 
 -- SECURITY INVOKER: the Games insert is checked by the caller's RLS. The whole
 -- function is one transaction, so the key claim, the insert, and the stored
@@ -425,7 +435,7 @@ RETURNS jsonb
 LANGUAGE plpgsql VOLATILE SECURITY INVOKER SET search_path = public
 AS $$
 DECLARE
-  tok uuid := (public.request_token()).id;
+  tok uuid := public.current_token_id();
   claimed boolean;
   k public.api_idempotency_keys;
   g public.games;
@@ -525,12 +535,25 @@ AS $$
 $$;
 
 -- -----------------------------------------------------------------------------
--- 9. Function privileges
---    Postgres grants EXECUTE to PUBLIC by default; be explicit.
+-- 9. Privileges
+--    Don't rely on Supabase's default privileges: newer projects
+--    (api.auto_expose_new_tables = false) don't grant them. Be explicit, and
+--    let RLS decide row access. Postgres also grants EXECUTE to PUBLIC by
+--    default, so internal functions are revoked explicitly.
 -- -----------------------------------------------------------------------------
 
+GRANT SELECT, INSERT, UPDATE, DELETE ON public.games, public.attendance TO anon, authenticated;
+GRANT SELECT, UPDATE ON public.user_roles TO anon, authenticated;
+GRANT SELECT, INSERT, UPDATE, DELETE ON public.settings TO anon, authenticated;
+-- Profiles: public columns only for SELECT (granted above); updates are
+-- governed by the "own profile" policy and the vanity-name trigger.
+GRANT UPDATE ON public.profiles TO authenticated;
+
+-- request_token() returns token_hash: never client-callable.
+REVOKE EXECUTE ON FUNCTION public.request_token() FROM PUBLIC, anon, authenticated;
+
 GRANT EXECUTE ON FUNCTION
-  public.request_token(), public.current_actor_id(), public.is_session(), public.has_scope(text),
+  public.current_token_id(), public.current_actor_id(), public.is_session(), public.has_scope(text),
   public.is_admin(), public.is_approved_or_admin(),
   public.revoke_api_token(uuid), public.api_authenticate(text), public.api_rate_limit_anonymous(text),
   public.api_create_event(jsonb, text, text), public.authorize_user_deletion(uuid),

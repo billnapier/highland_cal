@@ -52,6 +52,11 @@ RETURNS uuid LANGUAGE sql AS $$
   VALUES (uid, raw, encode(sha256(convert_to(raw, 'UTF8')), 'hex'), left(raw, 12), scopes, expires, revoked)
   RETURNING id
 $$;
+-- Look up a token id by name, bypassing RLS (runs as the test owner), so
+-- assertions can target tokens the current caller is not allowed to see.
+CREATE FUNCTION tests.token_id(token_name text) RETURNS uuid LANGUAGE sql SECURITY DEFINER AS $$
+  SELECT id FROM public.api_tokens WHERE name = token_name
+$$;
 GRANT EXECUTE ON ALL FUNCTIONS IN SCHEMA tests TO anon, authenticated;
 
 -- --------------------------------------------------------------- fixtures ---
@@ -102,6 +107,10 @@ SELECT is(public.is_admin(), false, 'session + admin token: no admin escalation'
 SELECT tests.as_token('hcal_pat_approved_rsvp');
 SELECT throws_ok($$ SELECT token_hash FROM public.api_tokens $$, '42501', NULL, 'token: token_hash is not selectable');
 SELECT is((SELECT count(*)::int FROM public.api_tokens), 4, 'token: sees only its owner''s tokens');
+SELECT throws_ok($$ SELECT (public.request_token()).token_hash $$, '42501', NULL,
+  'token: request_token() (full row incl. token_hash) is not callable via RPC');
+SELECT is(public.current_token_id(), tests.token_id('hcal_pat_approved_rsvp'), 'token: current_token_id() returns only the id');
+SELECT ok(NOT (to_jsonb(public.api_authenticate('read')) ? 'token_hash'), 'api_authenticate() does not expose token_hash');
 
 SELECT tests.as_session('00000000-0000-0000-0000-00000000000a');
 SELECT throws_ok($$ SELECT token_hash FROM public.api_tokens $$, '42501', NULL, 'session: token_hash is not selectable');
@@ -139,11 +148,16 @@ $$, '42501', NULL, 'token: cannot mint new tokens');
 SELECT tests.as_token('hcal_pat_approved_rsvp');
 SELECT throws_ok($$ UPDATE public.api_tokens SET revoked_at = NULL $$, '42501', NULL,
   'token: cannot UPDATE tokens directly (revocation cannot be undone)');
-SELECT is(public.revoke_api_token((SELECT id FROM public.api_tokens WHERE name = 'hcal_pat_admin_all')), false,
+SELECT isnt(tests.token_id('hcal_pat_admin_all'), NULL, 'fixture: admin token id resolved (not a NULL no-op)');
+SELECT is(public.revoke_api_token(tests.token_id('hcal_pat_admin_all')), false,
   'token: cannot revoke another user''s token');
-SELECT is(public.revoke_api_token((SELECT id FROM public.api_tokens WHERE name = 'hcal_pat_approved_other')), true,
+SELECT tests.as_owner();
+SELECT is((SELECT revoked_at FROM public.api_tokens WHERE name = 'hcal_pat_admin_all'), NULL,
+  'the other user''s token is still live');
+SELECT tests.as_token('hcal_pat_approved_rsvp');
+SELECT is(public.revoke_api_token(tests.token_id('hcal_pat_approved_other')), true,
   'token: can revoke a sibling token of the same owner');
-SELECT is(public.revoke_api_token((SELECT id FROM public.api_tokens WHERE name = 'hcal_pat_approved_other')), false,
+SELECT is(public.revoke_api_token(tests.token_id('hcal_pat_approved_other')), false,
   'revoking twice is a no-op');
 
 SELECT tests.as_token('hcal_pat_approved_other');

@@ -205,6 +205,9 @@ SELECT is(tests.affected($$ UPDATE public.settings SET value = 'Club' WHERE key 
   'settings: even a full-scope ADMIN token is denied (session only)');
 
 -- =============================================================== Storage ====
+-- Supabase's storage.protect_delete() trigger blocks direct DELETEs unless this
+-- flag is set. Setting it keeps RLS and the role switches fully in effect.
+SELECT set_config('storage.allow_delete_query', 'true', true);
 SELECT tests.as_session('00000000-0000-0000-0000-00000000000b');
 SELECT lives_ok($$ INSERT INTO storage.objects (bucket_id, name, owner) VALUES ('public_images', 'b.png', '00000000-0000-0000-0000-00000000000b') $$,
   'storage upload: APPROVED session (unchanged)');

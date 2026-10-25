@@ -71,12 +71,12 @@ SELECT is(
     'api_rate_limit_anonymous',
     'authorize_user_deletion',
     'current_actor_id',
+    'current_token_id',
     'get_user_private',
     'has_scope',
     'is_admin',
     'is_approved_or_admin',
     'is_session',
-    'request_token',
     'revoke_api_token'
   ]::text[],
   'client-executable SECURITY DEFINER functions match the reviewed allowlist'
@@ -87,6 +87,9 @@ SELECT ok(NOT has_function_privilege('anon', 'public.api_rate_limit_hit(text, in
   'api_rate_limit_hit is not executable by anon');
 SELECT ok(NOT has_function_privilege('authenticated', 'public.api_rate_limit_hit(text, integer)', 'EXECUTE'),
   'api_rate_limit_hit is not executable by authenticated');
+
+SELECT ok(NOT has_function_privilege(r, 'public.request_token()', 'EXECUTE'), r || ' cannot call request_token() (returns token_hash)')
+  FROM unnest(ARRAY['anon', 'authenticated']) r;
 
 -- 6. api_create_event must run with the caller's privileges (RLS applies).
 SELECT is((SELECT prosecdef FROM pg_proc WHERE proname = 'api_create_event'), false,
