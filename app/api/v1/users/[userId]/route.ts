@@ -76,6 +76,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
       avatar_url: profile.avatar_url || null,
       outward_links: profile.outward_links || null,
       created_at: profile.created_at,
+      profile_url: coreUsers.profileUrl(profile.vanity_name, profile.id),
     }
 
     // Include email and role for admins with users:admin, or for self

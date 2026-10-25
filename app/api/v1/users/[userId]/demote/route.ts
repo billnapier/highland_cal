@@ -53,7 +53,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
     // Flatten the joined role:user_roles!inner(role) shape to a plain string.
     user.role = (user.role as { role?: string } | undefined)?.role ?? null
 
-    return jsonResponse(user, 200, auth.identity.rate_limit)
+    return jsonResponse(coreUsers.addProfileUrl(user), 200, auth.identity.rate_limit)
   } catch (e) {
     return errorResponse(e)
   }
