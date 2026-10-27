@@ -144,6 +144,12 @@ Once Milestone 14 is deployed, your site automatically includes the Agent API �
 
 - Members create tokens at **Profile → API Tokens** and use them with AI assistants or scripts.
 - Your instance's API reference is at `https://<your-site>/api/v1/docs`.
-- Full instructions: [API.md](./API.md).
-- The API runs on the public anon key and enforces permissions through the database's Row Level Security, so it needs no new secrets. The existing `SUPABASE_SERVICE_ROLE_KEY` is still used only for deleting user accounts and by the server-only email dispatcher. Never expose that key publicly or prefix it with `NEXT_PUBLIC_`.
+|- Full instructions: [API.md](./API.md).  
+|- The API runs on the public anon key and enforces permissions through the database's Row Level Security, so it needs no new secrets. The existing `SUPABASE_SERVICE_ROLE_KEY` is still used only for deleting user accounts and by the server-only email dispatcher. Never expose that key publicly or prefix it with `NEXT_PUBLIC_`.
+
+## Preview Environments (Developers)
+
+Each pull request gets an ephemeral preview deployment on Vercel that shares a dedicated Supabase project (staging, `Highland Cal - STAGING`). This isolation keeps test data and write operations from production. The preview Supabase project stores the same schema (4 migrations) and its own data.
+
+**If a preview deployment's `/api/v1/*` endpoints return 500 errors** while the UI renders fine, the preview Supabase project may be paused or deleted. Check the project status in the Supabase Dashboard and restore it if needed (restore preserves all API keys — Vercel env vars do not need updating after a restore).
 
