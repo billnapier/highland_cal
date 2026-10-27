@@ -74,7 +74,7 @@ export async function GET(request: NextRequest) {
       }
 
       // Add computed profile_url after all other fields are populated
-      const usersWithUrl = users.map((u: Record<string, unknown>) => addProfileUrl(u as Parameters<typeof addProfileUrl>[0]))
+      const usersWithUrl = users.map((u: Record<string, unknown>) => addProfileUrl(u as Parameters<typeof addProfileUrl>[0], request))
 
       let nextCursor: string | null = null
       if (hasMore && users.length > 0) {
@@ -112,7 +112,7 @@ return jsonResponse({ data: usersWithUrl, next_cursor: nextCursor }, 200, rateLi
     })
 
     // Add computed profile_url to public users
-    const publicUsersWithUrl = publicUsers.map((u: Record<string, unknown>) => addProfileUrl(u as Parameters<typeof addProfileUrl>[0]))
+    const publicUsersWithUrl = publicUsers.map((u: Record<string, unknown>) => addProfileUrl(u as Parameters<typeof addProfileUrl>[0], request))
 
     let nextCursor: string | null = null
     if (hasMore && publicUsersWithUrl.length > 0) {

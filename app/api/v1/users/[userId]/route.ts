@@ -2,6 +2,7 @@ import type { NextRequest } from 'next/server'
 import { authenticateRequest, requireAuth } from '@/lib/api/auth'
 import { errorResponse, jsonResponse, noContentResponse } from '@/lib/api/response'
 import { NotFoundError, CoreError } from '@/lib/core/errors'
+import { getBaseUrl } from '@/lib/core/base-url'
 import * as coreUsers from '@/lib/core/users'
 
 /**
@@ -78,7 +79,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
       avatar_url: profile.avatar_url || null,
       outward_links: profile.outward_links || null,
       created_at: profile.created_at,
-      profile_url: coreUsers.profileUrl(profile.vanity_name, profile.id),
+      profile_url: coreUsers.profileUrl(profile.vanity_name, profile.id, getBaseUrl(request)),
     }
 
     // Include email and role for admins with users:admin, or for self
