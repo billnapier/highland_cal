@@ -180,7 +180,7 @@ Practices require `start_time` and `end_time`. `registration_url` must be http(s
 
 **Attendance**: `event_id`, `user` (`id`, `display_name`, `vanity_name`), `interest_level` (`REGISTERED` \| `INTERESTED` \| `WATCHING` \| `NOT_GOING`), `attend_day` (`DAY_1` \| `DAY_2` \| `BOTH` \| `null`, two-day events only), `updated_at`.
 
-**User**: `id`, `display_name`, `vanity_name`, `class`, `avatar_url`, `outward_links`, `profile_url`, `created_at`; plus `email` and `role` for Admins or yourself.
+**User**: `id`, `display_name`, `vanity_name`, `class`, `avatar_url`, `outward_links` (`instagram`, `facebook`, `customLinks` — array of `{title, url}`, max 5), `profile_url`, `created_at`; plus `email` and `role` for Admins or yourself.
 
 ---
 
