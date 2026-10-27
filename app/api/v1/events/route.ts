@@ -89,7 +89,7 @@ export async function GET(request: NextRequest) {
     }
 
     return jsonResponse(
-      { data: eventsWithSummary.map(core.addEventUrl), next_cursor: nextCursor },
+      { data: eventsWithSummary.map((e: Record<string, unknown>) => core.addEventUrl(e as Parameters<typeof core.addEventUrl>[0], request)), next_cursor: nextCursor },
       200,
       rateLimit,
     )
@@ -142,7 +142,7 @@ export async function POST(request: NextRequest) {
       // api_create_event() returns { status, replayed, response }; the spec's
       // 201 body is the Event object itself (replayed or not — same shape).
       return jsonResponse(
-        { ...core.addEventUrl(data.response), attendance_summary: { REGISTERED: 0, INTERESTED: 0, WATCHING: 0, NOT_GOING: 0 } },
+        { ...core.addEventUrl(data.response, request), attendance_summary: { REGISTERED: 0, INTERESTED: 0, WATCHING: 0, NOT_GOING: 0 } },
         data.status,
         rateLimit,
       )
@@ -151,7 +151,7 @@ export async function POST(request: NextRequest) {
     // No idempotency key-> regular insert through core
     const event = await core.createEvent(client, identity.user_id, body)
     return jsonResponse(
-      { ...core.addEventUrl(event), attendance_summary: { REGISTERED: 0, INTERESTED: 0, WATCHING: 0, NOT_GOING: 0 } },
+      { ...core.addEventUrl(event, request), attendance_summary: { REGISTERED: 0, INTERESTED: 0, WATCHING: 0, NOT_GOING: 0 } },
       201,
       rateLimit,
     )

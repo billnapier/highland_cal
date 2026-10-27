@@ -44,7 +44,7 @@ export async function GET(request: NextRequest) {
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const dataWithUrl = (data || []).map((record: any) => {
       if (record.event) {
-        record.event = addEventUrl(record.event)
+        record.event = addEventUrl(record.event, request)
       }
       return record
     })

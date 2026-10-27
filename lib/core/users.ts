@@ -2,6 +2,7 @@ import type { DbClient } from './client'
 import { ConflictError, CoreError, ForbiddenError, NotFoundError, fromPostgrestError } from './errors'
 import { kickNotifications } from '@/lib/notifications'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { getBaseUrl, type BaseUrlSource } from './base-url'
 
 /**
  * Admin user-management operations shared by Server Actions and the Agent API.
@@ -84,8 +85,7 @@ export async function deleteUser(db: DbClient, userId: string): Promise<void> {
  * Build the public profile URL for a user on the website.
  * Uses vanity_name when available, otherwise falls back to the UUID.
  */
-export function profileUrl(vanityName: string | null, userId: string): string {
-  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
+export function profileUrl(vanityName: string | null, userId: string, baseUrl: string = getBaseUrl()): string {
   const slug = vanityName || userId
   return `${baseUrl}/roster/${slug}`
 }
@@ -93,9 +93,11 @@ export function profileUrl(vanityName: string | null, userId: string): string {
 /**
  * Add computed `profile_url` field to a user row.
  * Used by API route handlers to fulfil the User schema contract.
+ * `source` is the incoming request, used to derive the base URL.
  */
 export function addProfileUrl<T extends { vanity_name: string | null; id: string }>(
   user: T,
+  source?: BaseUrlSource,
 ): T & { profile_url: string } {
-  return { ...user, profile_url: profileUrl(user.vanity_name, user.id) }
+  return { ...user, profile_url: profileUrl(user.vanity_name, user.id, getBaseUrl(source)) }
 }

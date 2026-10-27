@@ -1,6 +1,7 @@
 import * as z from 'zod'
 import { eventSchema, type EventFormData } from '@/lib/schemas'
 import { kickNotifications } from '@/lib/notifications'
+import { getBaseUrl, type BaseUrlSource } from './base-url'
 import { type DbClient, MAJOR_CHANGE_HEADER, NOTIFY_HEADER } from './client'
 import { CoreError, ForbiddenError, NotFoundError, ValidationError, fromPostgrestError } from './errors'
 
@@ -187,15 +188,15 @@ export async function deleteEvent(
 /**
  * Build the public URL for an event on the website.
  */
-export function eventUrl(eventId: string): string {
-  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
+export function eventUrl(eventId: string, baseUrl: string = getBaseUrl()): string {
   return `${baseUrl}/events/${eventId}`
 }
 
 /**
  * Add computed `url` field to an event row.
  * Used by API route handlers to fulfil the Event schema contract.
+ * `source` is the incoming request, used to derive the base URL.
  */
-export function addEventUrl<T extends { id: string }>(event: T): T & { url: string } {
-  return { ...event, url: eventUrl(event.id) }
+export function addEventUrl<T extends { id: string }>(event: T, source?: BaseUrlSource): T & { url: string } {
+  return { ...event, url: eventUrl(event.id, getBaseUrl(source)) }
 }
