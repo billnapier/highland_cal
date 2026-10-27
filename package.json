@@ -7,7 +7,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "test": "vitest run",
+    "test": "vitest run --exclude 'lib/api/e2e-smoke.test.ts'",
     "test:api": "vitest run --reporter verbose lib/api/e2e-smoke.test.ts"
   },
   "dependencies": {
