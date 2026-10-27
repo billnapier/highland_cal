@@ -101,6 +101,15 @@ export default async function RootLayout({
               </a>
               .
             </p>
+            <p className="text-sm font-medium text-slate-500 dark:text-slate-400">
+              <Link
+                href="/api/v1/docs"
+                className="text-emerald-600 hover:text-emerald-700 dark:text-emerald-400 dark:hover:text-emerald-300 underline underline-offset-4 transition-colors font-bold"
+                title="Agent API documentation"
+              >
+                Developers
+              </Link>
+            </p>
           </div>
         </footer>
       </body>
