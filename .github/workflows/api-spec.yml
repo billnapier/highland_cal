@@ -1,21 +1,17 @@
 name: API Spec
 
 # Lint the Agent API OpenAPI spec and check spec-to-route drift.
+#
+# NOTE: this workflow intentionally has NO path filters. Branch protection on
+# main requires a passing `lint` check on every pull request, and this
+# workflow's `lint` job is what reports that check. Path-gating it (as it was
+# before) meant UI-only or docs-only PRs could never satisfy the required
+# check and could not be merged.
 on:
   push:
-    paths:
-      - 'docs/openapi.yaml'
-      - 'redocly.yaml'
-      - 'app/api/v1/**'
-      - 'lib/api/**'
-      - '.github/workflows/api-spec.yml'
+    branches: [main]
   pull_request:
-    paths:
-      - 'docs/openapi.yaml'
-      - 'redocly.yaml'
-      - 'app/api/v1/**'
-      - 'lib/api/**'
-      - '.github/workflows/api-spec.yml'
+    branches: [main]
 
 permissions:
   contents: read
