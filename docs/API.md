@@ -316,6 +316,40 @@ description: Use when managing the Highland Cal club calendar — list events, R
 
 ---
 
+## Appendix: Live-preview E2E test suite
+
+The repo ships a vitest-based e2e harness that runs against a live preview deployment.
+Use it to validate an API change before merging:
+
+```bash
+HCAL_BASE_URL=https://pr-123.vercel.app \
+  VERCEL_PROTECTION_BYPASS=<secret> \
+  E2E_TOKEN_PENDING=hcal_pat_... \
+  E2E_TOKEN_APPROVED=hcal_pat_... \
+  E2E_TOKEN_ADMIN=hcal_pat_... \
+  npm run test:api
+```
+
+> **Vercel preview protection**: Preview deployments are behind Vercel Authentication.
+> Find the bypass secret with `vercel curl -v <preview-url>/api/v1/events | grep x-vercel-protection-bypass`
+> and set it as `VERCEL_PROTECTION_BYPASS`. The harness auto-injects the header.
+> For production (`club.hankslam-rondo.com`), no bypass is needed.
+
+The harness is in `lib/api/e2e-harness.ts` and exports:
+
+| Export | Purpose |
+| :--- | :--- |
+| `e2eConfig` | Resolved `baseUrl`, `runId`, and per-role tokens |
+| `ns(label)` | Prefix a string with `CI-<runId>-` for unique test data |
+| `apiGet`/`apiPost`/`apiPatch`/`apiDelete` | Fetch wrappers that inject the Bearer token |
+| `expectOk(res)` | Assert status and parse JSON body |
+| `expectError(res, status, code?)` | Assert status + Error-schema body |
+| `rateLimitHeader(res, name)` | Read a rate-limit response header |
+
+Every spec file that imports the harness auto-checks for the required env vars at load time — missing `HCAL_BASE_URL` or any `E2E_TOKEN_*` exits with a clear message.
+
+Test files live in `lib/api/` with the `.test.ts` extension and are included automatically. Run the full suite with `npm run test:api`.
+
 ## 9. Roadmap: OAuth & MCP
 
 PATs are the v1 auth method because they are simple, work for unattended jobs (cron), and support scopes today. The auth layer is designed to accept a second credential type later without changing any endpoints:

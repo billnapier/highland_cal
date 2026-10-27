@@ -7,7 +7,8 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "test": "vitest run"
+    "test": "vitest run",
+    "test:api": "vitest run --reporter verbose lib/api/e2e-smoke.test.ts"
   },
   "dependencies": {
     "@base-ui/react": "^1.4.1",
