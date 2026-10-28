@@ -1,0 +1,106 @@
+# Run the full E2E API test suite (smoke + read matrix + write matrix) against
+# Vercel Preview deployments when they are ready.
+#
+# Prerequisites:
+#   - E2E_TOKEN_PENDING, E2E_TOKEN_APPROVED, E2E_TOKEN_ADMIN must be set as
+#     repo/organization secrets — long-lived PATs for the seeded fixture users
+#     in the preview Supabase project.
+#   - The Vercel preview's Supabase project must have the test fixture users
+#     seeded (see env-fix card t_b17eb965).
+#   - For previews behind Vercel Deployment Protection: GitHub Actions requests
+#     from this repo automatically pass through when "Allow GitHub Actions" is
+#     enabled in the Vercel project settings. If that is not set, create a
+#     VERCEL_PROTECTION_BYPASS secret with the preview bypass secret.
+#
+#     Vercel project → Settings → Deployment Protection → "Allow GitHub Actions"
+#     (repo-matched requests pass without extra headers).
+name: API E2E
+
+on:
+  deployment_status:
+
+permissions:
+  contents: read
+  deployments: read
+  checks: write
+  pull-requests: write
+
+concurrency:
+  group: api-e2e-${{ github.event.deployment_status.task_id }}-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  e2e:
+    if: >
+      github.event_name == 'deployment_status' &&
+      github.event.deployment_status.state == 'success' &&
+      github.event.deployment_status.environment == 'Preview'
+    runs-on: ubuntu-latest
+    environment: Preview
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Use Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - run: npm ci
+
+      - name: Run E2E API test suite
+        id: e2e
+        env:
+          HCAL_BASE_URL: ${{ github.event.deployment_status.environment_url }}
+          RUN_ID: ${{ github.run_id }}
+          E2E_TOKEN_PENDING: ${{ secrets.E2E_TOKEN_PENDING }}
+          E2E_TOKEN_APPROVED: ${{ secrets.E2E_TOKEN_APPROVED }}
+          E2E_TOKEN_ADMIN: ${{ secrets.E2E_TOKEN_ADMIN }}
+          VERCEL_PROTECTION_BYPASS: ${{ secrets.VERCEL_PROTECTION_BYPASS }}
+        run: |
+          npm run test:api -- --reporter=json 2>&1 | tee /tmp/e2e-output.txt
+
+      - name: Check test results
+        id: check
+        run: |
+          echo "## E2E API Test Results" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          if grep -q "FAIL" /tmp/e2e-output.txt; then
+            echo "❌ Some tests failed." >> $GITHUB_STEP_SUMMARY
+            grep -B1 "FAIL" /tmp/e2e-output.txt >> $GITHUB_STEP_SUMMARY
+            exit 1
+          fi
+          if grep -q "Tests.*passed" /tmp/e2e-output.txt; then
+            grep "^Tests" /tmp/e2e-output.txt >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "✅ All E2E API tests passed." >> $GITHUB_STEP_SUMMARY
+          else
+            echo "⚠️ Could not parse test results — check run log." >> $GITHUB_STEP_SUMMARY
+            tail -20 /tmp/e2e-output.txt >> $GITHUB_STEP_SUMMARY
+          fi
+
+      - name: Write check run summary
+        if: always()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const output = fs.readFileSync('/tmp/e2e-output.txt', 'utf8');
+            const title = 'API E2E Tests';
+            const summary = output.includes('FAIL') ? 'Some tests failed' : 'All tests passed';
+            const text = [
+              '## E2E API Test Results',
+              '',
+              '```',
+              output.slice(0, 10000),
+              '```',
+            ].join('\n');
+            await github.rest.checks.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              name: title,
+              head_sha: context.sha,
+              status: 'completed',
+              conclusion: output.includes('FAIL') ? 'failure' : 'success',
+              output: { title, summary, text },
+            });
