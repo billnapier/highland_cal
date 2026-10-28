@@ -135,6 +135,11 @@ export function apiPatch(path: string, opts?: FetchOptions): Promise<Response> {
   return request('PATCH', path, opts)
 }
 
+/** PUT request. */
+export function apiPut(path: string, opts?: FetchOptions): Promise<Response> {
+  return request('PUT', path, opts)
+}
+
 /** DELETE request. */
 export function apiDelete(path: string, opts?: FetchOptions): Promise<Response> {
   return request('DELETE', path, opts)
