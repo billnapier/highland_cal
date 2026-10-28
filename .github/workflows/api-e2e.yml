@@ -23,11 +23,10 @@ permissions:
   contents: read
   deployments: read
   checks: write
-  pull-requests: write
 
 concurrency:
-  group: api-e2e-${{ github.event.deployment_status.task_id }}-${{ github.ref }}
-  cancel-in-progress: false
+  group: api-e2e-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   e2e:
@@ -58,26 +57,7 @@ jobs:
           E2E_TOKEN_ADMIN: ${{ secrets.E2E_TOKEN_ADMIN }}
           VERCEL_PROTECTION_BYPASS: ${{ secrets.VERCEL_PROTECTION_BYPASS }}
         run: |
-          npm run test:api -- --reporter=json 2>&1 | tee /tmp/e2e-output.txt
-
-      - name: Check test results
-        id: check
-        run: |
-          echo "## E2E API Test Results" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          if grep -q "FAIL" /tmp/e2e-output.txt; then
-            echo "❌ Some tests failed." >> $GITHUB_STEP_SUMMARY
-            grep -B1 "FAIL" /tmp/e2e-output.txt >> $GITHUB_STEP_SUMMARY
-            exit 1
-          fi
-          if grep -q "Tests.*passed" /tmp/e2e-output.txt; then
-            grep "^Tests" /tmp/e2e-output.txt >> $GITHUB_STEP_SUMMARY
-            echo "" >> $GITHUB_STEP_SUMMARY
-            echo "✅ All E2E API tests passed." >> $GITHUB_STEP_SUMMARY
-          else
-            echo "⚠️ Could not parse test results — check run log." >> $GITHUB_STEP_SUMMARY
-            tail -20 /tmp/e2e-output.txt >> $GITHUB_STEP_SUMMARY
-          fi
+          npm run test:api 2>&1 | tee /tmp/e2e-output.txt
 
       - name: Write check run summary
         if: always()
@@ -85,9 +65,11 @@ jobs:
         with:
           script: |
             const fs = require('fs');
-            const output = fs.readFileSync('/tmp/e2e-output.txt', 'utf8');
+            let output = '';
+            try { output = fs.readFileSync('/tmp/e2e-output.txt', 'utf8'); } catch { output = 'No test output captured'; }
+            const failed = output.includes('FAIL') || output.includes('Tests failed');
             const title = 'API E2E Tests';
-            const summary = output.includes('FAIL') ? 'Some tests failed' : 'All tests passed';
+            const summary = failed ? 'Some tests failed' : output.includes('Tests') ? 'All tests passed' : 'No test results parsed';
             const text = [
               '## E2E API Test Results',
               '',

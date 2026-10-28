@@ -84,11 +84,17 @@ afterAll(async () => {
       // Best-effort cleanup — if it's already gone, that's fine.
     }
   }
+  createdEventIds.length = 0
 
-  // Assert the preview DB is clean: no leftover namespace data
-  // (Created events were deleted above; verify there's nothing left.)
-  const leftover = createdEventIds.filter(Boolean)
-  expect(leftover.length).toBe(0)
+  // Confirm no leftover events with our namespace prefix exist in the DB
+  const listRes = await apiGet(`/events?name=${encodeURIComponent(`CI-${e2eConfig.runId}`)}`)
+  if (listRes.status === 200) {
+    const body = await listRes.json() as { data: unknown[] }
+    const lingering = body.data.filter(
+      (e: unknown) => (e as Record<string, unknown>).name as string,
+    )
+    expect(lingering.length).toBe(0)
+  }
 })
 
 /* ------------------------------------------------------------------ */
@@ -96,14 +102,6 @@ afterAll(async () => {
 /* ------------------------------------------------------------------ */
 
 describe('POST /events', () => {
-  let createdId: string | null = null
-
-  afterAll(async () => {
-    if (createdId) {
-      await deleteFixture(createdId).catch(() => {})
-    }
-  })
-
   it('APPROVED creates an event → 201', async () => {
     const body = {
       name: ns('approved-create'),
@@ -116,7 +114,7 @@ describe('POST /events', () => {
     expect(event).toHaveProperty('id')
     expect(event).toHaveProperty('url')
     expect(event.name).toBe(ns('approved-create'))
-    createdId = event.id as string
+    createdEventIds.push(event.id as string)
   })
 
   it('ADMIN creates an event → 201', async () => {
@@ -195,20 +193,14 @@ describe('POST /events', () => {
       idemEventId = event.id as string
     })
 
-    it('same key, same body → returns same event (201 or 409 OK per spec)', async () => {
+    it('same key, same body → returns same event (201 replayed)', async () => {
       const res = await apiPost('/events', {
         token: APPROVED.token,
         body: idemBody,
         headers: { 'Idempotency-Key': IDEM_KEY.concat('-event') },
       })
-      // The spec is ambiguous here — the RPC returns the existing event with status 201
-      // but some implementations return 409 for the same body. Accept both.
-      if (res.status === 409) {
-        await expectError(res, 409, 'idempotency_conflict')
-      } else {
-        const event = await expectOk<Record<string, unknown>>(res, 201)
-        expect(event.id).toBe(idemEventId)
-      }
+      const event = await expectOk<Record<string, unknown>>(res, 201)
+      expect(event.id).toBe(idemEventId)
     })
 
     it('same key, different body → 409 idempotency_conflict', async () => {
@@ -270,6 +262,33 @@ describe('PATCH /events/{eventId}', () => {
       body: { name: ns('anon-patch') },
     })
     await expectError(res, 401, 'unauthorized')
+  })
+
+  it('APPROVED patches own created event → 200', async () => {
+    const body = {
+      name: ns('approved-own-patch'),
+      start_date: '2026-11-15',
+      type: 'EVENT',
+      notify: false,
+    }
+    const createRes = await apiPost('/events', { token: APPROVED.token, body })
+    const created = await expectOk<Record<string, unknown>>(createRes, 201)
+    createdEventIds.push(created.id as string)
+
+    const patchRes = await apiPatch(`/events/${created.id}`, {
+      token: APPROVED.token,
+      body: { name: ns('approved-own-patch-updated') },
+    })
+    const updated = await expectOk<Record<string, unknown>>(patchRes, 200)
+    expect(updated.name).toBe(ns('approved-own-patch-updated'))
+  })
+
+  it('invalid type on PATCH → 400', async () => {
+    const res = await apiPatch(`/events/${patchFixture.id}`, {
+      token: ADMIN.token,
+      body: { type: 'BAD_TYPE' },
+    })
+    await expectError(res, 400, 'validation_error')
   })
 })
 
@@ -379,7 +398,7 @@ describe('Attendance write matrix', () => {
     await expectError(res, 401, 'unauthorized')
   })
 
-  it('PENDING → 403 on PUT (role check)', async () => {
+  it('PENDING → 403 on PUT (RLS deny)', async () => {
     const res = await apiPut(`/events/${attFixture.id}/attendance/me`, {
       token: PENDING.token,
       body: { interest_level: 'WATCHING' },
@@ -390,6 +409,11 @@ describe('Attendance write matrix', () => {
 
 /* ------------------------------------------------------------------ */
 /*  Token operations                                                   */
+/*                                                                      */
+/*  WARNING: the self-revoke test below destroys the PENDING token in  */
+/*  the fixture DB. This describe block MUST remain the last in this   */
+/*  file — any test added after it that relies on the PENDING token    */
+/*  will fail with 401.                                                */
 /* ------------------------------------------------------------------ */
 
 describe('Token write matrix', () => {
