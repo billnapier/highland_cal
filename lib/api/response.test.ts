@@ -63,6 +63,24 @@ describe('errorResponse', () => {
     const b = await body(res)
     expect((b.error as Record<string, string>).code).toBe('internal_error')
   })
+
+  it('extracts rate-limit info from error when not passed explicitly', async () => {
+    const err = new CoreError('unauthorized', 'Authentication required')
+    ;(err as CoreError & { rateLimit: { limit: number; remaining: number; reset: number } }).rateLimit = { limit: 120, remaining: 119, reset: 1234567890 }
+    const res = errorResponse(err)
+    expect(res.status).toBe(401)
+    expect(res.headers.get('RateLimit-Limit')).toBe('120')
+    expect(res.headers.get('RateLimit-Remaining')).toBe('119')
+    expect(res.headers.get('RateLimit-Reset')).toBe('1234567890')
+  })
+
+  it('prefers explicit rateLimit over error-attached rateLimit', async () => {
+    const err = new CoreError('unauthorized', 'Authentication required')
+    ;(err as CoreError & { rateLimit: { limit: number; remaining: number; reset: number } }).rateLimit = { limit: 60, remaining: 0, reset: 1 }
+    const res = errorResponse(err, { limit: 300, remaining: 299, reset: 999 })
+    expect(res.headers.get('RateLimit-Limit')).toBe('300')
+    expect(res.headers.get('RateLimit-Remaining')).toBe('299')
+  })
 })
 
 describe('jsonResponse', () => {

@@ -154,7 +154,9 @@ export async function requireAuth(
 ): Promise<PatIdentity> {
   const result = await authenticateRequest(request, kind)
   if (result.kind === 'anonymous') {
-    throw new CoreError('unauthorized', 'Authentication required')
+    const err = new CoreError('unauthorized', 'Authentication required')
+    ;(err as CoreError & { rateLimit: RateLimitInfo | null }).rateLimit = result.rate_limit ?? null
+    throw err
   }
   return result
 }

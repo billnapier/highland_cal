@@ -51,6 +51,10 @@ export function errorResponse(
     )
   }
 
+  // Fallback: extract rate-limit from the error object when not passed explicitly.
+  // Used by requireAuth which attaches anonymous rate-limit info to the thrown error.
+  const rl = rateLimit ?? ('rateLimit' in error ? (error as CoreError & { rateLimit?: typeof rateLimit }).rateLimit : null)
+
   const code = error.code
   const status = errorStatus(code)
   const body: { error: Record<string, unknown> } = {
@@ -68,13 +72,13 @@ export function errorResponse(
   const headers: Record<string, string> = {}
 
   // Rate-limit headers
-  if (rateLimit) {
-    headers['RateLimit-Limit'] = String(rateLimit.limit)
-    headers['RateLimit-Remaining'] = String(rateLimit.remaining)
-    headers['RateLimit-Reset'] = String(rateLimit.reset)
+  if (rl) {
+    headers['RateLimit-Limit'] = String(rl.limit)
+    headers['RateLimit-Remaining'] = String(rl.remaining)
+    headers['RateLimit-Reset'] = String(rl.reset)
   }
-  if (status === 429 && rateLimit) {
-    headers['Retry-After'] = String(Math.max(1, Math.ceil(rateLimit.reset - Date.now() / 1000)))
+  if (status === 429 && rl) {
+    headers['Retry-After'] = String(Math.max(1, Math.ceil(rl.reset - Date.now() / 1000)))
   }
 
   return NextResponse.json(body, { status, headers })
