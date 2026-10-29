@@ -118,17 +118,16 @@ describe('public: GET /events', () => {
     }
   })
 
-  // NOTE: bad `from` returns 500 internal_error instead of 400 validation_error
-  // (known API limitation — the DB query fails on invalid date before validation)
-  it('bad `from` returns an error response', async () => {
+  it('bad `from` returns 400 validation_error', async () => {
     const res = await apiGet('/events?from=notadate')
-    // The spec says 400 validation_error; the API currently returns 500 internal_error
-    const body = await (async () => {
-      const b: unknown = await res.json()
-      return b as { error: { code: string; message: string } }
-    })()
-    expect(body.error).toBeDefined()
-    expect(typeof body.error.code).toBe('string')
+    await expectError(res, 400, 'validation_error')
+    expectRateLimitHeaders(res)
+  })
+
+  it('bad `to` returns 400 validation_error', async () => {
+    const res = await apiGet('/events?to=2026-13-01')
+    await expectError(res, 400, 'validation_error')
+    expectRateLimitHeaders(res)
   })
 
   // NOTE: bad `type` silently returns 200 with empty data instead of 400

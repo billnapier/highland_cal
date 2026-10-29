@@ -1,5 +1,6 @@
 import type { NextRequest } from 'next/server'
 import { authenticateRequest, requireAuth } from '@/lib/api/auth'
+import { validateDateParams } from '@/lib/api/date-params'
 import { errorResponse, jsonResponse } from '@/lib/api/response'
 import * as core from '@/lib/core/events'
 import { CoreError, IdempotencyConflictError } from '@/lib/core/errors'
@@ -27,6 +28,10 @@ export async function GET(request: NextRequest) {
     const limitParam = url.searchParams.get('limit')
     const cursor = url.searchParams.get('cursor')
     const limit = Math.min(Math.max(parseInt(limitParam || '50', 10) || 50, 1), 200)
+
+    // Reject malformed date-range params before they reach the DB (400,
+    // not a 500 from PostgREST's date parsing).
+    validateDateParams(url)
 
     // Build the select query
     let selectFields = core.EVENT_COLUMNS
