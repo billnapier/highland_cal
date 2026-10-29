@@ -7,8 +7,8 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "test": "vitest run --exclude 'lib/api/e2e-smoke.test.ts' --exclude 'lib/api/e2e-read-matrix.test.ts'",
-    "test:api": "vitest run --reporter verbose lib/api/e2e-smoke.test.ts lib/api/e2e-read-matrix.test.ts"
+    "test": "vitest run --exclude 'lib/api/e2e-*.test.ts'",
+    "test:api": "vitest run --reporter verbose lib/api/e2e-*.test.ts"
   },
   "dependencies": {
     "@base-ui/react": "^1.4.1",
