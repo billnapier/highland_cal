@@ -1,5 +1,5 @@
 import { createClient } from '@/lib/supabase/server'
-import { ExternalLink, Calendar, MapPin } from 'lucide-react'
+import { ExternalLink, Calendar, MapPin, Download } from 'lucide-react'
 import { buttonVariants } from '@/components/ui/button'
 import Link from 'next/link'
 import { notFound, redirect } from 'next/navigation'
@@ -188,11 +188,16 @@ export default async function AthleteProfilePage({ params }: { params: Promise<{
                         </div>
                       </div>
                       
-                      {game.registration_url && (
-                        <a href={game.registration_url} target="_blank" rel="noopener noreferrer" className={buttonVariants({ variant: 'secondary', size: 'sm' })}>
-                          <ExternalLink className="mr-2 h-4 w-4" /> View Event
+                      <div className="flex items-center gap-2">
+                        <a href={`/api/event.ics?game_id=${game.id}`} className={buttonVariants({ variant: 'outline', size: 'sm' })}>
+                          <Download className="mr-2 h-4 w-4" /> iCal
                         </a>
-                      )}
+                        {game.registration_url && (
+                          <a href={game.registration_url} target="_blank" rel="noopener noreferrer" className={buttonVariants({ variant: 'secondary', size: 'sm' })}>
+                            <ExternalLink className="mr-2 h-4 w-4" /> View Event
+                          </a>
+                        )}
+                      </div>
                     </div>
                   </div>
                 )
