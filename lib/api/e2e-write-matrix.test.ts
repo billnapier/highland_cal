@@ -87,11 +87,16 @@ afterAll(async () => {
   createdEventIds.length = 0
 
   // Confirm no leftover events with our namespace prefix exist in the DB
-  const listRes = await apiGet(`/events?name=${encodeURIComponent(`CI-${e2eConfig.runId}`)}`)
+  // (name param is not a supported query filter; fetch all and filter client-side)
+  const listRes = await apiGet('/events?limit=200')
   if (listRes.status === 200) {
     const body = await listRes.json() as { data: unknown[] }
+    const prefix = `CI-${e2eConfig.runId}`
     const lingering = body.data.filter(
-      (e: unknown) => (e as Record<string, unknown>).name as string,
+      (e: unknown) => {
+        const n = (e as Record<string, unknown>).name
+        return typeof n === 'string' && n.startsWith(prefix)
+      },
     )
     expect(lingering.length).toBe(0)
   }
