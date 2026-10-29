@@ -130,12 +130,9 @@ describe('public: GET /events', () => {
     expectRateLimitHeaders(res)
   })
 
-  // NOTE: bad `type` silently returns 200 with empty data instead of 400
-  // (known API limitation — enum validation is not enforced server-side)
-  it('bad type returns 200 with empty data (known API limitation)', async () => {
+  it('bad type returns 400 validation_error', async () => {
     const res = await apiGet('/events?type=BAD_TYPE')
-    const body = await expectOk<{ data: unknown[] }>(res)
-    expect(Array.isArray(body.data)).toBe(true)
+    await expectError(res, 400, 'validation_error')
   })
 })
 

@@ -3,7 +3,7 @@ import { authenticateRequest, requireAuth } from '@/lib/api/auth'
 import { validateDateParams } from '@/lib/api/date-params'
 import { errorResponse, jsonResponse } from '@/lib/api/response'
 import * as core from '@/lib/core/events'
-import { CoreError, IdempotencyConflictError } from '@/lib/core/errors'
+import { CoreError, IdempotencyConflictError, ValidationError } from '@/lib/core/errors'
 
 /** Interest-level labels used in attendance_summary. */
 const INTEREST_LEVELS = ['REGISTERED', 'INTERESTED', 'WATCHING', 'NOT_GOING'] as const
@@ -32,6 +32,17 @@ export async function GET(request: NextRequest) {
     // Reject malformed date-range params before they reach the DB (400,
     // not a 500 from PostgREST's date parsing).
     validateDateParams(url)
+
+    // Validate `type` against the EventType enum (EVENT, PRACTICE)
+    const VALID_TYPES = ['EVENT', 'PRACTICE']
+    if (type && !VALID_TYPES.includes(type)) {
+      return errorResponse(
+        new ValidationError('Invalid type parameter', [
+          { path: ['type'], message: `Must be one of: ${VALID_TYPES.join(', ')}` },
+        ]),
+        rateLimit,
+      )
+    }
 
     // Build the select query
     let selectFields = core.EVENT_COLUMNS

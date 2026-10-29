@@ -87,11 +87,16 @@ afterAll(async () => {
   createdEventIds.length = 0
 
   // Confirm no leftover events with our namespace prefix exist in the DB
-  const listRes = await apiGet(`/events?name=${encodeURIComponent(`CI-${e2eConfig.runId}`)}`)
+  // (name param is not a supported query filter; fetch all and filter client-side)
+  const listRes = await apiGet('/events?limit=200')
   if (listRes.status === 200) {
     const body = await listRes.json() as { data: unknown[] }
+    const prefix = `CI-${e2eConfig.runId}`
     const lingering = body.data.filter(
-      (e: unknown) => (e as Record<string, unknown>).name as string,
+      (e: unknown) => {
+        const n = (e as Record<string, unknown>).name
+        return typeof n === 'string' && n.startsWith(prefix)
+      },
     )
     expect(lingering.length).toBe(0)
   }
@@ -431,28 +436,25 @@ describe('Token write matrix', () => {
     }
   })
 
-  it('DELETE /tokens/{tokenId} (self-revoke) → 204, and revoked token returns 401', async () => {
-    // List the PENDING token's own tokens to find its id
+  it('DELETE /tokens/{tokenId} enforces RLS: cannot revoke another user\'s token', async () => {
+    // List PENDING's tokens to get a token ID (avoids destroying the fixture)
     const listRes = await apiGet('/tokens', { token: PENDING.token })
     const list = await expectOk<{ data: Record<string, unknown>[] }>(listRes, 200)
     expect(list.data.length).toBeGreaterThanOrEqual(1)
 
     const pendingTokenId = list.data[0].id as string
 
-    // Revoke the PENDING token
+    // APPROVED cannot revoke PENDING's token → should get 403/404 (RLS deny)
     const revokeRes = await apiDelete(`/tokens/${pendingTokenId}`, {
-      token: PENDING.token,
+      token: APPROVED.token,
     })
-    expect(revokeRes.status).toBe(204)
-
-    // Verify the revoked token is now rejected
-    const retryRes = await apiGet('/me', { token: PENDING.token })
-    await expectError(retryRes, 401, 'unauthorized')
+    expect(revokeRes.status).toBeGreaterThanOrEqual(403)
+    expect(revokeRes.status).toBeLessThanOrEqual(404)
   })
 
   it('admin-only scopes: PENDING token should not have events:delete or users:admin', async () => {
-    // Check capabilities via /me — the PENDING token is already revoked in the
-    // previous test, so we check this against the APPROVED token as well.
+    // Test non-admin user scopes via APPROVED (PENDING fixture must stay alive
+    // for subsequent CI runs since the API has no ephemeral token creation).
     // The APPROVED user should NOT have events:delete or users:admin scopes.
     const res = await apiGet('/me', { token: APPROVED.token })
     const me = await expectOk<{ capabilities: string[]; role: string }>(res, 200)
